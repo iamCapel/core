@@ -1,0 +1,8 @@
+{
+  "setup": "npm install && echo 'Dependencias instaladas correctamente'",
+  "dev": "npm start",
+  "production": "npm run build && npx serve -s build -l 3000",
+  "clean": "rm -rf node_modules package-lock.json && npm install",
+  "test:watch": "npm test",
+  "build:analyze": "npm run build && npx webpack-bundle-analyzer build/static/js/*.js"
+}

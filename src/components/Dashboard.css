@@ -1,0 +1,1415 @@
+/* reset / existing styles ...existing code... */
+
+/* Topbar fija y compacta */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 999;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* placeholders left / right */
+.topbar-left,
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+/* logos en el lado izquierdo del topbar */
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-left: 16px;
+  z-index: 1001;
+}
+
+.dashboard-logos {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dashboard-logos img {
+  height: 40px;
+  width: 88px;
+  object-fit: contain;
+}
+
+/* logo centrado dentro de la topbar - ahora vacío */
+.topbar-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  white-space: nowrap;
+  z-index: 1000;
+  display: none; /* Ocultar el contenedor naranja */
+}
+
+.topbar-logo-img {
+  max-height: 40px;
+  max-width: 120px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.dashboard-logos {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-logo-left,
+.dashboard-logo-right {
+  max-height: 40px;
+  max-width: 88px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Empuja el contenido justo debajo de la topbar */
+.dashboard {
+  padding-top: 64px;
+  min-height: 100vh;
+  background: #fff;
+}
+
+/* simple icon placeholders */
+.topbar-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.04);
+}
+
+/* Contenedor principal */
+.dashboard-content {
+  padding: 8px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header: ahora subtítulo centrado y más grande */
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  text-align: center;
+  position: relative;
+}
+
+.header-center { 
+  display: block; 
+  flex: 1;
+  text-align: center;
+}
+
+.dashboard-subtitle {
+  margin: 0;
+  font-size: 18px;
+  color: #444;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+/* Estilos para notificaciones en el topbar */
+.topbar-notification {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.topbar-notification-icon {
+  transition: all 0.3s ease;
+}
+
+.topbar-notification-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}
+
+/* Nuevo encabezado encima del formulario */
+.records-header {
+  margin: 12px 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+}
+
+/* Controles (usuario/botones) dentro del topbar: */
+.topbar-user {
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #f8f9fa;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 8px;
+  white-space: nowrap;
+  border: 1px solid #e0e0e0;
+}
+
+/* Botones básicos */
+.btn {
+  padding: 6px 10px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.btn.primary {
+  background: #0b74de;
+  color: white;
+  border-color: #0b74de;
+}
+
+/* botones compactos dentro del topbar */
+.topbar-btn {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #ff7a00;
+  color: white;
+  border: 1px solid #ff7a00;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.topbar-btn:hover {
+  background: #e66900;
+  border-color: #e66900;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* GPS status badge */
+.gps-status-badge {
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  cursor: default;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: #f1f3f5;
+  color: #343a40;
+}
+
+.gps-status-badge.enabled {
+  background: #e9f7ef;
+  color: #1b7a3a;
+  border-color: rgba(40,167,69,0.15);
+}
+
+.gps-status-badge.disabled {
+  background: #fff5f5;
+  color: #9a2b2b;
+  border-color: rgba(220,53,69,0.08);
+}
+
+
+/* Botón específico para nueva página */
+.new-page-btn {
+  margin-right: 12px;
+  background: #17a2b8;
+  border-color: #17a2b8;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.new-page-btn:hover {
+  background: #117a8b;
+  border-color: #117a8b;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(23, 162, 184, 0.3);
+}
+
+/* GPS styles */
+.gps-wrapper { display: inline-flex; align-items: center; gap: 8px; margin-right: 6px; }
+.gps-btn.active { background: #e6f7ff; border-color: #b3e5ff; }
+.gps-status { font-size: 12px; color: #444; }
+
+/* Login panel styles */
+.login-wrapper { position: relative; display: inline-block; }
+.login-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 260px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  padding: 12px;
+  border-radius: 8px;
+  z-index: 1100;
+}
+.login-row { display: flex; flex-direction: column; margin-bottom: 8px; }
+.login-label { font-size: 12px; color: #333; margin-bottom: 6px; }
+.login-input {
+  padding: 8px 10px;
+  border: 1px solid #ccd0d6;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.login-error {
+  color: #b00020;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+/* Align actions inside panel */
+.login-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* Form layout */
+.dashboard-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+.form-group { min-width: 180px; display: flex; flex-direction: column; gap: 6px; }
+.form-group input[type="text"], .form-group select, .plantilla-input input[type="number"], .plantilla-input input[type="text"] {
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* Plantilla table */
+.plantilla-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.plantilla-table td { padding: 6px 8px; vertical-align: middle; }
+.plantilla-label { width: 50%; font-size: 13px; color: #222; }
+.plantilla-input { width: 30%; }
+.plantilla-unit { width: 20%; color: #555; font-size: 13px; }
+
+/* Actions and summary */
+.plantilla-actions { margin-top: 12px; display: flex; gap: 8px; }
+.guardado-resumen { margin-top: 12px; background: #fafafa; padding: 8px; border: 1px solid #eee; border-radius: 6px; font-size: 13px; }
+.hint { margin-top: 6px; color: #666; font-size: 12px; }
+
+/* Responsive tweaks */
+@media (max-width: 700px) {
+  .dashboard-row { flex-direction: column; }
+  .form-group { width: 100%; min-width: auto; }
+  .plantilla-table td { display: block; width: 100%; }
+  .plantilla-label { margin-bottom: 6px; }
+  .topbar { height: auto; padding: 12px; }
+  .dashboard { padding-top: calc(64px + 12px); }
+  .topbar-logo { position: relative; left: auto; transform: none; margin: 0 auto 8px; display: inline-block; top: auto; }
+  .topbar-right { margin-left: auto; }
+  .dashboard-subtitle { font-size: 16px; }
+  .login-panel { right: 8px; left: 8px; top: auto; position: relative; margin-top: 8px; width: auto; }
+}
+
+/* Login Screen Styles */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: url('./background-logo.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  padding: 20px;
+}
+
+.login-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  padding: 45px;
+  box-shadow: 
+    0 0 30px rgba(255, 122, 0, 0.7),
+    0 0 60px rgba(255, 149, 0, 0.5),
+    0 0 90px rgba(255, 122, 0, 0.3),
+    0 12px 35px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  position: relative;
+}
+
+.login-header {
+  margin-bottom: 30px;
+}
+
+.login-logos {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 30px;
+  width: 100%;
+}
+
+.logo-left,
+.logo-right {
+  max-height: 80px;
+  max-width: 160px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  flex: 1;
+}
+
+.logo-left {
+  max-height: 92px; /* 80px + 15% = 92px */
+  max-width: 184px; /* 160px + 15% = 184px */
+}
+
+/* Estilos específicos para logos del login */
+.login-logo-left,
+.login-logo-right {
+  max-height: 70px;
+  max-width: 140px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.login-logo-left:hover,
+.login-logo-right:hover {
+  transform: scale(1.05);
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.login-form {
+  margin-bottom: 30px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
+  height: 48px;
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.2;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.form-input[type="text"],
+.form-input[type="password"] {
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-input:disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background-color: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  border: 1px solid #fcc;
+}
+
+.login-button {
+  width: 100%;
+  padding: 14px;
+  background: #ff7a00;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 122, 0, 0.3);
+  background: #e56b00;
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-footer {
+  border-top: 1px solid #e1e5e9;
+  padding-top: 20px;
+  font-size: 12px;
+  color: #666;
+}
+
+.login-footer p {
+  margin: 0;
+}
+
+/* GPS Approval Modal Styles */
+.gps-approval-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.gps-approval-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 450px;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.gps-approval-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.gps-approval-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.gps-approval-content {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.gps-approval-content p {
+  margin: 12px 0;
+  color: #555;
+  line-height: 1.5;
+}
+
+.coordinates-display {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  font-weight: bold;
+  color: #495057;
+  letter-spacing: 1px;
+}
+
+.gps-approval-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-approve,
+.btn-cancel {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 140px;
+}
+
+.btn-approve {
+  background: #28a745;
+  color: white;
+}
+
+.btn-approve:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.btn-cancel {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+.btn-approve:focus,
+.btn-cancel:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* Estilo especial para campos de coordenadas */
+.coordinate-field {
+  background: linear-gradient(135deg, #f8f9ff, #ffffff);
+  border: 2px solid #007bff;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.coordinate-field:hover {
+  background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
+  border-color: #0056b3;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.coordinate-field::placeholder {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.coordinate-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  background: #ffffff;
+}
+
+/* Wrapper para campos de coordenadas con ícono */
+.coordinate-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* Campo de coordenadas con espacio para el ícono */
+.coordinate-input-wrapper .coordinate-field {
+  padding-left: 80px; /* Más espacio para botones GPS en la izquierda */
+  padding-right: 15px; /* Padding normal en la derecha */
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  cursor: pointer; /* Cambio a pointer para indicar que es clickeable */
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+  color: #495057;
+}
+
+.coordinate-input-wrapper .coordinate-field:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  background: #ffffff;
+}
+
+/* Animación suave para cuando se llenan las coordenadas */
+.coordinate-input-wrapper .coordinate-field:not(:placeholder-shown) {
+  background: #e7f3ff;
+  border-color: #007bff;
+  color: #0056b3;
+}
+
+/* Estilos para campos de coordenadas mejorados con GPS automático */
+.coordinate-field {
+  flex: 1;
+  padding-left: 92px; /* Más espacio para los botones en la izquierda */
+  padding-right: 15px; /* Padding normal en la derecha */
+}
+
+.coordinate-field.has-auto-gps {
+  background-color: rgba(0, 123, 255, 0.1) !important;
+  border-color: #007bff;
+  font-style: italic;
+}
+
+/* Botones de aceptar/rechazar GPS */
+.gps-action-buttons {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.gps-accept-btn,
+.gps-reject-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.gps-accept-btn.active {
+  background-color: #28a745;
+  color: white;
+}
+
+.gps-accept-btn.inactive {
+  background-color: #6c757d;
+  color: white;
+  opacity: 0.7;
+}
+
+.gps-accept-btn.active:hover {
+  background-color: #218838;
+  transform: scale(1.1);
+}
+
+.gps-accept-btn.inactive:hover {
+  background-color: #28a745;
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.gps-reject-btn.active {
+  background-color: #dc3545;
+  color: white;
+}
+
+.gps-reject-btn.inactive {
+  background-color: #6c757d;
+  color: white;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gps-reject-btn.active:hover {
+  background-color: #c82333;
+  transform: scale(1.1);
+}
+
+/* Animación para campos con coordenadas automáticas */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+}
+
+.coordinate-field.has-auto-gps {
+  animation: pulse 2s infinite;
+}
+
+/* Estilos para sector personalizado */
+.sector-personalizado {
+  margin-top: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #28a745;
+  border-radius: 8px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 200px;
+  }
+}
+
+.sector-personalizado-label {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #155724 !important;
+  margin-bottom: 8px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+}
+
+.sector-personalizado-label::before {
+  content: "✏️";
+  font-size: 16px;
+}
+
+.sector-personalizado-input {
+  background: #ffffff !important;
+  border: 2px solid #28a745 !important;
+  border-radius: 6px !important;
+  padding: 10px 12px !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.1) !important;
+}
+
+.sector-personalizado-input:focus {
+  border-color: #1e7e34 !important;
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2) !important;
+  outline: none !important;
+  background: #f8fff9 !important;
+}
+
+.sector-personalizado-input::placeholder {
+  color: #6c757d !important;
+  font-style: italic !important;
+}
+
+/* Efecto especial para la opción "Otros" en el select */
+select option[value="otros"] {
+  background: #e8f5e9 !important;
+  color: #1b5e20 !important;
+  font-weight: 600 !important;
+}
+
+/* ===================================
+   NUEVO DISEÑO DE DASHBOARD CON ICONOS
+   =================================== */
+
+.dashboard-main {
+  padding: 24px 0;
+}
+
+.dashboard-icons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 48px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dashboard-icon-card {
+  background: white;
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-icon-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border-color: #007bff;
+}
+
+.dashboard-icon-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f8f9fa;
+}
+
+.dashboard-icon-card.disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: transparent;
+}
+
+.dashboard-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  display: block;
+  line-height: 1;
+}
+
+.dashboard-icon img {
+  filter: drop-shadow(0 4px 8px rgba(255, 152, 0, 0.4));
+  transition: filter 0.3s ease;
+}
+
+.dashboard-icon img:hover {
+  filter: drop-shadow(0 6px 12px rgba(255, 152, 0, 0.6));
+}
+
+.dashboard-icon-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  margin-top: 0;
+}
+
+.dashboard-icon-description {
+  color: #6c757d;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Efecto de ondas al hacer clic */
+.dashboard-icon-card::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 123, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.dashboard-icon-card:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Estadísticas del dashboard */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.stats-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-left: 4px solid #007bff;
+}
+
+.stats-icon {
+  font-size: 2.5rem;
+  opacity: 0.8;
+  filter: drop-shadow(0 3px 6px rgba(255, 152, 0, 0.3));
+  transition: filter 0.3s ease;
+}
+
+.stats-icon:hover {
+  filter: drop-shadow(0 4px 8px rgba(255, 152, 0, 0.5));
+}
+
+.stats-content h4 {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #007bff;
+  margin: 0;
+  line-height: 1;
+}
+
+.stats-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #28a745;
+  margin: 0;
+  line-height: 1;
+}
+
+/* Colores específicos para diferentes tipos de tarjetas de estadísticas */
+.stats-card:nth-child(1) {
+  border-left-color: #28a745;
+}
+
+.stats-card:nth-child(1) .stats-number {
+  color: #28a745;
+}
+
+.stats-card:nth-child(2) {
+  border-left-color: #ffc107;
+}
+
+.stats-card:nth-child(2) .stats-number {
+  color: #ffc107;
+}
+
+.stats-card:nth-child(3) {
+  border-left-color: #17a2b8;
+}
+
+.stats-card:nth-child(3) .stats-text {
+  color: #17a2b8;
+}
+
+/* Responsive design para el nuevo dashboard */
+@media (max-width: 768px) {
+  .dashboard-icons-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
+  }
+
+  .dashboard-icon-card {
+    padding: 24px 20px;
+  }
+
+  .dashboard-icon {
+    font-size: 3rem;
+  }
+
+  .dashboard-icon-title {
+    font-size: 1.25rem;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 0 16px;
+  }
+
+  .stats-card {
+    padding: 16px;
+  }
+
+  .stats-number {
+    font-size: 1.5rem;
+  }
+}
+
+/* ===================================
+   ESTILOS PARA EL MAPA DE INTERVENCIONES
+   =================================== */
+
+.map-stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.map-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 32px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-left: 4px solid #007bff;
+  min-width: 160px;
+}
+
+.map-stat-number {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #007bff;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.map-stat-label {
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.map-container {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 600px;
+}
+
+.map-legend {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.legend-dot.red {
+  background: #ff4444;
+}
+
+.rd-map {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-svg {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+}
+
+.country-outline {
+  transition: fill 0.3s ease;
+}
+
+.country-outline:hover {
+  fill: #d4edda;
+}
+
+.intervention-point {
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.intervention-point:hover {
+  r: 8;
+  fill: #ff2222;
+  filter: drop-shadow(0 4px 8px rgba(255,68,68,0.5));
+}
+
+.interventions-sidebar {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.interventions-sidebar h3 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+  font-weight: 600;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 12px;
+}
+
+.interventions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.intervention-item {
+  padding: 16px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.intervention-item:hover {
+  border-color: #007bff;
+  background: #e3f2fd;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+}
+
+.intervention-location strong {
+  display: block;
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.intervention-location span {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.intervention-type {
+  color: #28a745;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 8px 0 4px 0;
+  background: #d4edda;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.intervention-date {
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+
+.no-interventions {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+}
+
+.no-interventions p {
+  margin: 8px 0;
+}
+
+/* Modal para detalles de intervención */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 12px 24px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.modal-body {
+  padding: 20px 24px 24px 24px;
+}
+
+.intervention-detail {
+  margin-bottom: 16px;
+}
+
+.intervention-detail strong {
+  display: block;
+  color: #495057;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.intervention-detail p {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1rem;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+}
+
+/* Responsive design para el mapa */
+@media (max-width: 1200px) {
+  .map-container {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  
+  .interventions-sidebar {
+    order: -1;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-stats {
+    gap: 16px;
+  }
+  
+  .map-stat-card {
+    padding: 16px 24px;
+    min-width: 140px;
+  }
+  
+  .map-stat-number {
+    font-size: 2rem;
+  }
+  
+  .rd-map {
+    padding: 12px;
+  }
+  
+  .interventions-sidebar {
+    padding: 16px;
+  }
+  
+  .modal-content {
+    margin: 20px;
+    max-height: calc(100vh - 40px);
+  }
+
+  /* Estilos para el ícono de búsqueda superpuesto */
+  .search-map-icon {
+    position: relative;
+    display: inline-block;
+    font-size: 2.5rem;
+    color: #0066cc;
+  }
+
+  .map-background {
+    position: relative;
+    z-index: 1;
+  }
+
+  .search-overlay {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 1.2rem;
+    color: #ff6b35;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    padding: 2px;
+    z-index: 2;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}
