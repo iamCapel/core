@@ -1,10 +1,26 @@
-# Getting Started with Create React App
+# MOPC Dashboard
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Dashboard de gestión para el Ministerio de Obras Públicas y Comunicaciones (MOPC) de República Dominicana.
 
-## Available Scripts
+## Características
 
-In the project directory, you can run:
+- 📊 Dashboard interactivo con métricas en tiempo real
+- 🗺️ Integración con mapas (Google Maps y Leaflet)
+- 📋 Sistema de reportes y formularios
+- 👥 Gestión de usuarios
+- 📤 Exportación de datos
+- 🎨 Interfaz moderna y responsiva
+
+## Tecnologías
+
+- **React 19** con TypeScript
+- **Chart.js** para gráficos
+- **Leaflet** y **Google Maps** para mapas
+- **CSS3** con diseño responsivo
+
+## Scripts Disponibles
+
+En el directorio del proyecto, puedes ejecutar:
 
 ### `npm start`
 

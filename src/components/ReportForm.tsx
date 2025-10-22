@@ -444,7 +444,6 @@ const ReportForm: React.FC<ReportFormProps> = ({
         };
         
         setPendingCoords(coords);
-        setShowGpsApproval(true);
         setGpsStatus(`Ubicación encontrada: ${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`);
       },
       error => {
@@ -481,7 +480,6 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setGpsEnabled(v => !v);
     if (gpsEnabled) {
       setGpsStatus('');
-      setShowGpsApproval(false);
       setPendingCoords(null);
       setTargetField(null);
       setApprovedGpsFields(new Set());
@@ -498,13 +496,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setGpsStatus(`Coordenadas aplicadas a "${targetField.label}": ${coordsString}`);
       setApprovedGpsFields(prev => new Set(prev).add(targetField.key));
     }
-    setShowGpsApproval(false);
     setPendingCoords(null);
     setTargetField(null);
   };
 
   const handleGpsCancel = () => {
-    setShowGpsApproval(false);
     setPendingCoords(null);
     setTargetField(null);
     setGpsStatus('Coordenadas descartadas');
