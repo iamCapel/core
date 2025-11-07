@@ -1,0 +1,25 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo del icono -->
+  <rect width="64" height="64" rx="8" fill="#2196F3"/>
+  
+  <!-- Gráfico de barras -->
+  <rect x="12" y="32" width="6" height="20" fill="#FFFFFF"/>
+  <rect x="22" y="24" width="6" height="28" fill="#FFFFFF"/>
+  <rect x="32" y="16" width="6" height="36" fill="#FFFFFF"/>
+  <rect x="42" y="28" width="6" height="24" fill="#FFFFFF"/>
+  
+  <!-- Línea de tendencia -->
+  <path d="M12 36 L24 28 L36 20 L48 32" stroke="#FFC107" stroke-width="2" fill="none"/>
+  
+  <!-- Puntos en la línea -->
+  <circle cx="12" cy="36" r="2" fill="#FFC107"/>
+  <circle cx="24" cy="28" r="2" fill="#FFC107"/>
+  <circle cx="36" cy="20" r="2" fill="#FFC107"/>
+  <circle cx="48" cy="32" r="2" fill="#FFC107"/>
+  
+  <!-- Icono de documento en la esquina -->
+  <rect x="48" y="8" width="12" height="16" rx="2" fill="#FFFFFF"/>
+  <rect x="50" y="12" width="8" height="1" fill="#2196F3"/>
+  <rect x="50" y="15" width="6" height="1" fill="#2196F3"/>
+  <rect x="50" y="18" width="8" height="1" fill="#2196F3"/>
+</svg>

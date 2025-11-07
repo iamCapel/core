@@ -1,0 +1,19 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Círculo amarillo/naranja de fondo -->
+  <circle cx="16" cy="16" r="16" fill="#F39C12"/>
+  
+  <!-- Ícono de reloj/pendiente -->
+  <circle cx="16" cy="16" r="10" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+  
+  <!-- Manecillas del reloj -->
+  <path d="M16 10 L16 16 L20 20" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Detalles adicionales -->
+  <circle cx="16" cy="16" r="14" stroke="#E67E22" stroke-width="1" fill="none"/>
+  
+  <!-- Puntos de hora -->
+  <circle cx="16" cy="6" r="1" fill="#FFFFFF"/>
+  <circle cx="26" cy="16" r="1" fill="#FFFFFF"/>
+  <circle cx="16" cy="26" r="1" fill="#FFFFFF"/>
+  <circle cx="6" cy="16" r="1" fill="#FFFFFF"/>
+</svg>

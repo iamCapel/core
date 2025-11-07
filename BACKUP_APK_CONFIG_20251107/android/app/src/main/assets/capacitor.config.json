@@ -1,0 +1,19 @@
+{
+	"appId": "com.mopc.dashboard",
+	"appName": "MOPC Dashboard",
+	"webDir": "build",
+	"server": {
+		"androidScheme": "https",
+		"cleartext": true
+	},
+	"android": {},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"backgroundColor": "#1976d2",
+			"showSpinner": true,
+			"androidSpinnerStyle": "large",
+			"spinnerColor": "#ffffff"
+		}
+	}
+}
