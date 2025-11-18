@@ -982,6 +982,68 @@
   text-align: center;
 }
 
+/* Selector de modo de estadísticas */
+.stats-mode-selector {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.mode-toggle-btn {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 1.25rem 2rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 240px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.mode-toggle-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(255, 122, 0, 0.15);
+  border-color: var(--primary-orange);
+}
+
+.mode-toggle-btn.active {
+  background: linear-gradient(135deg, var(--primary-orange) 0%, #ff9a3d 100%);
+  border-color: var(--primary-orange);
+  color: white;
+  box-shadow: 0 6px 20px rgba(255, 122, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.mode-toggle-btn .mode-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.mode-toggle-btn .mode-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: left;
+}
+
+.mode-toggle-btn .mode-text strong {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.mode-toggle-btn .mode-text small {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.mode-toggle-btn.active .mode-text small {
+  opacity: 0.95;
+}
+
 /* Grid de regiones */
 .regions-grid {
   display: grid;
@@ -1079,6 +1141,21 @@
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--region-color, #ff7a00);
+}
+
+/* Estadísticas de kilometraje */
+.stat-item-km {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.stat-value-lg {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--region-color, #ff7a00);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .region-arrow {
