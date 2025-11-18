@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Wrapper, Status } from '@googlemaps/react-wrapper';
 import { GOOGLE_MAPS_API_KEY, MAP_CONFIG, INTERVENTION_COLORS } from '../config/googleMapsConfig';
+import { reportStorage } from '../services/reportStorage';
 
 interface Intervention {
   id: number;
@@ -478,6 +479,59 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
         }}>
           <h3 style={{ marginTop: 0, color: '#2c3e50' }}>📊 Filtros</h3>
           
+          {/* Búsqueda por Número de Reporte */}
+          <div style={{ 
+            marginBottom: '20px', 
+            padding: '15px', 
+            backgroundColor: '#f8f9fa', 
+            borderRadius: '8px',
+            border: '1px solid #e9ecef'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+              <img 
+                src="/images/search-report-icon.svg" 
+                alt="Buscar reporte" 
+                style={{ width: '24px', height: '24px', marginRight: '8px' }}
+              />
+              <h4 style={{ color: '#495057', margin: 0, fontSize: '14px' }}>
+                Buscar por Número de Reporte
+              </h4>
+            </div>
+            <input
+              type="text"
+              placeholder="Ingrese # de reporte (ej: RPT-2025-000001)"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #ced4da',
+                borderRadius: '4px',
+                fontSize: '14px',
+                marginBottom: '8px'
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  const reportNumber = (e.target as HTMLInputElement).value;
+                  if (reportNumber.trim()) {
+                    // Búsqueda optimizada usando reportStorage (O(1))
+                    const report = reportStorage.getReportByNumber(reportNumber.trim());
+                    
+                    if (report) {
+                      // Centrar mapa en el municipio de la intervención encontrada
+                      alert(`✅ Reporte encontrado: ${report.numeroReporte} en ${report.municipio}, ${report.provincia}\nTipo: ${report.tipoIntervencion}`);
+                      console.log('📍 Reporte encontrado vía búsqueda optimizada:', report);
+                      // Aquí podrías agregar lógica para centrar el mapa en las coordenadas del municipio
+                    } else {
+                      alert('❌ No se encontró ningún reporte con ese número');
+                      console.log('❌ Búsqueda sin resultados para:', reportNumber);
+                    }
+                  }
+                }
+              }}
+            />
+            <p style={{ fontSize: '12px', color: '#6c757d', margin: 0 }}>
+              Presione Enter para buscar y ubicar en el mapa
+            </p>
+          </div>
 
         </div>
 

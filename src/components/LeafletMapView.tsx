@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { reportStorage } from '../services/reportStorage';
 
 // Configurar iconos de Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -364,7 +365,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             </div>
             <input
               type="text"
-              placeholder="Ingrese # de reporte (ej: RPT-001)"
+              placeholder="Ingrese # de reporte (ej: RPT-2025-000001)"
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -377,17 +378,17 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 if (e.key === 'Enter') {
                   const reportNumber = (e.target as HTMLInputElement).value;
                   if (reportNumber.trim()) {
-                    // Buscar intervención por número de reporte
-                    const intervention = interventions.find(i => 
-                      i.numeroReporte?.toLowerCase().includes(reportNumber.toLowerCase()) ||
-                      i.id?.toString().includes(reportNumber)
-                    );
-                    if (intervention && intervention.municipio) {
+                    // Búsqueda optimizada usando reportStorage (O(1))
+                    const report = reportStorage.getReportByNumber(reportNumber.trim());
+                    
+                    if (report) {
                       // Centrar mapa en el municipio de la intervención encontrada
-                      alert(`Reporte encontrado: ${intervention.numeroReporte || intervention.id} en ${intervention.municipio}`);
+                      alert(`✅ Reporte encontrado: ${report.numeroReporte} en ${report.municipio}, ${report.provincia}\nTipo: ${report.tipoIntervencion}`);
+                      console.log('📍 Reporte encontrado vía búsqueda optimizada:', report);
                       // Aquí podrías agregar lógica para centrar el mapa en las coordenadas del municipio
                     } else {
-                      alert('No se encontró ningún reporte con ese número');
+                      alert('❌ No se encontró ningún reporte con ese número');
+                      console.log('❌ Búsqueda sin resultados para:', reportNumber);
                     }
                   }
                 }

@@ -259,62 +259,74 @@
 
 ```javascript
 // ANTES (Formato antiguo - Array)
-localStorage.setItem('mopc_intervenciones', JSON.stringify([
-  {
-    id: 1,
-    usuario: "Juan Pérez",
-    region: "Cibao Central",
-    tipoIntervencion: "Pavimentación",
-    // ...
-  },
-  {
-    id: 2,
-    // ...
-  }
-  // Búsqueda requiere iterar todo el array
-]));
+localStorage.setItem(
+  "mopc_intervenciones",
+  JSON.stringify([
+    {
+      id: 1,
+      usuario: "Juan Pérez",
+      region: "Cibao Central",
+      tipoIntervencion: "Pavimentación",
+      // ...
+    },
+    {
+      id: 2,
+      // ...
+    },
+    // Búsqueda requiere iterar todo el array
+  ])
+);
 
 // DESPUÉS (Formato nuevo - Objeto indexado)
-localStorage.setItem('mopc_reports_db', JSON.stringify({
-  "MOPC_MTAwMDAwLTUyMDItVFBS": {
-    id: "MOPC_MTAwMDAwLTUyMDItVFBS",
-    numeroReporte: "RPT-2025-000001",
-    creadoPor: "Juan Pérez",
-    region: "Cibao Central",
-    tipoIntervencion: "Pavimentación",
-    // ...
-  },
-  "MOPC_MjAwMDAwLTUyMDItVFBS": {
-    id: "MOPC_MjAwMDAwLTUyMDItVFBS",
-    numeroReporte: "RPT-2025-000002",
-    // ...
-  }
-  // Búsqueda directa por clave: O(1)
-}));
+localStorage.setItem(
+  "mopc_reports_db",
+  JSON.stringify({
+    MOPC_MTAwMDAwLTUyMDItVFBS: {
+      id: "MOPC_MTAwMDAwLTUyMDItVFBS",
+      numeroReporte: "RPT-2025-000001",
+      creadoPor: "Juan Pérez",
+      region: "Cibao Central",
+      tipoIntervencion: "Pavimentación",
+      // ...
+    },
+    MOPC_MjAwMDAwLTUyMDItVFBS: {
+      id: "MOPC_MjAwMDAwLTUyMDItVFBS",
+      numeroReporte: "RPT-2025-000002",
+      // ...
+    },
+    // Búsqueda directa por clave: O(1)
+  })
+);
 
 // ÍNDICE (Para listados rápidos)
-localStorage.setItem('mopc_reports_index', JSON.stringify([
-  {
-    id: "MOPC_MTAwMDAwLTUyMDItVFBS",
-    numeroReporte: "RPT-2025-000001",
-    timestamp: "2025-01-15T10:30:00Z",
-    creadoPor: "Juan Pérez",
-    region: "Cibao Central",
-    provincia: "Santiago",
-    tipoIntervencion: "Pavimentación",
-    estado: "completado"
-  }
-  // Solo campos esenciales, sin metricData ni GPS
-]));
+localStorage.setItem(
+  "mopc_reports_index",
+  JSON.stringify([
+    {
+      id: "MOPC_MTAwMDAwLTUyMDItVFBS",
+      numeroReporte: "RPT-2025-000001",
+      timestamp: "2025-01-15T10:30:00Z",
+      creadoPor: "Juan Pérez",
+      region: "Cibao Central",
+      provincia: "Santiago",
+      tipoIntervencion: "Pavimentación",
+      estado: "completado",
+    },
+    // Solo campos esenciales, sin metricData ni GPS
+  ])
+);
 
 // METADATA (Información del sistema)
-localStorage.setItem('mopc_reports_metadata', JSON.stringify({
-  version: 1,
-  createdAt: "2025-01-15T09:00:00Z",
-  lastModified: "2025-01-15T14:30:00Z",
-  totalReports: 42,
-  lastReportNumber: 42  // Para generar siguiente: RPT-2025-000043
-}));
+localStorage.setItem(
+  "mopc_reports_metadata",
+  JSON.stringify({
+    version: 1,
+    createdAt: "2025-01-15T09:00:00Z",
+    lastModified: "2025-01-15T14:30:00Z",
+    totalReports: 42,
+    lastReportNumber: 42, // Para generar siguiente: RPT-2025-000043
+  })
+);
 ```
 
 ---
@@ -322,6 +334,7 @@ localStorage.setItem('mopc_reports_metadata', JSON.stringify({
 ## 🎯 Casos de Uso
 
 ### 1. Buscar Reporte Específico
+
 ```
 Usuario → Ingresa "RPT-2025-000042" en ExportPage
        → Sistema encripta → "MOPC_MjQwMDAwLTUyMDItVFBS"
@@ -330,6 +343,7 @@ Usuario → Ingresa "RPT-2025-000042" en ExportPage
 ```
 
 ### 2. Listar Reportes por Región
+
 ```
 ReportsPage → Llama getStatistics()
            → Itera índice (no base completa)
@@ -338,6 +352,7 @@ ReportsPage → Llama getStatistics()
 ```
 
 ### 3. Filtrar Reportes de Técnico
+
 ```
 ExportPage (Técnico) → Aplica filtro user.username
                      → Búsqueda optimizada con permisos
@@ -345,6 +360,7 @@ ExportPage (Técnico) → Aplica filtro user.username
 ```
 
 ### 4. Exportar Múltiples Reportes
+
 ```
 DetailedReportView → Carga jerarquía completa
                    → Organiza por Región > Provincia > Distrito
@@ -357,29 +373,33 @@ DetailedReportView → Carga jerarquía completa
 ## 🔧 Mantenimiento
 
 ### Limpiar Base de Datos
+
 ```javascript
 reportStorage.clearDatabase();
 // Elimina todos los reportes y reinicia metadata
 ```
 
 ### Exportar Backup
+
 ```javascript
 const backup = reportStorage.exportDatabase();
-localStorage.setItem('mopc_backup_2025_01_15', backup);
+localStorage.setItem("mopc_backup_2025_01_15", backup);
 ```
 
 ### Importar Backup
+
 ```javascript
-const backup = localStorage.getItem('mopc_backup_2025_01_15');
+const backup = localStorage.getItem("mopc_backup_2025_01_15");
 reportStorage.importDatabase(backup);
 ```
 
 ### Verificar Integridad
+
 ```javascript
 const allReports = reportStorage.getAllReports();
 console.log(`Total reportes: ${allReports.length}`);
 
-allReports.forEach(report => {
+allReports.forEach((report) => {
   const decrypted = decryptReportId(report.id);
   if (decrypted !== report.numeroReporte) {
     console.error(`❌ ID inconsistente: ${report.numeroReporte}`);
@@ -405,6 +425,7 @@ allReports.forEach(report => {
 ---
 
 **Sistema implementado exitosamente ✅**
+
 - **Commit**: fa7e3ce
 - **Branch**: main
 - **Estado**: Producción
