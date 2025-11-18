@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface PendingReport {
   id: string;
@@ -15,17 +15,19 @@ interface PendingReportsModalProps {
   isOpen: boolean;
   onClose: () => void;
   reports: PendingReport[];
-  onEditReport?: (reportId: string) => void;
-  onDeleteReport?: (reportId: string) => void;
+  onContinueReport?: (reportId: string) => void;
+  onCancelReport?: (reportId: string) => void;
 }
 
 const PendingReportsModal: React.FC<PendingReportsModalProps> = ({
   isOpen,
   onClose,
   reports,
-  onEditReport,
-  onDeleteReport
+  onContinueReport,
+  onCancelReport
 }) => {
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+
   if (!isOpen) return null;
 
   const formatDate = (timestamp: string) => {
@@ -33,8 +35,7 @@ const PendingReportsModal: React.FC<PendingReportsModalProps> = ({
       const date = new Date(timestamp);
       return date.toLocaleString('es-ES', {
         day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
+        month: 'short',
         hour: '2-digit',
         minute: '2-digit'
       });
@@ -44,14 +45,33 @@ const PendingReportsModal: React.FC<PendingReportsModalProps> = ({
   };
 
   const getReportNumber = (reportId: string) => {
-    // Extraer número de reporte del ID o generar uno basado en timestamp
     const match = reportId.match(/(\d+)$/);
+    const year = new Date().getFullYear();
     if (match) {
-      return `RPT-${match[1].slice(-6).padStart(6, '0')}`;
+      return `DCR-${year}-${match[1].slice(-6).padStart(6, '0')}`;
     }
-    // Generar número basado en timestamp si no hay número en el ID
     const timestamp = Date.now();
-    return `RPT-${timestamp.toString().slice(-6)}`;
+    return `DCR-${year}-${timestamp.toString().slice(-6)}`;
+  };
+
+  const handleCancelWithAnimation = (reportId: string) => {
+    if (window.confirm('¿Eliminar este reporte pendiente?')) {
+      // Agregar el ID a la lista de elementos que se están eliminando
+      setRemovingIds(prev => new Set(prev).add(reportId));
+      
+      // Esperar a que termine la animación antes de eliminar
+      setTimeout(() => {
+        if (onCancelReport) {
+          onCancelReport(reportId);
+        }
+        // Limpiar el ID de la lista de removidos
+        setRemovingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(reportId);
+          return newSet;
+        });
+      }, 400); // Duración de la animación
+    }
   };
 
   return (
@@ -62,193 +82,322 @@ const PendingReportsModal: React.FC<PendingReportsModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(8px)',
         zIndex: 10000,
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'flex-end',
-        paddingTop: '70px',
-        paddingRight: '20px'
+        paddingTop: '80px',
+        paddingRight: '24px',
+        animation: 'fadeIn 0.2s ease'
       }}
-      onClick={onClose} // Cerrar al hacer click fuera
+      onClick={onClose}
     >
       <div 
         style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          padding: '15px',
-          maxWidth: '400px',
-          width: '400px',
-          maxHeight: '60vh',
-          overflow: 'auto',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          border: '1px solid #ddd',
-          position: 'relative'
+          backgroundColor: '#f9f9f9',
+          borderRadius: '20px',
+          padding: '0',
+          maxWidth: '420px',
+          width: '420px',
+          maxHeight: '75vh',
+          overflow: 'hidden',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          border: 'none',
+          position: 'relative',
+          animation: 'slideInRight 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
         }}
-        onClick={(e) => e.stopPropagation()} // Evitar que se cierre al hacer click dentro
+        onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '15px',
-          borderBottom: '2px solid #ff7a00',
-          paddingBottom: '8px'
+          background: 'linear-gradient(135deg, #ff7a00 0%, #ff9a3d 100%)',
+          padding: '20px 24px',
+          borderRadius: '20px 20px 0 0',
+          boxShadow: '0 2px 10px rgba(255, 122, 0, 0.2)'
         }}>
-          <h3 style={{ margin: 0, color: '#ff7a00', fontSize: '16px' }}>
-            � Pendientes ({reports.length})
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: '#e74c3c',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '4px 8px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            ✕
-          </button>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <h3 style={{ 
+                margin: 0, 
+                color: 'white', 
+                fontSize: '22px',
+                fontWeight: '700',
+                letterSpacing: '-0.5px'
+              }}>
+                Notificaciones
+              </h3>
+              <p style={{ 
+                margin: '4px 0 0 0', 
+                color: 'rgba(255, 255, 255, 0.9)', 
+                fontSize: '13px',
+                fontWeight: '500'
+              }}>
+                {reports.length} {reports.length === 1 ? 'reporte pendiente' : 'reportes pendientes'}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                cursor: 'pointer',
+                fontSize: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+                fontWeight: '300'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        {reports.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '20px',
-            color: '#666'
-          }}>
-            <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
-            <p style={{ fontSize: '14px', margin: 0 }}>No hay reportes pendientes</p>
-          </div>
-        ) : (
-          <div>
-            {reports.slice(0, 5).map((report, index) => (
-              <div
-                key={report.id}
-                style={{
-                  border: '1px solid #eee',
-                  borderRadius: '4px',
-                  padding: '10px',
-                  marginBottom: '8px',
-                  backgroundColor: report.estado === 'borrador' ? '#fff9e6' : '#f8f9fa',
-                  fontSize: '12px'
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start'
-                }}>
-                  <div style={{ flex: 1 }}>
+        {/* Lista de notificaciones */}
+        <div style={{
+          padding: '16px',
+          maxHeight: 'calc(75vh - 100px)',
+          overflowY: 'auto',
+          backgroundColor: '#f9f9f9'
+        }}>
+          {reports.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: '#999'
+            }}>
+              <div style={{ fontSize: '56px', marginBottom: '16px', opacity: 0.5 }}>🔔</div>
+              <p style={{ fontSize: '16px', margin: 0, fontWeight: '600', color: '#666' }}>Sin notificaciones</p>
+              <p style={{ fontSize: '13px', margin: '8px 0 0 0', color: '#999' }}>Todos los reportes están al día</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {reports.map((report) => {
+                const isRemoving = removingIds.has(report.id);
+                return (
+                  <div
+                    key={report.id}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                      border: '1px solid rgba(0, 0, 0, 0.06)',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      opacity: isRemoving ? 0 : 1,
+                      transform: isRemoving ? 'translateX(100px) scale(0.8)' : 'translateX(0) scale(1)',
+                      maxHeight: isRemoving ? '0px' : '500px',
+                      overflow: 'hidden',
+                      marginBottom: isRemoving ? '0px' : '0px',
+                      pointerEvents: isRemoving ? 'none' : 'auto'
+                    }}
+                  >
+                  {/* Contenido del reporte */}
+                  <div style={{ marginBottom: '14px' }}>
                     <div style={{
                       display: 'flex',
-                      alignItems: 'center',
-                      marginBottom: '6px'
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: '8px'
                     }}>
-                      <span style={{
-                        backgroundColor: report.estado === 'borrador' ? '#f39c12' : '#3498db',
-                        color: 'white',
-                        padding: '1px 6px',
-                        borderRadius: '8px',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
-                        marginRight: '8px'
-                      }}>
-                        {getReportNumber(report.id)}
-                      </span>
-                      <span style={{
-                        backgroundColor: report.estado === 'borrador' ? '#e67e22' : '#2980b9',
-                        color: 'white',
-                        padding: '1px 4px',
-                        borderRadius: '3px',
-                        fontSize: '9px',
-                        textTransform: 'uppercase'
-                      }}>
-                        {report.estado}
-                      </span>
-                    </div>
-                    
-                    <div style={{ fontSize: '11px', color: '#333', marginBottom: '4px' }}>
-                      <strong>{report.provincia}</strong> → {report.municipio}
-                    </div>
-                    
-                    <div style={{ fontSize: '10px', color: '#888' }}>
-                      {formatDate(report.timestamp)}
+                      <div style={{ flex: 1 }}>
+                        <div style={{
+                          fontSize: '15px',
+                          fontWeight: '600',
+                          color: '#1a1a1a',
+                          marginBottom: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <span style={{
+                            display: 'inline-block',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: '#ff7a00',
+                            animation: 'pulse 2s infinite'
+                          }}></span>
+                          {report.tipoIntervencion || 'Intervención'}
+                        </div>
+                        <div style={{
+                          fontSize: '13px',
+                          color: '#666',
+                          marginBottom: '4px'
+                        }}>
+                          📍 <strong>{report.provincia}</strong> • {report.municipio || 'N/A'}
+                        </div>
+                        <div style={{
+                          fontSize: '12px',
+                          color: '#999',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}>
+                          <span>🕐 {formatDate(report.timestamp)}</span>
+                          <span style={{
+                            backgroundColor: '#f0f0f0',
+                            padding: '2px 8px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#666'
+                          }}>
+                            {getReportNumber(report.id)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    {onEditReport && (
+
+                  {/* Botones de acción */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '10px',
+                    justifyContent: 'flex-end'
+                  }}>
+                    {/* Botón Cancelar (Rojo) */}
+                    {onCancelReport && (
                       <button
-                        onClick={() => onEditReport(report.id)}
+                        onClick={() => handleCancelWithAnimation(report.id)}
                         style={{
-                          backgroundColor: '#27ae60',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          padding: '4px 6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          backgroundColor: 'white',
+                          color: '#e74c3c',
+                          border: '2px solid #e74c3c',
+                          borderRadius: '20px',
                           cursor: 'pointer',
-                          fontSize: '10px'
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 4px rgba(231, 76, 60, 0.1)'
                         }}
-                        title="Editar"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#e74c3c';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                          e.currentTarget.style.color = '#e74c3c';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
                       >
-                        ✏️
+                        <span style={{
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px'
+                        }}>✕</span>
+                        Cancelar
                       </button>
                     )}
-                    
-                    {onDeleteReport && (
+
+                    {/* Botón Continuar (Verde) */}
+                    {onContinueReport && (
                       <button
-                        onClick={() => {
-                          if (window.confirm(`¿Eliminar ${getReportNumber(report.id)}?`)) {
-                            onDeleteReport(report.id);
-                          }
-                        }}
+                        onClick={() => onContinueReport(report.id)}
                         style={{
-                          backgroundColor: '#e74c3c',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          backgroundColor: '#27ae60',
                           color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          padding: '4px 6px',
+                          border: '2px solid #27ae60',
+                          borderRadius: '20px',
                           cursor: 'pointer',
-                          fontSize: '10px'
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          transition: 'all 0.2s ease',
+                          boxShadow: '0 2px 4px rgba(39, 174, 96, 0.2)'
                         }}
-                        title="Eliminar"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#229954';
+                          e.currentTarget.style.borderColor = '#229954';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                          e.currentTarget.style.boxShadow = '0 4px 8px rgba(39, 174, 96, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#27ae60';
+                          e.currentTarget.style.borderColor = '#27ae60';
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(39, 174, 96, 0.2)';
+                        }}
                       >
-                        🗑️
+                        Continuar
+                        <span style={{
+                          width: '18px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '14px'
+                        }}>→</span>
                       </button>
                     )}
                   </div>
                 </div>
-              </div>
-            ))}
-            
-            {reports.length > 5 && (
-              <div style={{
-                textAlign: 'center',
-                padding: '8px',
-                color: '#666',
-                fontSize: '11px',
-                borderTop: '1px solid #eee',
-                marginTop: '8px'
-              }}>
-                ... y {reports.length - 5} más
-              </div>
-            )}
-          </div>
-        )}
-
-        <div style={{
-          marginTop: '10px',
-          textAlign: 'center',
-          fontSize: '10px',
-          color: '#999'
-        }}>
-          💡 Click para gestionar reportes
+              );
+              })}
+            </div>
+          )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(100px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.5;
+            transform: scale(0.8);
+          }
+        }
+      `}</style>
     </div>
   );
 };

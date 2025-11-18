@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Wrapper, Status } from '@googlemaps/react-wrapper';
 import { GOOGLE_MAPS_API_KEY, MAP_CONFIG, INTERVENTION_COLORS } from '../config/googleMapsConfig';
 import { reportStorage } from '../services/reportStorage';
+import ReportDetailView from './ReportDetailView';
 
 interface Intervention {
   id: number;
   timestamp: string;
+  numeroReporte?: string;
   region: string;
   provincia: string;
   distrito: string;
@@ -27,6 +29,7 @@ interface MapProps {
   center: google.maps.LatLngLiteral;
   zoom: number;
   interventions: Intervention[];
+  onViewDetail: (numeroReporte: string) => void;
 }
 
 // Coordenadas de República Dominicana por municipios principales
@@ -184,7 +187,7 @@ const municipioCoordinates: Record<string, { lat: number; lng: number }> = {
   'Rancho Arriba': { lat: 18.6833, lng: -70.4167 }
 };
 
-const Map: React.FC<MapProps> = ({ center, zoom, interventions }) => {
+const Map: React.FC<MapProps> = ({ center, zoom, interventions, onViewDetail }) => {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -265,6 +268,7 @@ const Map: React.FC<MapProps> = ({ center, zoom, interventions }) => {
                 ${intervention.tipoIntervencion}
               </h3>
               <div style="font-size: 14px; line-height: 1.5;">
+                ${intervention.numeroReporte ? `<p style="margin: 5px 0; padding: 5px 10px; background-color: #3498db; color: white; border-radius: 4px; font-weight: bold; text-align: center;">📋 ${intervention.numeroReporte}</p>` : ''}
                 <p style="margin: 5px 0;"><strong>📍 Ubicación:</strong></p>
                 <p style="margin: 2px 0 10px 20px; color: #555;">
                   ${intervention.region} → ${intervention.provincia}<br>
@@ -277,6 +281,32 @@ const Map: React.FC<MapProps> = ({ center, zoom, interventions }) => {
                   `<p style="margin: 5px 0;"><strong>📌 GPS:</strong> ${intervention.latitud.toFixed(6)}, ${intervention.longitud.toFixed(6)}</p>` : 
                   `<p style="margin: 5px 0; color: #e74c3c;"><strong>📌 GPS:</strong> Ubicación aproximada</p>`
                 }
+                <div style="margin-top: 15px; text-align: center;">
+                  <button
+                    id="view-detail-btn-${intervention.id}"
+                    style="
+                      display: inline-flex;
+                      align-items: center;
+                      justify-content: center;
+                      gap: 8px;
+                      padding: 10px 20px;
+                      background-color: #3498db;
+                      color: white;
+                      border: 2px solid #3498db;
+                      border-radius: 50px;
+                      font-size: 14px;
+                      font-weight: bold;
+                      cursor: pointer;
+                      transition: all 0.3s ease;
+                      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+                    "
+                    onmouseover="this.style.backgroundColor='#2980b9'; this.style.transform='scale(1.05)';"
+                    onmouseout="this.style.backgroundColor='#3498db'; this.style.transform='scale(1)';"
+                  >
+                    Ir
+                    <span style="font-size: 16px;">→</span>
+                  </button>
+                </div>
               </div>
             </div>
           `
@@ -284,6 +314,14 @@ const Map: React.FC<MapProps> = ({ center, zoom, interventions }) => {
 
         marker.addListener('click', () => {
           infoWindow.open(mapRef.current, marker);
+          
+          // Agregar listener al botón después de que se abra el InfoWindow
+          setTimeout(() => {
+            const btn = document.getElementById(`view-detail-btn-${intervention.id}`);
+            if (btn && intervention.numeroReporte) {
+              btn.onclick = () => onViewDetail(intervention.numeroReporte!);
+            }
+          }, 100);
         });
 
         markersRef.current.push(marker);
@@ -351,15 +389,32 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [allTypes, setAllTypes] = useState<string[]>([]);
+  const [showDetailView, setShowDetailView] = useState(false);
+  const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
 
   useEffect(() => {
-    // Cargar intervenciones desde localStorage
-    const savedInterventions = JSON.parse(localStorage.getItem('mopc_intervenciones') || '[]');
-    setInterventions(savedInterventions);
+    // Cargar intervenciones desde reportStorage
+    const reports = reportStorage.getAllReports();
+    const interventionsData = reports.map((report, index) => ({
+      id: index,
+      timestamp: report.timestamp,
+      numeroReporte: report.numeroReporte,
+      region: report.region,
+      provincia: report.provincia,
+      distrito: report.distrito,
+      municipio: report.municipio,
+      sector: report.sector,
+      tipoIntervencion: report.tipoIntervencion,
+      usuario: report.creadoPor,
+      latitud: report.gpsData?.punto_inicial?.lat || report.gpsData?.punto_alcanzado?.lat,
+      longitud: report.gpsData?.punto_inicial?.lon || report.gpsData?.punto_alcanzado?.lon
+    }));
+    
+    setInterventions(interventionsData);
 
     // Obtener tipos únicos de intervenciones
     const typeSet = new Set();
-    savedInterventions.forEach((i: Intervention) => typeSet.add(i.tipoIntervencion));
+    interventionsData.forEach((i: Intervention) => typeSet.add(i.tipoIntervencion));
     const types = Array.from(typeSet) as string[];
     setAllTypes(types);
     setSelectedTypes(types); // Mostrar todos por defecto
@@ -386,6 +441,20 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
     }
     return INTERVENTION_COLORS.default;
   };
+
+  const handleViewDetail = (numeroReporte: string) => {
+    setSelectedReportNumber(numeroReporte);
+    setShowDetailView(true);
+  };
+
+  const handleBackToMap = () => {
+    setShowDetailView(false);
+    setSelectedReportNumber('');
+  };
+
+  if (showDetailView && selectedReportNumber) {
+    return <ReportDetailView numeroReporte={selectedReportNumber} onBack={handleBackToMap} />;
+  }
 
   return (
     <div style={{ padding: '20px', height: '100vh', backgroundColor: '#f8f9fa' }}>
@@ -499,7 +568,7 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
             </div>
             <input
               type="text"
-              placeholder="Ingrese # de reporte (ej: RPT-2025-000001)"
+              placeholder="Ingrese # de reporte (ej: DCR-2025-000001)"
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -548,6 +617,7 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
               center={center} 
               zoom={zoom} 
               interventions={filteredInterventions}
+              onViewDetail={handleViewDetail}
             />
           </Wrapper>
         </div>

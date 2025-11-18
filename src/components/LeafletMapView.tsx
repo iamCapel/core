@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { reportStorage } from '../services/reportStorage';
+import ReportDetailView from './ReportDetailView';
 
 // Configurar iconos de Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -15,6 +16,7 @@ L.Icon.Default.mergeOptions({
 interface Intervention {
   id: number;
   timestamp: string;
+  numeroReporte?: string;
   region: string;
   provincia: string;
   distrito: string;
@@ -200,15 +202,32 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [allTypes, setAllTypes] = useState<string[]>([]);
+  const [showDetailView, setShowDetailView] = useState(false);
+  const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
 
   useEffect(() => {
-    // Cargar intervenciones desde localStorage
-    const savedInterventions = JSON.parse(localStorage.getItem('mopc_intervenciones') || '[]');
-    setInterventions(savedInterventions);
+    // Cargar intervenciones desde reportStorage
+    const reports = reportStorage.getAllReports();
+    const interventionsData = reports.map((report, index) => ({
+      id: index,
+      timestamp: report.timestamp,
+      numeroReporte: report.numeroReporte,
+      region: report.region,
+      provincia: report.provincia,
+      distrito: report.distrito,
+      municipio: report.municipio,
+      sector: report.sector,
+      tipoIntervencion: report.tipoIntervencion,
+      usuario: report.creadoPor,
+      latitud: report.gpsData?.punto_inicial?.lat || report.gpsData?.punto_alcanzado?.lat,
+      longitud: report.gpsData?.punto_inicial?.lon || report.gpsData?.punto_alcanzado?.lon
+    }));
+    
+    setInterventions(interventionsData);
 
     // Obtener tipos únicos de intervenciones
     const typeSet = new Set();
-    savedInterventions.forEach((i: Intervention) => typeSet.add(i.tipoIntervencion));
+    interventionsData.forEach((i: Intervention) => typeSet.add(i.tipoIntervencion));
     const types = Array.from(typeSet) as string[];
     setAllTypes(types);
     setSelectedTypes(types); // Mostrar todos por defecto
@@ -232,6 +251,20 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     }
     return INTERVENTION_COLORS.default;
   };
+
+  const handleViewDetail = (numeroReporte: string) => {
+    setSelectedReportNumber(numeroReporte);
+    setShowDetailView(true);
+  };
+
+  const handleBackToMap = () => {
+    setShowDetailView(false);
+    setSelectedReportNumber('');
+  };
+
+  if (showDetailView && selectedReportNumber) {
+    return <ReportDetailView numeroReporte={selectedReportNumber} onBack={handleBackToMap} />;
+  }
 
   // Crear iconos personalizados para cada tipo de intervención
   const createCustomIcon = (color: string) => {
@@ -365,7 +398,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             </div>
             <input
               type="text"
-              placeholder="Ingrese # de reporte (ej: RPT-2025-000001)"
+              placeholder="Ingrese # de reporte (ej: DCR-2025-000001)"
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -452,6 +485,11 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                         {intervention.tipoIntervencion}
                       </h3>
                       <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
+                        {intervention.numeroReporte && (
+                          <p style={{ margin: '5px 0', padding: '5px 10px', backgroundColor: '#3498db', color: 'white', borderRadius: '4px', fontWeight: 'bold', textAlign: 'center' }}>
+                            📋 {intervention.numeroReporte}
+                          </p>
+                        )}
                         <p style={{ margin: '5px 0' }}><strong>📍 Ubicación:</strong></p>
                         <p style={{ margin: '2px 0 10px 20px', color: '#555' }}>
                           {intervention.region} → {intervention.provincia}<br />
@@ -464,6 +502,38 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                           <p style={{ margin: '5px 0' }}><strong>📌 GPS:</strong> {intervention.latitud.toFixed(6)}, {intervention.longitud.toFixed(6)}</p> : 
                           <p style={{ margin: '5px 0', color: '#e74c3c' }}><strong>📌 GPS:</strong> Ubicación aproximada</p>
                         }
+                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => intervention.numeroReporte && handleViewDetail(intervention.numeroReporte)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              padding: '10px 20px',
+                              backgroundColor: '#3498db',
+                              color: 'white',
+                              border: '2px solid #3498db',
+                              borderRadius: '50px',
+                              fontSize: '14px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              boxShadow: '0 2px 8px rgba(52, 152, 219, 0.3)'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = '#2980b9';
+                              e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = '#3498db';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
+                            Ir
+                            <span style={{ fontSize: '16px' }}>→</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </Popup>

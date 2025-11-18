@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { reportStorage } from '../services/reportStorage';
+import ReportDetailView from './ReportDetailView';
 
 interface User {
   username: string;
@@ -105,11 +107,32 @@ const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
   const [interventions, setInterventions] = useState<any[]>([]);
   const [selectedIntervention, setSelectedIntervention] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showDetailView, setShowDetailView] = useState(false);
+  const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
+  const [showDetailView, setShowDetailView] = useState(false);
+  const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
 
   useEffect(() => {
-    // Cargar intervenciones del localStorage
-    const storedInterventions = JSON.parse(localStorage.getItem('mopc_intervenciones') || '[]');
-    setInterventions(storedInterventions);
+    // Cargar intervenciones desde reportStorage
+    const reports = reportStorage.getAllReports();
+    const interventionsData = reports.map((report, index) => ({
+      id: index,
+      timestamp: report.timestamp,
+      numeroReporte: report.numeroReporte,
+      region: report.region,
+      provincia: report.provincia,
+      distrito: report.distrito,
+      municipio: report.municipio,
+      sector: report.sector,
+      tipoIntervencion: report.tipoIntervencion,
+      usuario: report.creadoPor,
+      latitud: report.gpsData?.punto_inicial?.lat || report.gpsData?.punto_alcanzado?.lat,
+      longitud: report.gpsData?.punto_inicial?.lon || report.gpsData?.punto_alcanzado?.lon,
+      punto_inicial: report.gpsData?.punto_inicial ? `${report.gpsData.punto_inicial.lat}, ${report.gpsData.punto_inicial.lon}` : undefined,
+      punto_alcanzado: report.gpsData?.punto_alcanzado ? `${report.gpsData.punto_alcanzado.lat}, ${report.gpsData.punto_alcanzado.lon}` : undefined
+    }));
+    
+    setInterventions(interventionsData);
   }, []);
 
   // Función para obtener las coordenadas de un municipio
@@ -128,6 +151,21 @@ const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
     setShowModal(false);
     setSelectedIntervention(null);
   };
+
+  const handleViewDetail = (numeroReporte: string) => {
+    setSelectedReportNumber(numeroReporte);
+    setShowDetailView(true);
+    setShowModal(false);
+  };
+
+  const handleBackToMap = () => {
+    setShowDetailView(false);
+    setSelectedReportNumber('');
+  };
+
+  if (showDetailView && selectedReportNumber) {
+    return <ReportDetailView numeroReporte={selectedReportNumber} onBack={handleBackToMap} />;
+  }
 
   // Obtener estadísticas rápidas
   const totalInterventions = interventions.length;
@@ -285,6 +323,11 @@ const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body">
+              {selectedIntervention.numeroReporte && (
+                <div className="intervention-detail" style={{ backgroundColor: '#3498db', color: 'white', padding: '10px', borderRadius: '6px', textAlign: 'center', marginBottom: '15px' }}>
+                  <strong style={{ fontSize: '16px' }}>📋 {selectedIntervention.numeroReporte}</strong>
+                </div>
+              )}
               <div className="intervention-detail">
                 <strong>Ubicación:</strong>
                 <p>{selectedIntervention.sector}, {selectedIntervention.municipio}, {selectedIntervention.provincia}</p>
@@ -317,6 +360,38 @@ const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
                   <p>{selectedIntervention.punto_alcanzado}</p>
                 </div>
               )}
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                <button
+                  onClick={() => selectedIntervention.numeroReporte && handleViewDetail(selectedIntervention.numeroReporte)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '12px 24px',
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: '2px solid #3498db',
+                    borderRadius: '50px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: '0 2px 8px rgba(52, 152, 219, 0.3)'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2980b9';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#3498db';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  Ir
+                  <span style={{ fontSize: '18px' }}>→</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

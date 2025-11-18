@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
+import { pendingReportStorage } from '../services/pendingReportStorage';
+import PendingClockAnimation from './PendingClockAnimation';
+import PendingReportsModal from './PendingReportsModal';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
 
@@ -62,6 +65,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
   // Estado para animación de guardado
   const [showSaveAnimation, setShowSaveAnimation] = useState(false);
+  const [showPendingAnimation, setShowPendingAnimation] = useState(false);
+  const [currentPendingReportId, setCurrentPendingReportId] = useState<string | null>(null);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   // GPS state
   const [gpsEnabled, setGpsEnabled] = useState(parentGpsEnabled);
@@ -253,6 +260,58 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setTipoIntervencion('');
     setSubTipoCanal('');
   };
+
+  // Funciones de notificaciones
+  const updatePendingCount = () => {
+    const pendientes = pendingReportStorage.getPendingCount();
+    setPendingCount(pendientes);
+  };
+
+  const getPendingReports = () => {
+    const pendingReports = pendingReportStorage.getAllPendingReports();
+    return pendingReports.map(report => ({
+      id: report.id,
+      reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
+      timestamp: report.timestamp,
+      estado: 'pendiente',
+      region: report.formData.region || 'N/A',
+      provincia: report.formData.provincia || 'N/A',
+      municipio: report.formData.municipio || 'N/A',
+      tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
+    }));
+  };
+
+  const handleContinuePendingReport = (reportId: string) => {
+    const pendingReport = pendingReportStorage.getPendingReport(reportId);
+    if (pendingReport && pendingReport.formData) {
+      // Cargar datos del reporte pendiente
+      const data = pendingReport.formData;
+      setRegion(data.region || '');
+      setProvincia(data.provincia || '');
+      setMunicipio(data.municipio || '');
+      setDistrito(data.distrito || '');
+      setSector(data.sector || '');
+      setTipoIntervencion(data.tipoIntervencion || '');
+      setSubTipoCanal(data.subTipoCanal || '');
+      setPlantillaValues(data.plantillaValues || {});
+      setObservaciones(data.observaciones || '');
+      setCurrentPendingReportId(reportId);
+      setShowPendingModal(false);
+    }
+  };
+
+  const handleCancelPendingReport = (reportId: string) => {
+    pendingReportStorage.deletePendingReport(reportId);
+    updatePendingCount();
+    setShowPendingModal(false);
+    setTimeout(() => setShowPendingModal(true), 100);
+  };
+
+  useEffect(() => {
+    updatePendingCount();
+    const interval = setInterval(updatePendingCount, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleMunicipioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setMunicipio(e.target.value);
@@ -625,12 +684,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
             <img 
               src="/images/notification-bell-icon.svg" 
               alt="Notificaciones" 
+              onClick={() => setShowPendingModal(true)}
               style={{
                 width: '24px', 
                 height: '24px',
                 filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))',
                 cursor: 'pointer',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
+                animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'scale(1.1)';
@@ -641,6 +702,29 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 e.currentTarget.style.filter = 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))';
               }}
             />
+            {pendingCount > 0 && (
+              <span 
+                style={{
+                  position: 'absolute',
+                  top: '-6px',
+                  right: '-6px',
+                  backgroundColor: '#e74c3c',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '18px',
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  border: '2px solid white',
+                  animation: 'badgeGlow 2s infinite'
+                }}
+              >
+                {pendingCount > 99 ? '99+' : pendingCount}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -656,7 +740,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 <span className="report-number-label">Nº de Reporte:</span>
                 <span className="report-number-value">
                   {interventionToEdit?.numeroReporte || 
-                    `RPT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`
+                    `DCR-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`
                   }
                 </span>
               </div>
@@ -1078,17 +1162,39 @@ const ReportForm: React.FC<ReportFormProps> = ({
             <button 
               type="button" 
               onClick={() => {
-                // Guardar como pendiente
-                const pendienteData = { 
-                  region, provincia, distrito, municipio, sector, 
-                  tipoIntervencion, subTipoCanal, plantillaValues,
-                  estado: 'pendiente',
-                  timestamp: new Date().toISOString()
+                // Guardar como pendiente usando el servicio
+                const reportId = currentPendingReportId || 'pending_' + Date.now();
+                const pendingReport = {
+                  id: reportId,
+                  timestamp: new Date().toISOString(),
+                  userId: user.username,
+                  formData: {
+                    region,
+                    provincia,
+                    distrito,
+                    municipio,
+                    sector,
+                    sectorPersonalizado,
+                    tipoIntervencion,
+                    subTipoCanal,
+                    plantillaValues,
+                    observaciones,
+                    autoGpsFields
+                  },
+                  progress: 0,
+                  fieldsCompleted: []
                 };
-                localStorage.setItem('intervencion_pendiente_' + Date.now(), JSON.stringify(pendienteData));
-                alert('Guardado como pendiente');
-                limpiarFormulario();
+                
+                // Guardar en pendingReportStorage
+                pendingReportStorage.savePendingReport(pendingReport);
+                
+                // Guardar el ID en el estado
+                setCurrentPendingReportId(reportId);
+                
+                // Mostrar animación
+                setShowPendingAnimation(true);
               }}
+            
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -1125,9 +1231,16 @@ const ReportForm: React.FC<ReportFormProps> = ({
               type="button" 
               onClick={() => {
                 if (window.confirm('¿Está seguro de que desea cancelar? Se perderán los datos no guardados.')) {
+                  // Si existe un reporte pendiente, eliminarlo de las notificaciones
+                  if (currentPendingReportId) {
+                    pendingReportStorage.deletePendingReport(currentPendingReportId);
+                    setCurrentPendingReportId(null);
+                  }
+                  
+                  // Limpiar formulario
                   limpiarFormulario();
-                  // Opcional: cerrar el formulario o redirigir
-                  alert('Operación cancelada');
+                  
+                  // El formulario queda listo para un nuevo reporte
                 }
               }}
               style={{
@@ -1279,6 +1392,28 @@ const ReportForm: React.FC<ReportFormProps> = ({
           }
         }
       `}</style>
+
+      {/* Animación de Pendiente */}
+      {showPendingAnimation && (
+        <PendingClockAnimation
+          message="Reporte Guardado como Pendiente"
+          onClose={() => {
+            setShowPendingAnimation(false);
+            limpiarFormulario();
+            // Mantener el ID para poder cancelar después si es necesario
+            // setCurrentPendingReportId(null); // NO limpiar aquí
+          }}
+        />
+      )}
+
+      {/* Modal de notificaciones pendientes */}
+      <PendingReportsModal
+        isOpen={showPendingModal}
+        onClose={() => setShowPendingModal(false)}
+        reports={getPendingReports()}
+        onContinueReport={handleContinuePendingReport}
+        onCancelReport={handleCancelPendingReport}
+      />
     </div>
   );
 };

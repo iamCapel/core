@@ -1,0 +1,229 @@
+/* Animación del Reloj Pendiente */
+
+.pending-clock-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pending-clock-container {
+  background: white;
+  border-radius: 24px;
+  padding: 3rem;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(255, 122, 0, 0.3);
+  animation: slideUp 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  max-width: 400px;
+  width: 90%;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Reloj Animado */
+.clock-animation {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 2rem;
+}
+
+.clock-face {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff7a00 0%, #ff9a3d 100%);
+  box-shadow: 
+    0 0 0 8px rgba(255, 122, 0, 0.1),
+    0 0 0 16px rgba(255, 122, 0, 0.05),
+    0 10px 30px rgba(255, 122, 0, 0.3);
+  position: relative;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.clock-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 180px;
+  height: 180px;
+  margin: -90px 0 0 -90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 122, 0, 0.3) 0%, transparent 70%);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.clock-hand {
+  position: absolute;
+  background: white;
+  transform-origin: bottom center;
+  border-radius: 4px;
+  left: 50%;
+  bottom: 50%;
+}
+
+.clock-hand.hour {
+  width: 6px;
+  height: 45px;
+  margin-left: -3px;
+  animation: rotateHour 3s linear infinite;
+}
+
+.clock-hand.minute {
+  width: 4px;
+  height: 60px;
+  margin-left: -2px;
+  animation: rotateMinute 2s linear infinite;
+}
+
+@keyframes rotateHour {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateMinute {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.clock-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Textos */
+.pending-message {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0 0 0.75rem 0;
+  animation: fadeInText 0.8s ease 0.3s both;
+}
+
+.pending-subtitle {
+  font-size: 1rem;
+  color: #7f8c8d;
+  margin: 0 0 2rem 0;
+  animation: fadeInText 0.8s ease 0.5s both;
+}
+
+@keyframes fadeInText {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Botón */
+.pending-close-btn {
+  background: linear-gradient(135deg, #ff7a00 0%, #ff9a3d 100%);
+  color: white;
+  border: none;
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3);
+  transition: all 0.3s ease;
+  animation: fadeInText 0.8s ease 0.7s both;
+}
+
+.pending-close-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 122, 0, 0.4);
+}
+
+.pending-close-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .pending-clock-container {
+    padding: 2rem;
+  }
+  
+  .clock-animation {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .clock-face {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .pending-message {
+    font-size: 1.5rem;
+  }
+  
+  .pending-subtitle {
+    font-size: 0.9rem;
+  }
+}

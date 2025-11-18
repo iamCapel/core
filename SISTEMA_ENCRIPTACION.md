@@ -12,7 +12,7 @@ El sistema utiliza **encriptación de números de reporte** como identificadores
 
 - Cada reporte se guarda usando su número encriptado como clave/ID
 - Formato del ID: `MOPC_[Base64_Invertido]`
-- Ejemplo: `RPT-2025-000001` → `MOPC_MTAwMDAwLTUyMDItVFBS`
+- Ejemplo: `DCR-2025-000001` → `MOPC_MTAwMDAwLTUyMDItUkNE`
 
 ### 2. Búsqueda Optimizada
 
@@ -35,7 +35,7 @@ El sistema utiliza **encriptación de números de reporte** como identificadores
 ```typescript
 interface ReportData {
   id: string; // ID encriptado del número de reporte
-  numeroReporte: string; // Formato: RPT-YYYY-XXXXXX
+  numeroReporte: string; // Formato: DCR-YYYY-XXXXXX
   timestamp: string;
   fechaCreacion: string;
   // ... otros campos
@@ -58,7 +58,7 @@ Convierte un número de reporte en un ID encriptado.
 **Ejemplo:**
 
 ```javascript
-encryptReportNumber("RPT-2025-000001");
+encryptReportNumber("DCR-2025-000001");
 // → 'MOPC_MTAwMDAwLTUyMDItVFBS'
 ```
 
@@ -77,7 +77,7 @@ Recupera el número de reporte original desde el ID encriptado.
 
 ```javascript
 decryptReportId("MOPC_MTAwMDAwLTUyMDItVFBS");
-// → 'RPT-2025-000001'
+// → 'DCR-2025-000001'
 ```
 
 ---
@@ -105,7 +105,7 @@ Búsqueda optimizada por número de reporte.
 import { reportStorage } from "./services/reportStorage";
 
 // Búsqueda directa (instantánea)
-const report = reportStorage.getReportByNumber("RPT-2025-000001");
+const report = reportStorage.getReportByNumber("DCR-2025-000001");
 
 if (report) {
   console.log(`Reporte encontrado: ${report.tipoIntervencion}`);
@@ -203,7 +203,7 @@ const guardarIntervencion = () => {
 
   const savedReport = reportStorage.saveReport(reportData);
   // savedReport.id será el número encriptado
-  // savedReport.numeroReporte será RPT-YYYY-XXXXXX
+  // savedReport.numeroReporte será DCR-YYYY-XXXXXX
 };
 ```
 
@@ -226,7 +226,7 @@ const guardarIntervencion = () => {
   "mopc_reports_index": [
     {
       id: "MOPC_MTAwMDAwLTUyMDItVFBS",
-      numeroReporte: "RPT-2025-000001",
+      numeroReporte: "DCR-2025-000001",
       timestamp: "2025-01-15T10:30:00Z",
       // ... campos clave
     }
@@ -310,8 +310,8 @@ private migrateOldData(): void {
     oldReports.forEach(oldReport => {
       // Crear nuevo formato con ID encriptado
       const newReport = {
-        id: encryptReportNumber(`RPT-${oldReport.id}`),
-        numeroReporte: `RPT-${oldReport.id}`,
+        id: encryptReportNumber(`DCR-${oldReport.id}`),
+        numeroReporte: `DCR-${oldReport.id}`,
         // ... mapear campos
       };
 

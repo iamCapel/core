@@ -152,10 +152,10 @@
             let html = '<h3>Resultados:</h3>';
 
             const testNumbers = [
-                'RPT-2025-000001',
-                'RPT-2025-000099',
-                'RPT-2025-001234',
-                'RPT-2024-999999'
+                'DCR-2025-000001',
+                'DCR-2025-000099',
+                'DCR-2025-001234',
+                'DCR-2024-999999'
             ];
 
             testNumbers.forEach(reportNumber => {
@@ -180,7 +180,7 @@
             const resultsDiv = document.getElementById('search-results');
             let html = '<h3>Simulación de Búsqueda:</h3>';
 
-            const reportNumber = 'RPT-2025-000042';
+            const reportNumber = 'DCR-2025-000042';
             const encryptedId = encryptReportNumber(reportNumber);
 
             // Simular base de datos
@@ -238,7 +238,7 @@
             let html = '<h3>Test de Guardado y Recuperación:</h3>';
 
             // Simular guardado de reporte
-            const reportNumber = 'RPT-2025-000123';
+            const reportNumber = 'DCR-2025-000123';
             const encryptedId = encryptReportNumber(reportNumber);
             
             const reportData = {
@@ -297,7 +297,7 @@
             
             // Generar números de reporte
             for (let i = 1; i <= 100; i++) {
-                reportNumbers.push(`RPT-2025-${String(i).padStart(6, '0')}`);
+                reportNumbers.push(`DCR-2025-${String(i).padStart(6, '0')}`);
             }
 
             // Test 1: Encriptación masiva

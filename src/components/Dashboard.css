@@ -2651,3 +2651,32 @@ select option[value="otros"] {
     width: 100%;
   }
 }
+
+/* ===== ANIMACIÓN DE CAMPANITA ===== */
+@keyframes bellShake {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-15deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+  75% {
+    transform: rotate(-10deg);
+  }
+  100% {
+    transform: rotate(10deg);
+  }
+}
+
+/* Animación adicional de resplandor para el badge */
+@keyframes badgeGlow {
+  0%, 100% {
+    box-shadow: 0 2px 4px rgba(231, 76, 60, 0.4);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.8), 0 0 12px rgba(231, 76, 60, 0.6);
+  }
+}

@@ -7,6 +7,7 @@ import GoogleMapView from './GoogleMapView';
 import LeafletMapView from './LeafletMapView';
 import PendingReportsModal from './PendingReportsModal';
 import { UserRole, applyUserTheme, getRoleConfig, getRoleBadge, UserWithRole } from '../types/userRoles';
+import { pendingReportStorage } from '../services/pendingReportStorage';
 import './Dashboard.css';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
@@ -546,32 +547,25 @@ const Dashboard: React.FC = () => {
 
   // Función para actualizar el contador de pendientes
   const updatePendingCount = () => {
-    const pendientes = Object.keys(localStorage).filter(key => 
-      key.startsWith('intervencion_pendiente_') || key.startsWith('borrador_intervencion')
-    ).length;
+    const pendientes = pendingReportStorage.getPendingCount();
     setPendingCount(pendientes);
   };
 
   // Función para obtener lista detallada de reportes pendientes
   const getPendingReports = () => {
-    const pendingKeys = Object.keys(localStorage).filter(key => 
-      key.startsWith('intervencion_pendiente_') || key.startsWith('borrador_intervencion')
-    );
+    const pendingReports = pendingReportStorage.getAllPendingReports();
 
-    return pendingKeys.map(key => {
+    return pendingReports.map(report => {
       try {
-        const data = JSON.parse(localStorage.getItem(key) || '{}');
         return {
-          id: key,
-          reportNumber: key.includes('pendiente_') ? 
-            `RPT-${key.split('_').pop()?.slice(-6) || '000000'}` : 
-            `BRR-${Date.now().toString().slice(-6)}`,
-          timestamp: data.timestamp || new Date().toISOString(),
-          estado: data.estado || (key.includes('borrador') ? 'borrador' : 'pendiente'),
-          region: data.region || 'N/A',
-          provincia: data.provincia || 'N/A',
-          municipio: data.municipio || 'N/A',
-          tipoIntervencion: data.tipoIntervencion || 'No especificado'
+          id: report.id,
+          reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
+          timestamp: report.timestamp,
+          estado: 'pendiente',
+          region: report.formData.region || 'N/A',
+          provincia: report.formData.provincia || 'N/A',
+          municipio: report.formData.municipio || 'N/A',
+          tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
         };
       } catch {
         return {
@@ -588,24 +582,27 @@ const Dashboard: React.FC = () => {
     });
   };
 
-  // Función para editar un reporte pendiente
-  const handleEditPendingReport = (reportId: string) => {
+  // Función para continuar un reporte pendiente
+  const handleContinuePendingReport = (reportId: string) => {
     try {
-      const reportData = localStorage.getItem(reportId);
-      if (reportData) {
-        const data = JSON.parse(reportData);
-        setInterventionToEdit(data);
+      const pendingReport = pendingReportStorage.getPendingReport(reportId);
+      if (pendingReport && pendingReport.formData) {
+        // Cargar el formData completo del reporte pendiente
+        setInterventionToEdit(pendingReport.formData);
         setShowPendingModal(false);
         setShowReportForm(true);
+      } else {
+        alert('No se pudo cargar el reporte pendiente');
       }
     } catch (error) {
+      console.error('Error al cargar el reporte pendiente:', error);
       alert('Error al cargar el reporte pendiente');
     }
   };
 
-  // Función para eliminar un reporte pendiente
-  const handleDeletePendingReport = (reportId: string) => {
-    localStorage.removeItem(reportId);
+  // Función para cancelar/eliminar un reporte pendiente
+  const handleCancelPendingReport = (reportId: string) => {
+    pendingReportStorage.deletePendingReport(reportId);
     updatePendingCount();
     // Actualizar la vista del modal
     setShowPendingModal(false);
@@ -1095,7 +1092,8 @@ const Dashboard: React.FC = () => {
                     filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    marginLeft: '8px'
+                    marginLeft: '8px',
+                    animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
                   }}
                   onClick={() => {
                     // Abrir modal con lista de reportes pendientes
@@ -1129,8 +1127,7 @@ const Dashboard: React.FC = () => {
                       fontSize: '10px',
                       fontWeight: 'bold',
                       border: '2px solid white',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                      animation: pendingCount > 0 ? 'pulse 2s infinite' : 'none'
+                      animation: 'badgeGlow 2s infinite'
                     }}
                   >
                     {pendingCount > 99 ? '99+' : pendingCount}
@@ -1143,9 +1140,17 @@ const Dashboard: React.FC = () => {
                 <div 
                   className="topbar-notification"
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    padding: '8px'
+                  }}
                 >
-                  <span style={{ fontSize: '24px' }}>⚙️</span>
+                  <div style={{ width: '24px', height: '3px', backgroundColor: '#ff7a00', borderRadius: '2px' }}></div>
+                  <div style={{ width: '24px', height: '3px', backgroundColor: '#ff7a00', borderRadius: '2px' }}></div>
+                  <div style={{ width: '24px', height: '3px', backgroundColor: '#ff7a00', borderRadius: '2px' }}></div>
                 </div>
 
                 {showUserMenu && (
@@ -1310,8 +1315,8 @@ const Dashboard: React.FC = () => {
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
         reports={getPendingReports()}
-        onEditReport={handleEditPendingReport}
-        onDeleteReport={handleDeletePendingReport}
+        onContinueReport={handleContinuePendingReport}
+        onCancelReport={handleCancelPendingReport}
       />
 
       {/* Modal de Perfil de Usuario */}

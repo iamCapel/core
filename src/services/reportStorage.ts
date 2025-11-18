@@ -110,7 +110,7 @@ class ReportStorage {
           oldReports.forEach((oldReport: any) => {
             const newReport: ReportData = {
               id: oldReport.id?.toString() || `migrated_${Date.now()}_${Math.random()}`,
-              numeroReporte: `RPT-${oldReport.id || Date.now()}`,
+              numeroReporte: `DCR-${oldReport.id || Date.now()}`,
               timestamp: oldReport.timestamp || new Date().toISOString(),
               fechaCreacion: oldReport.timestamp || new Date().toISOString(),
               creadoPor: oldReport.usuario || 'Sistema',
@@ -173,7 +173,7 @@ class ReportStorage {
     const metadata = this.getMetadata();
     const nextNumber = (metadata?.lastReportNumber || 0) + 1;
     const year = new Date().getFullYear();
-    const reportNumber = `RPT-${year}-${String(nextNumber).padStart(6, '0')}`;
+    const reportNumber = `DCR-${year}-${String(nextNumber).padStart(6, '0')}`;
     
     this.updateMetadata({ lastReportNumber: nextNumber });
     

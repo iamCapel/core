@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import PendingReportsModal from './PendingReportsModal';
-import { reportStorage } from '../services/reportStorage';
+import { reportStorage, ReportData as FullReportData } from '../services/reportStorage';
+import { pendingReportStorage } from '../services/pendingReportStorage';
 import './ExportPage.css';
 import { UserRole } from '../types/userRoles';
+import jsPDF from 'jspdf';
 
 interface User {
   username: string;
@@ -37,53 +39,33 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
 
   // Función para actualizar el contador de pendientes
   const updatePendingCount = () => {
-    const pendientes = Object.keys(localStorage).filter(key => 
-      key.startsWith('intervencion_pendiente_') || key.startsWith('borrador_intervencion')
-    ).length;
+    const pendientes = pendingReportStorage.getPendingCount();
     setPendingCount(pendientes);
   };
 
   // Función para obtener lista detallada de reportes pendientes
   const getPendingReports = () => {
-    const pendingKeys = Object.keys(localStorage).filter(key => 
-      key.startsWith('intervencion_pendiente_') || key.startsWith('borrador_intervencion')
-    );
-
-    return pendingKeys.map(key => {
-      try {
-        const data = JSON.parse(localStorage.getItem(key) || '{}');
-        return {
-          id: key,
-          reportNumber: key.includes('pendiente_') ? 
-            `RPT-${key.split('_').pop()?.slice(-6) || '000000'}` : 
-            `BRR-${Date.now().toString().slice(-6)}`,
-          timestamp: data.timestamp || new Date().toISOString(),
-          estado: data.estado || (key.includes('borrador') ? 'borrador' : 'pendiente'),
-          region: data.region || 'N/A',
-          provincia: data.provincia || 'N/A',
-          municipio: data.municipio || 'N/A',
-          tipoIntervencion: data.tipoIntervencion || 'No especificado'
-        };
-      } catch {
-        return {
-          id: key,
-          reportNumber: `ERR-${Date.now().toString().slice(-6)}`,
-          timestamp: new Date().toISOString(),
-          estado: 'error',
-          region: 'Error',
-          provincia: 'Error',
-          municipio: 'Error',
-          tipoIntervencion: 'Error al cargar'
-        };
-      }
-    });
+    const pendingReports = pendingReportStorage.getAllPendingReports();
+    return pendingReports.map(report => ({
+      id: report.id,
+      reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
+      timestamp: report.timestamp,
+      estado: 'pendiente',
+      region: report.formData.region || 'N/A',
+      provincia: report.formData.provincia || 'N/A',
+      municipio: report.formData.municipio || 'N/A',
+      tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
+    }));
   };
 
-  // Función para eliminar un reporte pendiente
-  const handleDeletePendingReport = (reportId: string) => {
-    localStorage.removeItem(reportId);
+  const handleContinuePendingReport = (reportId: string) => {
+    alert('Función de continuar reporte desde ExportPage - redirigir a formulario');
+    setShowPendingModal(false);
+  };
+
+  const handleCancelPendingReport = (reportId: string) => {
+    pendingReportStorage.deletePendingReport(reportId);
     updatePendingCount();
-    // Actualizar la vista del modal
     setShowPendingModal(false);
     setTimeout(() => setShowPendingModal(true), 100);
   };
@@ -91,21 +73,8 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
   // Actualizar contador al cargar y cada vez que cambie localStorage
   useEffect(() => {
     updatePendingCount();
-    
-    // Escuchar cambios en localStorage
-    const handleStorageChange = () => {
-      updatePendingCount();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    
-    // También verificar periódicamente por si hay cambios internos
     const interval = setInterval(updatePendingCount, 2000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const handleSearch = () => {
@@ -181,9 +150,260 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
   };
 
   const handleDownloadPDF = (report: ReportData) => {
-    // Simulación de descarga PDF
-    const pdfContent = generatePDFContent(report);
-    downloadFile(pdfContent, `${report.reportNumber}_reporte.pdf`, 'application/pdf');
+    // Obtener datos completos del reporte desde reportStorage
+    const fullReport = reportStorage.getReportByNumber(report.reportNumber);
+    
+    if (!fullReport) {
+      alert('No se pudo cargar el reporte completo');
+      return;
+    }
+
+    generateProfessionalPDF(fullReport, report);
+  };
+
+  const generateProfessionalPDF = (fullReport: FullReportData, displayData: ReportData) => {
+    const doc = new jsPDF();
+    let yPos = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+
+    // Encabezado - Logo y título
+    doc.setFillColor(41, 128, 185); // Azul MOPC
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MINISTERIO DE OBRAS PÚBLICAS', pageWidth / 2, 15, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text('Y COMUNICACIONES', pageWidth / 2, 25, { align: 'center' });
+    
+    yPos = 50;
+
+    // Título del documento
+    doc.setTextColor(41, 128, 185);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REPORTE DE INTERVENCIÓN VIAL', pageWidth / 2, yPos, { align: 'center' });
+    
+    yPos += 15;
+
+    // Información principal en recuadro
+    doc.setFillColor(240, 248, 255);
+    doc.rect(margin, yPos - 5, contentWidth, 30, 'F');
+    doc.setDrawColor(41, 128, 185);
+    doc.rect(margin, yPos - 5, contentWidth, 30, 'S');
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Número de Reporte:`, margin + 5, yPos + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fullReport.numeroReporte, margin + 50, yPos + 5);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Fecha:`, margin + 5, yPos + 12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(fullReport.fechaCreacion).toLocaleDateString('es-PY'), margin + 50, yPos + 12);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Estado:`, margin + 5, yPos + 19);
+    doc.setFont('helvetica', 'normal');
+    const estadoColor = fullReport.estado === 'completado' ? [34, 139, 34] : 
+                        fullReport.estado === 'pendiente' ? [255, 140, 0] : [128, 128, 128];
+    doc.setTextColor(estadoColor[0], estadoColor[1], estadoColor[2]);
+    doc.text(fullReport.estado.toUpperCase(), margin + 50, yPos + 19);
+    doc.setTextColor(0, 0, 0);
+
+    yPos += 40;
+
+    // Sección de Ubicación
+    doc.setFillColor(41, 128, 185);
+    doc.rect(margin, yPos, contentWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('📍 UBICACIÓN GEOGRÁFICA', margin + 3, yPos + 5);
+    
+    yPos += 13;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Región:', margin + 5, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fullReport.region || 'N/A', margin + 30, yPos);
+    
+    yPos += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Provincia:', margin + 5, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fullReport.provincia || 'N/A', margin + 30, yPos);
+    
+    yPos += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Municipio:', margin + 5, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fullReport.municipio || 'N/A', margin + 30, yPos);
+    
+    yPos += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Distrito:', margin + 5, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fullReport.distrito || 'N/A', margin + 30, yPos);
+    
+    yPos += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Sector:', margin + 5, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fullReport.sector || 'N/A', margin + 30, yPos);
+    
+    yPos += 15;
+
+    // Sección de Intervención
+    doc.setFillColor(41, 128, 185);
+    doc.rect(margin, yPos, contentWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('🛠️ DATOS DE LA INTERVENCIÓN', margin + 3, yPos + 5);
+    
+    yPos += 13;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Tipo de Intervención:', margin + 5, yPos);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fullReport.tipoIntervencion || 'N/A', margin + 50, yPos);
+    
+    if (fullReport.subTipoCanal) {
+      yPos += 7;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Subtipo:', margin + 5, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(fullReport.subTipoCanal, margin + 50, yPos);
+    }
+    
+    yPos += 15;
+
+    // Datos Métricos
+    if (fullReport.metricData && Object.keys(fullReport.metricData).length > 0) {
+      doc.setFillColor(41, 128, 185);
+      doc.rect(margin, yPos, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('📊 DATOS MÉTRICOS', margin + 3, yPos + 5);
+      
+      yPos += 13;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      
+      Object.entries(fullReport.metricData).forEach(([key, value]) => {
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        doc.setFont('helvetica', 'bold');
+        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        doc.text(`${label}:`, margin + 5, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value), margin + 70, yPos);
+        yPos += 6;
+      });
+      
+      yPos += 10;
+    }
+
+    // Datos GPS
+    if (fullReport.gpsData && (fullReport.gpsData.punto_inicial || fullReport.gpsData.punto_alcanzado)) {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFillColor(41, 128, 185);
+      doc.rect(margin, yPos, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('🌍 COORDENADAS GPS', margin + 3, yPos + 5);
+      
+      yPos += 13;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      
+      if (fullReport.gpsData.punto_inicial) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Punto Inicial:', margin + 5, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Lat: ${fullReport.gpsData.punto_inicial.lat}, Lon: ${fullReport.gpsData.punto_inicial.lon}`, margin + 35, yPos);
+        yPos += 6;
+      }
+      
+      if (fullReport.gpsData.punto_alcanzado) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Punto Alcanzado:', margin + 5, yPos);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Lat: ${fullReport.gpsData.punto_alcanzado.lat}, Lon: ${fullReport.gpsData.punto_alcanzado.lon}`, margin + 35, yPos);
+        yPos += 6;
+      }
+      
+      yPos += 10;
+    }
+
+    // Observaciones
+    if (fullReport.observaciones) {
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFillColor(41, 128, 185);
+      doc.rect(margin, yPos, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('📝 OBSERVACIONES', margin + 3, yPos + 5);
+      
+      yPos += 13;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      const lines = doc.splitTextToSize(fullReport.observaciones, contentWidth - 10);
+      lines.forEach((line: string) => {
+        if (yPos > 280) {
+          doc.addPage();
+          yPos = 20;
+        }
+        doc.text(line, margin + 5, yPos);
+        yPos += 5;
+      });
+      
+      yPos += 10;
+    }
+
+    // Pie de página en todas las páginas
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.setFont('helvetica', 'italic');
+      doc.text(`Generado el ${new Date().toLocaleDateString('es-PY')} a las ${new Date().toLocaleTimeString('es-PY')}`, margin, 285);
+      doc.text(`Por: ${fullReport.creadoPor}`, margin, 290);
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, 290, { align: 'right' });
+      
+      // Línea decorativa
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(0.5);
+      doc.line(margin, 280, pageWidth - margin, 280);
+    }
+
+    // Descargar el PDF
+    doc.save(`${fullReport.numeroReporte}_reporte.pdf`);
   };
 
   const handleDownloadExcel = (report: ReportData) => {
@@ -196,28 +416,6 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
     // Simulación de descarga Word
     const wordContent = generateWordContent(report);
     downloadFile(wordContent, `${report.reportNumber}_reporte.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-  };
-
-  const generatePDFContent = (report: ReportData): string => {
-    return `
-MINISTERIO DE OBRAS PÚBLICAS Y COMUNICACIONES
-===============================================
-
-REPORTE DE INTERVENCIÓN
-Número: ${report.reportNumber}
-Fecha: ${report.date}
-Provincia: ${report.province}
-Estado: ${report.status}
-
-TÍTULO: ${report.title}
-
-DESCRIPCIÓN:
-${report.description}
-
----
-Generado el: ${new Date().toLocaleString()}
-Usuario: ${user.name}
-    `.trim();
   };
 
   const generateExcelContent = (report: ReportData): string => {
@@ -328,7 +526,8 @@ Documento generado el ${new Date().toLocaleString()} por ${user.name}
               height: '24px',
               filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))',
               cursor: 'pointer',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
             }}
             onClick={() => setShowPendingModal(true)}
             onMouseOver={(e) => {
@@ -359,8 +558,7 @@ Documento generado el ${new Date().toLocaleString()} por ${user.name}
                 fontSize: '10px',
                 fontWeight: 'bold',
                 border: '2px solid white',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                animation: pendingCount > 0 ? 'pulse 2s infinite' : 'none'
+                animation: 'badgeGlow 2s infinite'
               }}
             >
               {pendingCount > 99 ? '99+' : pendingCount}
@@ -384,7 +582,7 @@ Documento generado el ${new Date().toLocaleString()} por ${user.name}
               <input
                 type="text"
                 className="search-input"
-                placeholder="Ej: RPT-2025-001"
+                placeholder="Ej: DCR-2025-001"
                 value={searchNumber}
                 onChange={(e) => setSearchNumber(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -533,7 +731,8 @@ Documento generado el ${new Date().toLocaleString()} por ${user.name}
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
         reports={getPendingReports()}
-        onDeleteReport={handleDeletePendingReport}
+        onContinueReport={handleContinuePendingReport}
+        onCancelReport={handleCancelPendingReport}
       />
     </div>
   );

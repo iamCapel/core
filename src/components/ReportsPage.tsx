@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
+import { pendingReportStorage } from '../services/pendingReportStorage';
+import PendingReportsModal from './PendingReportsModal';
 import './ReportsPage.css';
 
 interface User {
@@ -70,10 +72,50 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
   const [statsMode, setStatsMode] = useState<StatsMode>('intervenciones');
   const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
   const [regionesData, setRegionesData] = useState<RegionData[]>([]);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     cargarDatosRegiones();
     const interval = setInterval(cargarDatosRegiones, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Actualizar contador de pendientes
+  const updatePendingCount = () => {
+    const pendientes = pendingReportStorage.getPendingCount();
+    setPendingCount(pendientes);
+  };
+
+  const getPendingReports = () => {
+    const pendingReports = pendingReportStorage.getAllPendingReports();
+    return pendingReports.map(report => ({
+      id: report.id,
+      reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
+      timestamp: report.timestamp,
+      estado: 'pendiente',
+      region: report.formData.region || 'N/A',
+      provincia: report.formData.provincia || 'N/A',
+      municipio: report.formData.municipio || 'N/A',
+      tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
+    }));
+  };
+
+  const handleContinuePendingReport = (reportId: string) => {
+    alert('Función de continuar reporte desde ReportsPage - redirigir a formulario');
+    setShowPendingModal(false);
+  };
+
+  const handleCancelPendingReport = (reportId: string) => {
+    pendingReportStorage.deletePendingReport(reportId);
+    updatePendingCount();
+    setShowPendingModal(false);
+    setTimeout(() => setShowPendingModal(true), 100);
+  };
+
+  useEffect(() => {
+    updatePendingCount();
+    const interval = setInterval(updatePendingCount, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -180,28 +222,90 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
   return (
     <div className="reports-page">
       <div className="reports-container">
-        <div className="reports-topbar">
-          <button className="topbar-back-btn" onClick={onBack}>
-            ← Volver al Dashboard
-          </button>
+        {/* Topbar Reconstruido */}
+        <div className="reports-topbar-modern">
+          <div className="topbar-left-section">
+            <button className="topbar-back-btn-modern" onClick={onBack}>
+              <span className="back-arrow">←</span>
+              <span className="back-text">Dashboard</span>
+            </button>
+            <div className="topbar-divider"></div>
+            <div className="topbar-title-section">
+              <h1 className="topbar-main-title">Informes y Estadísticas</h1>
+              <p className="topbar-subtitle">Análisis de intervenciones por región</p>
+            </div>
+          </div>
+          
+          <div className="topbar-right-section">
+            {/* Icono de notificaciones */}
+            <div className="notification-container" style={{ position: 'relative', marginRight: '16px' }}>
+              <img 
+                src="/images/notification-bell-icon.svg" 
+                alt="Notificaciones" 
+                className="notification-icon"
+                style={{
+                  width: '24px', 
+                  height: '24px',
+                  filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
+                }}
+                onClick={() => setShowPendingModal(true)}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.filter = 'drop-shadow(0 3px 6px rgba(255, 152, 0, 0.6))';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.filter = 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))';
+                }}
+              />
+              {pendingCount > 0 && (
+                <span 
+                  style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-6px',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: '18px',
+                    height: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    border: '2px solid white',
+                    animation: 'badgeGlow 2s infinite'
+                  }}
+                >
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
+            </div>
+
+            <div className="view-selector-topbar">
+              <button 
+                className={`view-btn-topbar ${currentView === 'estadisticas' ? 'active' : ''}`}
+                onClick={() => setCurrentView('estadisticas')}
+              >
+                <span className="view-icon">📊</span>
+                <span className="view-label">Estadísticas</span>
+              </button>
+              <button 
+                className={`view-btn-topbar ${currentView === 'detallado' ? 'active' : ''}`}
+                onClick={() => setCurrentView('detallado')}
+              >
+                <span className="view-icon">📄</span>
+                <span className="view-label">Informe Detallado</span>
+              </button>
+            </div>
+          </div>
         </div>
         
         <div className="reports-content">
-          <div className="view-selector">
-            <button 
-              className={`view-btn ${currentView === 'estadisticas' ? 'active' : ''}`}
-              onClick={() => setCurrentView('estadisticas')}
-            >
-              📊 Estadísticas
-            </button>
-            <button 
-              className={`view-btn ${currentView === 'detallado' ? 'active' : ''}`}
-              onClick={() => setCurrentView('detallado')}
-            >
-              📄 Informe Detallado
-            </button>
-          </div>
-
           {currentView === 'estadisticas' && (
             <div className="view-content">
               <div className="stats-header-section">
@@ -382,6 +486,15 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
           )}
         </div>
       </div>
+
+      {/* Modal de notificaciones pendientes */}
+      <PendingReportsModal
+        isOpen={showPendingModal}
+        onClose={() => setShowPendingModal(false)}
+        reports={getPendingReports()}
+        onContinueReport={handleContinuePendingReport}
+        onCancelReport={handleCancelPendingReport}
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
+import { pendingReportStorage } from '../services/pendingReportStorage';
 import './UsersPage.css';
 import PendingReportsModal from './PendingReportsModal';
 
@@ -66,81 +67,178 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
 
   // Función para actualizar el contador de pendientes
   const updatePendingCount = () => {
-    const pendientes = Object.keys(localStorage).filter(key => 
-      key.startsWith('intervencion_pendiente_') || key.startsWith('borrador_intervencion')
-    ).length;
+    const pendientes = pendingReportStorage.getPendingCount();
     setPendingCount(pendientes);
   };
 
   // Función para obtener lista detallada de reportes pendientes
   const getPendingReports = () => {
-    const pendingKeys = Object.keys(localStorage).filter(key => 
-      key.startsWith('intervencion_pendiente_') || key.startsWith('borrador_intervencion')
-    );
-
-    return pendingKeys.map(key => {
-      try {
-        const data = JSON.parse(localStorage.getItem(key) || '{}');
-        return {
-          id: key,
-          reportNumber: key.includes('pendiente_') ? 
-            `RPT-${key.split('_').pop()?.slice(-6) || '000000'}` : 
-            `BRR-${Date.now().toString().slice(-6)}`,
-          timestamp: data.timestamp || new Date().toISOString(),
-          estado: data.estado || (key.includes('borrador') ? 'borrador' : 'pendiente'),
-          region: data.region || 'N/A',
-          provincia: data.provincia || 'N/A',
-          municipio: data.municipio || 'N/A',
-          tipoIntervencion: data.tipoIntervencion || 'No especificado'
-        };
-      } catch {
-        return {
-          id: key,
-          reportNumber: `ERR-${Date.now().toString().slice(-6)}`,
-          timestamp: new Date().toISOString(),
-          estado: 'error',
-          region: 'Error',
-          provincia: 'Error',
-          municipio: 'Error',
-          tipoIntervencion: 'Error al cargar'
-        };
-      }
-    });
+    const pendingReports = pendingReportStorage.getAllPendingReports();
+    return pendingReports.map(report => ({
+      id: report.id,
+      reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
+      timestamp: report.timestamp,
+      estado: 'pendiente',
+      region: report.formData.region || 'N/A',
+      provincia: report.formData.provincia || 'N/A',
+      municipio: report.formData.municipio || 'N/A',
+      tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
+    }));
   };
 
-  // Función para eliminar un reporte pendiente
-  const handleDeletePendingReport = (reportId: string) => {
-    localStorage.removeItem(reportId);
+  const handleContinuePendingReport = (reportId: string) => {
+    alert('Función de continuar reporte desde UsersPage - redirigir a formulario');
+    setShowPendingModal(false);
+  };
+
+  const handleCancelPendingReport = (reportId: string) => {
+    pendingReportStorage.deletePendingReport(reportId);
     updatePendingCount();
-    // Actualizar la vista del modal
     setShowPendingModal(false);
     setTimeout(() => setShowPendingModal(true), 100);
   };
+
+  // Generar usuarios mock al cargar y calcular pendingReportsCount desde pendingReportStorage
+  useEffect(() => {
+    const mockUsers: UserProfile[] = [
+      {
+        id: 'user-001',
+        username: 'juan.perez',
+        name: 'Juan Pérez',
+        email: 'juan.perez@mopc.gov.py',
+        role: 'Supervisor',
+        isActive: true,
+        lastSeen: 'Hace 5 minutos',
+        department: 'Departamento de Obras Viales',
+        reportsCount: 45,
+        joinDate: '2024-01-15',
+        currentLocation: {
+          province: 'Central',
+          municipality: 'Asunción',
+          coordinates: { lat: -25.2637, lng: -57.5759 },
+          lastUpdated: 'Hace 10 minutos'
+        }
+      },
+      {
+        id: 'user-002',
+        username: 'maria.gonzalez',
+        name: 'María González',
+        email: 'maria.gonzalez@mopc.gov.py',
+        role: 'Técnico',
+        isActive: true,
+        lastSeen: 'Hace 15 minutos',
+        department: 'Departamento de Infraestructura',
+        reportsCount: 32,
+        joinDate: '2024-02-20',
+        currentLocation: {
+          province: 'Alto Paraná',
+          municipality: 'Ciudad del Este',
+          coordinates: { lat: -25.5138, lng: -54.6158 },
+          lastUpdated: 'Hace 20 minutos'
+        }
+      },
+      {
+        id: 'user-003',
+        username: 'carlos.rodriguez',
+        name: 'Carlos Rodríguez',
+        email: 'carlos.rodriguez@mopc.gov.py',
+        role: 'Técnico',
+        isActive: true,
+        lastSeen: 'Hace 30 minutos',
+        department: 'Departamento de Mantenimiento',
+        reportsCount: 28,
+        joinDate: '2023-11-10',
+        currentLocation: {
+          province: 'Itapúa',
+          municipality: 'Encarnación',
+          coordinates: { lat: -27.3300, lng: -55.8663 },
+          lastUpdated: 'Hace 45 minutos'
+        }
+      },
+      {
+        id: 'user-004',
+        username: 'ana.martinez',
+        name: 'Ana Martínez',
+        email: 'ana.martinez@mopc.gov.py',
+        role: 'Supervisor',
+        isActive: false,
+        lastSeen: 'Hace 2 días',
+        department: 'Departamento de Obras Viales',
+        reportsCount: 18,
+        joinDate: '2024-03-05',
+        currentLocation: {
+          province: 'Cordillera',
+          municipality: 'Caacupé',
+          coordinates: { lat: -25.3864, lng: -57.1439 },
+          lastUpdated: 'Hace 2 días'
+        }
+      },
+      {
+        id: 'user-005',
+        username: 'pedro.lopez',
+        name: 'Pedro López',
+        email: 'pedro.lopez@mopc.gov.py',
+        role: 'Técnico',
+        isActive: true,
+        lastSeen: 'Hace 1 hora',
+        department: 'Departamento de Infraestructura',
+        reportsCount: 52,
+        joinDate: '2023-08-12',
+        currentLocation: {
+          province: 'Central',
+          municipality: 'Luque',
+          coordinates: { lat: -25.2650, lng: -57.4942 },
+          lastUpdated: 'Hace 1 hora'
+        }
+      }
+    ];
+
+    // Calcular pendingReportsCount para cada usuario desde pendingReportStorage
+    const usersWithPendingCounts = mockUsers.map(mockUser => ({
+      ...mockUser,
+      pendingReportsCount: pendingReportStorage.getUserPendingReports(mockUser.username).length
+    }));
+
+    setUsers(usersWithPendingCounts);
+  }, []);
 
   // Actualizar contador al cargar y cada vez que cambie localStorage
   useEffect(() => {
     updatePendingCount();
     
-    // Escuchar cambios en localStorage
-    const handleStorageChange = () => {
-      updatePendingCount();
+    // Actualizar pendingReportsCount de todos los usuarios periódicamente
+    const updateUsersPendingCounts = () => {
+      setUsers(prevUsers => 
+        prevUsers.map(user => ({
+          ...user,
+          pendingReportsCount: pendingReportStorage.getUserPendingReports(user.username).length
+        }))
+      );
     };
-
-    window.addEventListener('storage', handleStorageChange);
     
-    // También verificar periódicamente por si hay cambios internos
-    const interval = setInterval(updatePendingCount, 2000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
+    const interval = setInterval(() => {
+      updatePendingCount();
+      updateUsersPendingCounts();
+    }, 2000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleUserClick = (clickedUser: UserProfile) => {
     setSelectedUser(clickedUser);
-    // En lugar de datos simulados, aquí se cargarían los reportes reales del usuario desde localStorage
-    setUserReports([]);
+    
+    // Cargar reportes pendientes reales del usuario desde pendingReportStorage
+    const pendingReports = pendingReportStorage.getUserPendingReports(clickedUser.username);
+    const formattedPendingReports: UserReport[] = pendingReports.map(report => ({
+      id: report.id,
+      title: report.formData.tipoIntervencion || 'Intervención',
+      date: new Date(report.timestamp).toLocaleDateString(),
+      status: 'Pendiente' as const,
+      province: report.formData.provincia || 'N/A',
+      type: report.formData.tipoIntervencion || 'No especificado'
+    }));
+    
+    setUserReports(formattedPendingReports);
     setShowUserDetail(true);
   };
 
@@ -243,7 +341,8 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                   height: '24px',
                   filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
                 }}
                 onClick={() => setShowPendingModal(true)}
                 onMouseOver={(e) => {
@@ -274,8 +373,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                     fontSize: '10px',
                     fontWeight: 'bold',
                     border: '2px solid white',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    animation: pendingCount > 0 ? 'pulse 2s infinite' : 'none'
+                    animation: 'badgeGlow 2s infinite'
                   }}
                 >
                   {pendingCount > 99 ? '99+' : pendingCount}
@@ -416,7 +514,10 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
             alt="Notificaciones" 
             className="notification-icon"
             onClick={() => setShowPendingModal(true)}
-            style={{ cursor: 'pointer' }}
+            style={{ 
+              cursor: 'pointer',
+              animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
+            }}
           />
           {/* Contador de notificaciones */}
           {pendingCount > 0 && (
@@ -437,8 +538,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                 fontSize: '10px',
                 fontWeight: 'bold',
                 border: '2px solid white',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                animation: pendingCount > 0 ? 'pulse 2s infinite' : 'none'
+                animation: 'badgeGlow 2s infinite'
               }}
             >
               {pendingCount > 99 ? '99+' : pendingCount}
@@ -1453,7 +1553,8 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
         reports={getPendingReports()}
-        onDeleteReport={handleDeletePendingReport}
+        onContinueReport={handleContinuePendingReport}
+        onCancelReport={handleCancelPendingReport}
       />
     </div>
   );
