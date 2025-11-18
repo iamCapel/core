@@ -1254,7 +1254,7 @@ const Dashboard: React.FC = () => {
             )}
 
             {/* Icono Buscar */}
-            <div className={`dashboard-icon-card ${!isProfileComplete ? 'profile-locked' : ''}`} onClick={handleShowLeafletMap}>
+            <div className={`dashboard-icon-card ${!isProfileComplete ? 'profile-locked' : ''}`} onClick={handleShowGoogleMap}>
               <div className="dashboard-icon">
                 <img src="/images/map-icon.svg" alt="Buscar en mapa" style={{width: '64px', height: '64px'}} />
               </div>
