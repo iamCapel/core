@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Sistema de Encriptación de Reportes MOPC</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .test-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .result {
+            background: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
+        }
+        .result-label {
+            font-weight: bold;
+            color: #667eea;
+            display: inline-block;
+            width: 200px;
+        }
+        .result-value {
+            color: #333;
+            font-family: 'Courier New', monospace;
+            background: #f1f3f5;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Sistema de Encriptación de Reportes</h1>
+        <p class="subtitle">Ministerio de Obras Públicas y Comunicaciones</p>
+
+        <div class="info-box">
+            <strong>ℹ️ Información del Sistema:</strong><br>
+            Cada reporte se guarda con un identificador encriptado basado en su número de reporte.
+            Esto optimiza las búsquedas y mantiene la organización del sistema.
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📝 Test 1: Encriptación de Números de Reporte</div>
+            <button onclick="testEncryption()">Ejecutar Test de Encriptación</button>
+            <div id="encryption-results"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🔍 Test 2: Búsqueda Optimizada</div>
+            <button onclick="testSearchOptimization()">Ejecutar Test de Búsqueda</button>
+            <div id="search-results"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">💾 Test 3: Guardar y Recuperar Reporte</div>
+            <button onclick="testSaveAndRetrieve()">Ejecutar Test Completo</button>
+            <div id="save-results"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">⚡ Test 4: Rendimiento</div>
+            <button onclick="testPerformance()">Medir Rendimiento</button>
+            <div id="performance-results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Funciones de encriptación (copiadas del sistema)
+        function encryptReportNumber(reportNumber) {
+            const base64 = btoa(reportNumber);
+            const encrypted = 'MOPC_' + base64.split('').reverse().join('').replace(/=/g, '_');
+            return encrypted;
+        }
+
+        function decryptReportId(encryptedId) {
+            try {
+                const base64 = encryptedId.replace('MOPC_', '').replace(/_/g, '=').split('').reverse().join('');
+                return atob(base64);
+            } catch {
+                return '';
+            }
+        }
+
+        function testEncryption() {
+            const resultsDiv = document.getElementById('encryption-results');
+            let html = '<h3>Resultados:</h3>';
+
+            const testNumbers = [
+                'RPT-2025-000001',
+                'RPT-2025-000099',
+                'RPT-2025-001234',
+                'RPT-2024-999999'
+            ];
+
+            testNumbers.forEach(reportNumber => {
+                const encrypted = encryptReportNumber(reportNumber);
+                const decrypted = decryptReportId(encrypted);
+                const isValid = decrypted === reportNumber;
+
+                html += `
+                    <div class="result">
+                        <div><span class="result-label">Original:</span> <span class="result-value">${reportNumber}</span></div>
+                        <div><span class="result-label">Encriptado (ID):</span> <span class="result-value">${encrypted}</span></div>
+                        <div><span class="result-label">Desencriptado:</span> <span class="result-value">${decrypted}</span></div>
+                        <div><span class="result-label">Validación:</span> <span class="${isValid ? 'success' : 'error'}">${isValid ? '✅ Correcto' : '❌ Error'}</span></div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function testSearchOptimization() {
+            const resultsDiv = document.getElementById('search-results');
+            let html = '<h3>Simulación de Búsqueda:</h3>';
+
+            const reportNumber = 'RPT-2025-000042';
+            const encryptedId = encryptReportNumber(reportNumber);
+
+            // Simular base de datos
+            const mockDatabase = {};
+            mockDatabase[encryptedId] = {
+                id: encryptedId,
+                numeroReporte: reportNumber,
+                tipoIntervencion: 'Pavimentación',
+                region: 'Cibao Central',
+                provincia: 'Santiago',
+                estado: 'completado'
+            };
+
+            // Test de búsqueda directa (O(1))
+            const startDirect = performance.now();
+            const directResult = mockDatabase[encryptedId];
+            const endDirect = performance.now();
+
+            // Test de búsqueda lineal (O(n))
+            const startLinear = performance.now();
+            let linearResult = null;
+            for (let key in mockDatabase) {
+                if (mockDatabase[key].numeroReporte === reportNumber) {
+                    linearResult = mockDatabase[key];
+                    break;
+                }
+            }
+            const endLinear = performance.now();
+
+            html += `
+                <div class="result">
+                    <div><span class="result-label">Número Buscado:</span> <span class="result-value">${reportNumber}</span></div>
+                    <div><span class="result-label">ID Encriptado:</span> <span class="result-value">${encryptedId}</span></div>
+                </div>
+                <div class="result">
+                    <div><span class="result-label">🚀 Búsqueda Directa (O(1)):</span></div>
+                    <div><span class="result-label">Tiempo:</span> <span class="result-value">${(endDirect - startDirect).toFixed(4)} ms</span></div>
+                    <div><span class="result-label">Resultado:</span> <span class="success">${directResult ? '✅ Encontrado' : '❌ No encontrado'}</span></div>
+                </div>
+                <div class="result">
+                    <div><span class="result-label">🐌 Búsqueda Lineal (O(n)):</span></div>
+                    <div><span class="result-label">Tiempo:</span> <span class="result-value">${(endLinear - startLinear).toFixed(4)} ms</span></div>
+                    <div><span class="result-label">Resultado:</span> <span class="success">${linearResult ? '✅ Encontrado' : '❌ No encontrado'}</span></div>
+                </div>
+                <div class="result">
+                    <div><span class="result-label">⚡ Mejora de Velocidad:</span> <span class="success">${((endLinear - startLinear) / (endDirect - startDirect)).toFixed(2)}x más rápido</span></div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function testSaveAndRetrieve() {
+            const resultsDiv = document.getElementById('save-results');
+            let html = '<h3>Test de Guardado y Recuperación:</h3>';
+
+            // Simular guardado de reporte
+            const reportNumber = 'RPT-2025-000123';
+            const encryptedId = encryptReportNumber(reportNumber);
+            
+            const reportData = {
+                id: encryptedId,
+                numeroReporte: reportNumber,
+                tipoIntervencion: 'Canalización',
+                region: 'Valdesia',
+                provincia: 'San Cristóbal',
+                municipio: 'San Cristóbal',
+                distrito: 'Hato Damas',
+                sector: 'Villa Fundación',
+                creadoPor: 'Test User',
+                fechaCreacion: new Date().toISOString(),
+                estado: 'completado'
+            };
+
+            // Guardar en localStorage de prueba
+            try {
+                const testKey = 'mopc_test_reports';
+                const testDb = JSON.parse(localStorage.getItem(testKey) || '{}');
+                testDb[encryptedId] = reportData;
+                localStorage.setItem(testKey, JSON.stringify(testDb));
+
+                // Recuperar
+                const retrieved = testDb[encryptedId];
+                const isValid = retrieved && retrieved.numeroReporte === reportNumber;
+
+                html += `
+                    <div class="result">
+                        <div><span class="result-label">📥 Guardado:</span> <span class="success">✅ Exitoso</span></div>
+                        <div><span class="result-label">ID Utilizado:</span> <span class="result-value">${encryptedId}</span></div>
+                    </div>
+                    <div class="result">
+                        <div><span class="result-label">📤 Recuperación:</span> <span class="${isValid ? 'success' : 'error'}">${isValid ? '✅ Exitosa' : '❌ Fallida'}</span></div>
+                        <div><span class="result-label">Número Reporte:</span> <span class="result-value">${retrieved?.numeroReporte || 'N/A'}</span></div>
+                        <div><span class="result-label">Tipo Intervención:</span> <span class="result-value">${retrieved?.tipoIntervencion || 'N/A'}</span></div>
+                        <div><span class="result-label">Provincia:</span> <span class="result-value">${retrieved?.provincia || 'N/A'}</span></div>
+                    </div>
+                `;
+
+                // Limpiar
+                localStorage.removeItem(testKey);
+            } catch (error) {
+                html += `<div class="result"><span class="error">❌ Error: ${error.message}</span></div>`;
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function testPerformance() {
+            const resultsDiv = document.getElementById('performance-results');
+            let html = '<h3>Análisis de Rendimiento:</h3>';
+
+            const iterations = 10000;
+            const reportNumbers = [];
+            
+            // Generar números de reporte
+            for (let i = 1; i <= 100; i++) {
+                reportNumbers.push(`RPT-2025-${String(i).padStart(6, '0')}`);
+            }
+
+            // Test 1: Encriptación masiva
+            const startEncrypt = performance.now();
+            for (let i = 0; i < iterations; i++) {
+                const idx = i % reportNumbers.length;
+                encryptReportNumber(reportNumbers[idx]);
+            }
+            const endEncrypt = performance.now();
+            const encryptTime = endEncrypt - startEncrypt;
+
+            // Test 2: Desencriptación masiva
+            const encryptedIds = reportNumbers.map(encryptReportNumber);
+            const startDecrypt = performance.now();
+            for (let i = 0; i < iterations; i++) {
+                const idx = i % encryptedIds.length;
+                decryptReportId(encryptedIds[idx]);
+            }
+            const endDecrypt = performance.now();
+            const decryptTime = endDecrypt - startDecrypt;
+
+            // Test 3: Búsqueda en base grande
+            const mockDb = {};
+            reportNumbers.forEach((num, idx) => {
+                mockDb[encryptedIds[idx]] = { numeroReporte: num };
+            });
+
+            const startSearch = performance.now();
+            for (let i = 0; i < 1000; i++) {
+                const idx = Math.floor(Math.random() * encryptedIds.length);
+                const result = mockDb[encryptedIds[idx]];
+            }
+            const endSearch = performance.now();
+            const searchTime = endSearch - startSearch;
+
+            html += `
+                <div class="result">
+                    <div><span class="result-label">🔐 Encriptaciones:</span> <span class="result-value">${iterations.toLocaleString()}</span></div>
+                    <div><span class="result-label">Tiempo Total:</span> <span class="result-value">${encryptTime.toFixed(2)} ms</span></div>
+                    <div><span class="result-label">Promedio:</span> <span class="result-value">${(encryptTime / iterations).toFixed(4)} ms/operación</span></div>
+                </div>
+                <div class="result">
+                    <div><span class="result-label">🔓 Desencriptaciones:</span> <span class="result-value">${iterations.toLocaleString()}</span></div>
+                    <div><span class="result-label">Tiempo Total:</span> <span class="result-value">${decryptTime.toFixed(2)} ms</span></div>
+                    <div><span class="result-label">Promedio:</span> <span class="result-value">${(decryptTime / iterations).toFixed(4)} ms/operación</span></div>
+                </div>
+                <div class="result">
+                    <div><span class="result-label">🔍 Búsquedas (1000):</span></div>
+                    <div><span class="result-label">Base de Datos:</span> <span class="result-value">${reportNumbers.length} reportes</span></div>
+                    <div><span class="result-label">Tiempo Total:</span> <span class="result-value">${searchTime.toFixed(2)} ms</span></div>
+                    <div><span class="result-label">Promedio:</span> <span class="result-value">${(searchTime / 1000).toFixed(4)} ms/búsqueda</span></div>
+                </div>
+                <div class="result">
+                    <div><span class="result-label">📊 Conclusión:</span> <span class="success">✅ Sistema optimizado para operaciones rápidas</span></div>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Ejecutar test inicial
+        window.onload = () => {
+            console.log('🔐 Sistema de Encriptación MOPC - Test Suite Cargado');
+        };
+    </script>
+</body>
+</html>

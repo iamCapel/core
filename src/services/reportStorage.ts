@@ -142,9 +142,34 @@ class ReportStorage {
   }
 
   /**
-   * Generar número de reporte único
+   * Encriptar número de reporte para usar como ID
+   * Usa una codificación simple Base64 con transformación adicional
    */
-  private generateReportNumber(): string {
+  private encryptReportNumber(reportNumber: string): string {
+    // Convertir a Base64 y agregar prefijo para identificación
+    const base64 = btoa(reportNumber);
+    // Transformar para hacerlo único y no obvio
+    const encrypted = 'MOPC_' + base64.split('').reverse().join('').replace(/=/g, '_');
+    return encrypted;
+  }
+
+  /**
+   * Desencriptar ID para obtener número de reporte
+   */
+  private decryptReportId(encryptedId: string): string {
+    try {
+      // Remover prefijo y revertir transformación
+      const base64 = encryptedId.replace('MOPC_', '').replace(/_/g, '=').split('').reverse().join('');
+      return atob(base64);
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Generar número de reporte único y su ID encriptado
+   */
+  private generateReportNumber(): { reportNumber: string; encryptedId: string } {
     const metadata = this.getMetadata();
     const nextNumber = (metadata?.lastReportNumber || 0) + 1;
     const year = new Date().getFullYear();
@@ -152,7 +177,10 @@ class ReportStorage {
     
     this.updateMetadata({ lastReportNumber: nextNumber });
     
-    return reportNumber;
+    return {
+      reportNumber,
+      encryptedId: this.encryptReportNumber(reportNumber)
+    };
   }
 
   /**
@@ -166,9 +194,12 @@ class ReportStorage {
 
       // Si es nuevo reporte
       if (!report.id) {
+        // Generar número de reporte y su ID encriptado
+        const { reportNumber, encryptedId } = this.generateReportNumber();
+        
         const newReport: ReportData = {
-          id: `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          numeroReporte: this.generateReportNumber(),
+          id: encryptedId, // Usar ID encriptado del número de reporte
+          numeroReporte: reportNumber,
           timestamp: now,
           fechaCreacion: now,
           creadoPor: report.creadoPor || 'Sistema',
@@ -295,10 +326,25 @@ class ReportStorage {
 
   /**
    * Obtener reporte por número de reporte
+   * Optimizado: busca directamente usando el ID encriptado del número
    */
   getReportByNumber(numeroReporte: string): ReportData | null {
-    const reports = this.getAllReports();
-    return reports.find(r => r.numeroReporte === numeroReporte) || null;
+    try {
+      // Primero intentar búsqueda directa por ID encriptado (más rápido)
+      const encryptedId = this.encryptReportNumber(numeroReporte);
+      const reports = this.getAllReportsRaw();
+      
+      if (reports[encryptedId]) {
+        return reports[encryptedId];
+      }
+      
+      // Si no se encuentra, buscar linealmente (para compatibilidad con datos antiguos)
+      const allReports = Object.values(reports);
+      return allReports.find(r => r.numeroReporte === numeroReporte) || null;
+    } catch (error) {
+      console.error('Error al buscar reporte por número:', error);
+      return null;
+    }
   }
 
   /**
@@ -357,6 +403,40 @@ class ReportStorage {
     }
 
     return reports;
+  }
+
+  /**
+   * Obtener vista previa de reporte por número (optimizado para búsquedas)
+   * Retorna datos básicos sin cargar todos los detalles
+   */
+  getReportPreviewByNumber(numeroReporte: string): Partial<ReportData> | null {
+    try {
+      const encryptedId = this.encryptReportNumber(numeroReporte);
+      const index = this.getIndex();
+      
+      // Buscar en el índice primero (más rápido)
+      const indexEntry = index.find(i => i.numeroReporte === numeroReporte);
+      if (indexEntry) {
+        return indexEntry as Partial<ReportData>;
+      }
+      
+      // Si no está en el índice, buscar en la base completa
+      const report = this.getReportByNumber(numeroReporte);
+      return report ? {
+        id: report.id,
+        numeroReporte: report.numeroReporte,
+        timestamp: report.timestamp,
+        creadoPor: report.creadoPor,
+        region: report.region,
+        provincia: report.provincia,
+        municipio: report.municipio,
+        tipoIntervencion: report.tipoIntervencion,
+        estado: report.estado
+      } : null;
+    } catch (error) {
+      console.error('Error al obtener vista previa:', error);
+      return null;
+    }
   }
 
   /**

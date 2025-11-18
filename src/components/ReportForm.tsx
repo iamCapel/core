@@ -655,9 +655,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
               <div className="report-number-container">
                 <span className="report-number-label">Nº de Reporte:</span>
                 <span className="report-number-value">
-                  {interventionToEdit ? 
-                    `RPT-${new Date(interventionToEdit.timestamp || Date.now()).getTime().toString().slice(-8)}` :
-                    `RPT-${Date.now().toString().slice(-8)}`
+                  {interventionToEdit?.numeroReporte || 
+                    `RPT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`
                   }
                 </span>
               </div>

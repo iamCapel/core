@@ -115,10 +115,10 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
     setNotFound(false);
     setSearchResult(null);
 
-    // Buscar usando reportStorage
+    // Buscar usando reportStorage con sistema de encriptación optimizado
     setTimeout(() => {
       try {
-        // Intentar búsqueda directa por número de reporte
+        // Búsqueda optimizada: primero intenta por ID encriptado (O(1))
         const directMatch = reportStorage.getReportByNumber(searchNumber.trim());
         
         if (directMatch) {
@@ -130,6 +130,7 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
             return;
           }
           
+          // Vista previa cargada exitosamente
           setSearchResult({
             reportNumber: directMatch.numeroReporte,
             title: directMatch.tipoIntervencion || 'Sin título',
@@ -140,8 +141,9 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
             createdBy: directMatch.creadoPor || 'Sistema'
           });
           setNotFound(false);
+          console.log('✅ Reporte encontrado por búsqueda optimizada (ID encriptado):', directMatch.numeroReporte);
         } else {
-          // Búsqueda parcial en todos los reportes
+          // Búsqueda parcial en todos los reportes (fallback)
           const searchFilters = user.role === UserRole.TECNICO 
             ? { creadoPor: user.username } 
             : {};
@@ -162,9 +164,11 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
               createdBy: found.creadoPor || 'Sistema'
             });
             setNotFound(false);
+            console.log('✅ Reporte encontrado por búsqueda parcial:', found.numeroReporte);
           } else {
             setSearchResult(null);
             setNotFound(true);
+            console.log('❌ Reporte no encontrado:', searchNumber);
           }
         }
       } catch (error) {
