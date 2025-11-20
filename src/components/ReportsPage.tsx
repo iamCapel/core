@@ -32,6 +32,15 @@ interface RegionData {
   provincias: ProvinciaData[];
 }
 
+interface MunicipioData {
+  nombre: string;
+  total: number;
+  kilometraje: number;
+  completados: number;
+  pendientes: number;
+  enProgreso: number;
+}
+
 interface ProvinciaData {
   nombre: string;
   total: number;
@@ -39,6 +48,8 @@ interface ProvinciaData {
   completados: number;
   pendientes: number;
   enProgreso: number;
+  municipios: MunicipioData[];
+  expanded?: boolean;
 }
 
 // Regiones de República Dominicana
@@ -76,6 +87,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
   const [regionesData, setRegionesData] = useState<RegionData[]>([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [expandedProvincias, setExpandedProvincias] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     cargarDatosRegiones();
@@ -156,18 +168,38 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
         return sum;
       }, 0);
 
-      // Agrupar por provincia
+      // Agrupar por provincia y luego por municipio
       const provinciaMap = new Map<string, {
         total: number;
         completados: number;
         pendientes: number;
         enProgreso: number;
         kilometraje: number;
+        municipios: Map<string, {
+          total: number;
+          completados: number;
+          pendientes: number;
+          enProgreso: number;
+          kilometraje: number;
+        }>;
       }>();
 
       reportesRegion.forEach(report => {
         const provincia = report.provincia || 'Sin Provincia';
-        const current = provinciaMap.get(provincia) || {
+        const municipio = report.municipio || report.distrito || 'Sin Municipio';
+        
+        // Obtener o crear entrada de provincia
+        const currentProv = provinciaMap.get(provincia) || {
+          total: 0,
+          completados: 0,
+          pendientes: 0,
+          enProgreso: 0,
+          kilometraje: 0,
+          municipios: new Map()
+        };
+
+        // Obtener o crear entrada de municipio
+        const currentMun = currentProv.municipios.get(municipio) || {
           total: 0,
           completados: 0,
           pendientes: 0,
@@ -175,15 +207,22 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
           kilometraje: 0
         };
 
-        current.total++;
+        // Actualizar contadores de provincia
+        currentProv.total++;
         
         if (report.estado === 'completado' || report.estado === 'aprobado') {
-          current.completados++;
+          currentProv.completados++;
+          currentMun.completados++;
         } else if (report.estado === 'pendiente') {
-          current.pendientes++;
+          currentProv.pendientes++;
+          currentMun.pendientes++;
         } else {
-          current.enProgreso++;
+          currentProv.enProgreso++;
+          currentMun.enProgreso++;
         }
+
+        // Actualizar contadores de municipio
+        currentMun.total++;
 
         // Calcular kilometraje de este reporte
         if (report.gpsData?.start && report.gpsData?.end) {
@@ -193,21 +232,40 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
             report.gpsData.end.latitude,
             report.gpsData.end.longitude
           );
-          current.kilometraje += km;
+          currentProv.kilometraje += km;
+          currentMun.kilometraje += km;
         }
 
-        provinciaMap.set(provincia, current);
+        currentProv.municipios.set(municipio, currentMun);
+        provinciaMap.set(provincia, currentProv);
       });
 
       // Convertir mapa a array
-      const provincias: ProvinciaData[] = Array.from(provinciaMap.entries()).map(([nombre, data]) => ({
-        nombre,
-        total: data.total,
-        kilometraje: data.kilometraje,
-        completados: data.completados,
-        pendientes: data.pendientes,
-        enProgreso: data.enProgreso
-      }));
+      const provincias: ProvinciaData[] = Array.from(provinciaMap.entries()).map(([nombre, data]) => {
+        // Convertir municipios a array
+        const municipios: MunicipioData[] = Array.from(data.municipios.entries()).map(([nomMun, munData]) => ({
+          nombre: nomMun,
+          total: munData.total,
+          kilometraje: munData.kilometraje,
+          completados: munData.completados,
+          pendientes: munData.pendientes,
+          enProgreso: munData.enProgreso
+        }));
+
+        // Ordenar municipios por total descendente
+        municipios.sort((a, b) => b.total - a.total);
+
+        return {
+          nombre,
+          total: data.total,
+          kilometraje: data.kilometraje,
+          completados: data.completados,
+          pendientes: data.pendientes,
+          enProgreso: data.enProgreso,
+          municipios,
+          expanded: false
+        };
+      });
 
       // Ordenar provincias por total descendente
       provincias.sort((a, b) => b.total - a.total);
@@ -224,6 +282,19 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
     });
 
     setRegionesData(regiones);
+  };
+
+  const toggleProvinciaExpansion = (regionId: number, provinciaNombre: string) => {
+    const key = `${regionId}-${provinciaNombre}`;
+    setExpandedProvincias(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -441,40 +512,94 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
 
                           <div className="provincias-list">
                             <h4 className="list-title">Provincias de {region.name}</h4>
-                            {region.provincias.map((provincia, index) => (
-                              <div key={index} className="provincia-card">
-                                <div className="provincia-header">
-                                  <h5 className="provincia-nombre">{provincia.nombre}</h5>
-                                  <div className="provincia-badge">{provincia.total} reportes</div>
+                            {region.provincias.map((provincia, index) => {
+                              const provinciaKey = `${selectedRegion}-${provincia.nombre}`;
+                              const isExpanded = expandedProvincias.has(provinciaKey);
+                              
+                              return (
+                                <div key={index} className="provincia-card-expandable">
+                                  <div 
+                                    className="provincia-card clickable"
+                                    onClick={() => toggleProvinciaExpansion(selectedRegion, provincia.nombre)}
+                                  >
+                                    <div className="provincia-header">
+                                      <div className="provincia-header-left">
+                                        <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
+                                        <h5 className="provincia-nombre">{provincia.nombre}</h5>
+                                      </div>
+                                      <div className="provincia-badge">{provincia.total} reportes</div>
+                                    </div>
+                                    <div className="provincia-stats">
+                                      <div className="provincia-stat">
+                                        <span className="stat-icon">✅</span>
+                                        <span className="stat-text">
+                                          <strong>{provincia.completados}</strong> Completados
+                                        </span>
+                                      </div>
+                                      <div className="provincia-stat">
+                                        <span className="stat-icon">⏳</span>
+                                        <span className="stat-text">
+                                          <strong>{provincia.pendientes}</strong> Pendientes
+                                        </span>
+                                      </div>
+                                      <div className="provincia-stat">
+                                        <span className="stat-icon">🔄</span>
+                                        <span className="stat-text">
+                                          <strong>{provincia.enProgreso}</strong> En Progreso
+                                        </span>
+                                      </div>
+                                      <div className="provincia-stat highlight">
+                                        <span className="stat-icon">📏</span>
+                                        <span className="stat-text">
+                                          <strong>{provincia.kilometraje.toFixed(2)} km</strong> Recorridos
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Lista de municipios expandible */}
+                                  {isExpanded && provincia.municipios.length > 0 && (
+                                    <div className="municipios-list">
+                                      <div className="municipios-header">
+                                        <h6 className="municipios-title">
+                                          Municipios/Distritos en {provincia.nombre}
+                                        </h6>
+                                        <span className="municipios-count">
+                                          {provincia.municipios.length} {provincia.municipios.length === 1 ? 'municipio' : 'municipios'}
+                                        </span>
+                                      </div>
+                                      {provincia.municipios.map((municipio, munIndex) => (
+                                        <div key={munIndex} className="municipio-item">
+                                          <div className="municipio-header">
+                                            <span className="municipio-icon">📍</span>
+                                            <span className="municipio-nombre">{municipio.nombre}</span>
+                                            <span className="municipio-total">{municipio.total} {municipio.total === 1 ? 'reporte' : 'reportes'}</span>
+                                          </div>
+                                          <div className="municipio-stats-grid">
+                                            <div className="municipio-stat">
+                                              <span className="municipio-stat-label">Completados</span>
+                                              <span className="municipio-stat-value completados">{municipio.completados}</span>
+                                            </div>
+                                            <div className="municipio-stat">
+                                              <span className="municipio-stat-label">Pendientes</span>
+                                              <span className="municipio-stat-value pendientes">{municipio.pendientes}</span>
+                                            </div>
+                                            <div className="municipio-stat">
+                                              <span className="municipio-stat-label">En Progreso</span>
+                                              <span className="municipio-stat-value en-progreso">{municipio.enProgreso}</span>
+                                            </div>
+                                            <div className="municipio-stat">
+                                              <span className="municipio-stat-label">Kilometraje</span>
+                                              <span className="municipio-stat-value kilometraje">{municipio.kilometraje.toFixed(2)} km</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="provincia-stats">
-                                  <div className="provincia-stat">
-                                    <span className="stat-icon">✅</span>
-                                    <span className="stat-text">
-                                      <strong>{provincia.completados}</strong> Completados
-                                    </span>
-                                  </div>
-                                  <div className="provincia-stat">
-                                    <span className="stat-icon">⏳</span>
-                                    <span className="stat-text">
-                                      <strong>{provincia.pendientes}</strong> Pendientes
-                                    </span>
-                                  </div>
-                                  <div className="provincia-stat">
-                                    <span className="stat-icon">🔄</span>
-                                    <span className="stat-text">
-                                      <strong>{provincia.enProgreso}</strong> En Progreso
-                                    </span>
-                                  </div>
-                                  <div className="provincia-stat highlight">
-                                    <span className="stat-icon">📏</span>
-                                    <span className="stat-text">
-                                      <strong>{provincia.kilometraje.toFixed(2)} km</strong> Recorridos
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </>
                       );

@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  z-index: 9997;
   backdrop-filter: blur(5px);
   animation: fadeIn 0.3s ease;
 }
@@ -308,8 +308,8 @@
 .report-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 4px 8px 4px 18px;
-  cursor: pointer;
   transition: all 0.1s ease;
   border-radius: 3px;
   margin-bottom: 1px;
@@ -339,6 +339,7 @@
   flex: 1;
   font-size: 12px;
   color: #666;
+  cursor: pointer;
 }
 
 .report-number {
@@ -361,6 +362,28 @@
   color: #999;
   font-size: 11px;
   margin-left: auto;
+}
+
+.btn-delete-report {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+  margin-left: 8px;
+}
+
+.btn-delete-report:hover {
+  opacity: 1;
+  background: #ffe6e6;
+  transform: scale(1.15);
+}
+
+.btn-delete-report:active {
+  transform: scale(0.95);
 }
 
 .report-arrow {
@@ -1095,6 +1118,34 @@
 
 .btn-view-icon:hover {
   transform: scale(1.2);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-delete-icon {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.btn-delete-icon:hover {
+  opacity: 1;
+  background: #ffe6e6;
+  transform: scale(1.2);
+}
+
+.btn-delete-icon:active {
+  transform: scale(0.9);
 }
 
 .no-data-cell {

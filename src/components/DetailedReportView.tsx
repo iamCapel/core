@@ -97,6 +97,32 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   const [regionsData, setRegionsData] = useState<Region[]>([]);
   const [allReportsFlat, setAllReportsFlat] = useState<Report[]>([]);
 
+  // Función para eliminar reporte (solo administradores)
+  const deleteReport = (reportId: string, reportNumber: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    const isConfirmed = window.confirm(
+      `¿Está seguro que desea eliminar el reporte ${reportNumber}?\n\nEsta acción no se puede deshacer.`
+    );
+
+    if (isConfirmed) {
+      try {
+        reportStorage.deleteReport(reportId);
+        // Recargar datos
+        loadReportsData();
+        alert(`Reporte ${reportNumber} eliminado exitosamente.`);
+      } catch (error) {
+        console.error('Error al eliminar reporte:', error);
+        alert('Error al eliminar el reporte. Por favor intente nuevamente.');
+      }
+    }
+  };
+
+  // Verificar si el usuario es administrador
+  const isAdmin = user?.role === 'Administrador' || user?.role === 'administrador' || user?.role === 'Admin' || user?.role === 'admin';
+
   useEffect(() => {
     // Cargar todos los reportes y organizarlos por jerarquía
     let allReports = reportStorage.getAllReports();
@@ -948,13 +974,24 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                                         <div 
                                           key={report.id}
                                           className="report-item"
-                                          onClick={(e) => viewReport(report, e)}
                                         >
-                                          <div className="report-info">
+                                          <div 
+                                            className="report-info"
+                                            onClick={(e) => viewReport(report, e)}
+                                          >
                                             <span className="report-number">#{report.reportNumber}</span>
                                             <span className="report-creator">{report.createdBy}</span>
                                             <span className="report-date">{report.date}</span>
                                           </div>
+                                          {isAdmin && (
+                                            <button
+                                              className="btn-delete-report"
+                                              onClick={(e) => deleteReport(report.id, report.reportNumber, e)}
+                                              title="Eliminar reporte"
+                                            >
+                                              🗑️
+                                            </button>
+                                          )}
                                         </div>
                                       ))}
                                     </div>
@@ -1031,13 +1068,27 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     <td className="km-cell">{report.kilometraje?.toFixed(2) || 'N/A'} km</td>
                     <td className="user-cell">{report.createdBy}</td>
                     <td>
-                      <button 
-                        className="btn-view-icon"
-                        onClick={(e) => viewReport(report, e)}
-                        title="Ver detalles"
-                      >
-                        👁️
-                      </button>
+                      <div className="action-buttons">
+                        <button 
+                          className="btn-view-icon"
+                          onClick={(e) => viewReport(report, e)}
+                          title="Ver detalles"
+                        >
+                          👁️
+                        </button>
+                        {isAdmin && (
+                          <button
+                            className="btn-delete-icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteReport(report.id, report.reportNumber);
+                            }}
+                            title="Eliminar reporte"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

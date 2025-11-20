@@ -410,7 +410,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setShowSaveAnimation(true);
 
     // Simular proceso de guardado con delay
-    setTimeout(() => {
+    setTimeout(async () => {
       const sectorFinal = sector === 'otros' ? sectorPersonalizado : sector;
       const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
       
@@ -434,7 +434,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
       };
 
       try {
-        const savedReport = reportStorage.saveReport(reportData);
+        const savedReport = await reportStorage.saveReport(reportData);
         console.log('Reporte guardado:', savedReport);
 
         // Ocultar animación después de 2 segundos

@@ -3,6 +3,8 @@
  * Proporciona una capa de abstracción sobre localStorage con estructura de base de datos
  */
 
+import { generatePDFBlob, generateExcelBlob, generateWordBlob } from './documentGenerationService';
+
 export interface ReportData {
   id: string;
   numeroReporte: string;
@@ -42,6 +44,25 @@ export interface ReportData {
   videos?: string[];
   documentos?: string[];
   
+  // Archivos generados automáticamente
+  generatedFiles?: {
+    pdf?: {
+      filename: string;
+      data: string; // base64
+      generatedAt: string;
+    };
+    excel?: {
+      filename: string;
+      data: string; // base64
+      generatedAt: string;
+    };
+    word?: {
+      filename: string;
+      data: string; // base64
+      generatedAt: string;
+    };
+  };
+  
   // Estado del reporte
   estado: 'completado' | 'pendiente' | 'borrador' | 'en_revision' | 'aprobado' | 'rechazado';
   
@@ -74,6 +95,39 @@ class ReportStorage {
   }
 
   /**
+   * Convertir Blob a string base64 para almacenamiento
+   */
+  private async blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          // Extraer solo la parte base64 (después de la coma)
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        } else {
+          reject(new Error('No se pudo convertir el blob a base64'));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  /**
+   * Convertir string base64 a Blob para descarga
+   */
+  private base64ToBlob(base64: string, mimeType: string): Blob {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
+  }
+
+  /**
    * Inicializar la base de datos si no existe
    */
   private initializeDatabase(): void {
@@ -99,7 +153,7 @@ class ReportStorage {
   /**
    * Migrar datos del formato antiguo al nuevo
    */
-  private migrateOldData(): void {
+  private async migrateOldData(): Promise<void> {
     try {
       const oldData = localStorage.getItem('mopc_intervenciones');
       if (oldData) {
@@ -107,7 +161,8 @@ class ReportStorage {
         if (Array.isArray(oldReports) && oldReports.length > 0) {
           console.log(`Migrando ${oldReports.length} reportes del formato antiguo...`);
           
-          oldReports.forEach((oldReport: any) => {
+          // Migrar sin generar archivos (solo datos)
+          for (const oldReport of oldReports) {
             const newReport: ReportData = {
               id: oldReport.id?.toString() || `migrated_${Date.now()}_${Math.random()}`,
               numeroReporte: `DCR-${oldReport.id || Date.now()}`,
@@ -128,8 +183,11 @@ class ReportStorage {
               version: 1
             };
             
-            this.saveReport(newReport);
-          });
+            // Guardar directamente sin generar archivos para migración
+            const reports = this.getAllReportsRaw();
+            reports[newReport.id] = newReport;
+            this.saveToStorage(reports);
+          }
           
           // Guardar copia de seguridad
           localStorage.setItem('mopc_intervenciones_backup', oldData);
@@ -184,20 +242,22 @@ class ReportStorage {
   }
 
   /**
-   * Guardar o actualizar un reporte
+   * Guardar o actualizar un reporte y generar archivos automáticamente
    */
-  saveReport(report: Partial<ReportData>): ReportData {
+  async saveReport(report: Partial<ReportData>): Promise<ReportData> {
     try {
       const reports = this.getAllReportsRaw();
       const index = this.getIndex();
       const now = new Date().toISOString();
+
+      let savedReport: ReportData;
 
       // Si es nuevo reporte
       if (!report.id) {
         // Generar número de reporte y su ID encriptado
         const { reportNumber, encryptedId } = this.generateReportNumber();
         
-        const newReport: ReportData = {
+        savedReport = {
           id: encryptedId, // Usar ID encriptado del número de reporte
           numeroReporte: reportNumber,
           timestamp: now,
@@ -223,19 +283,63 @@ class ReportStorage {
           categorias: report.categorias
         };
 
-        reports[newReport.id] = newReport;
+        // Generar archivos PDF, Excel y Word automáticamente
+        try {
+          console.log('Generando archivos automáticamente para el reporte:', savedReport.numeroReporte);
+          
+          const [pdfBlob, excelBlob, wordBlob] = await Promise.all([
+            generatePDFBlob(savedReport),
+            generateExcelBlob(savedReport),
+            generateWordBlob(savedReport)
+          ]);
+
+          const [pdfBase64, excelBase64, wordBase64] = await Promise.all([
+            this.blobToBase64(pdfBlob),
+            this.blobToBase64(excelBlob),
+            this.blobToBase64(wordBlob)
+          ]);
+
+          savedReport.generatedFiles = {
+            pdf: {
+              filename: `${savedReport.numeroReporte}_reporte.pdf`,
+              data: pdfBase64,
+              generatedAt: now
+            },
+            excel: {
+              filename: `${savedReport.numeroReporte}_reporte.xlsx`,
+              data: excelBase64,
+              generatedAt: now
+            },
+            word: {
+              filename: `${savedReport.numeroReporte}_reporte.docx`,
+              data: wordBase64,
+              generatedAt: now
+            }
+          };
+
+          console.log('Archivos generados exitosamente:', {
+            pdf: savedReport.generatedFiles.pdf.filename,
+            excel: savedReport.generatedFiles.excel.filename,
+            word: savedReport.generatedFiles.word.filename
+          });
+        } catch (error) {
+          console.error('Error al generar archivos automáticamente:', error);
+          // Continuar guardando el reporte aunque falle la generación de archivos
+        }
+
+        reports[savedReport.id] = savedReport;
         
         // Actualizar índice
         index.push({
-          id: newReport.id,
-          numeroReporte: newReport.numeroReporte,
-          timestamp: newReport.timestamp,
-          creadoPor: newReport.creadoPor,
-          region: newReport.region,
-          provincia: newReport.provincia,
-          municipio: newReport.municipio,
-          tipoIntervencion: newReport.tipoIntervencion,
-          estado: newReport.estado
+          id: savedReport.id,
+          numeroReporte: savedReport.numeroReporte,
+          timestamp: savedReport.timestamp,
+          creadoPor: savedReport.creadoPor,
+          region: savedReport.region,
+          provincia: savedReport.provincia,
+          municipio: savedReport.municipio,
+          tipoIntervencion: savedReport.tipoIntervencion,
+          estado: savedReport.estado
         });
 
         this.saveToStorage(reports);
@@ -245,7 +349,7 @@ class ReportStorage {
           lastModified: now 
         });
 
-        return newReport;
+        return savedReport;
       } else {
         // Actualizar reporte existente
         const existingReport = reports[report.id];
@@ -253,7 +357,7 @@ class ReportStorage {
           throw new Error(`Reporte con ID ${report.id} no encontrado`);
         }
 
-        const updatedReport: ReportData = {
+        savedReport = {
           ...existingReport,
           ...report,
           id: existingReport.id,
@@ -264,20 +368,63 @@ class ReportStorage {
           version: existingReport.version + 1
         };
 
-        reports[updatedReport.id] = updatedReport;
+        // Regenerar archivos si ha habido cambios significativos
+        try {
+          console.log('Regenerando archivos para el reporte actualizado:', savedReport.numeroReporte);
+          
+          const [pdfBlob, excelBlob, wordBlob] = await Promise.all([
+            generatePDFBlob(savedReport),
+            generateExcelBlob(savedReport),
+            generateWordBlob(savedReport)
+          ]);
+
+          const [pdfBase64, excelBase64, wordBase64] = await Promise.all([
+            this.blobToBase64(pdfBlob),
+            this.blobToBase64(excelBlob),
+            this.blobToBase64(wordBlob)
+          ]);
+
+          savedReport.generatedFiles = {
+            pdf: {
+              filename: `${savedReport.numeroReporte}_reporte.pdf`,
+              data: pdfBase64,
+              generatedAt: now
+            },
+            excel: {
+              filename: `${savedReport.numeroReporte}_reporte.xlsx`,
+              data: excelBase64,
+              generatedAt: now
+            },
+            word: {
+              filename: `${savedReport.numeroReporte}_reporte.docx`,
+              data: wordBase64,
+              generatedAt: now
+            }
+          };
+
+          console.log('Archivos regenerados exitosamente');
+        } catch (error) {
+          console.error('Error al regenerar archivos:', error);
+          // Mantener archivos anteriores si existen
+          if (existingReport.generatedFiles) {
+            savedReport.generatedFiles = existingReport.generatedFiles;
+          }
+        }
+
+        reports[savedReport.id] = savedReport;
 
         // Actualizar índice
-        const indexItem = index.find(i => i.id === updatedReport.id);
+        const indexItem = index.find(i => i.id === savedReport.id);
         if (indexItem) {
           Object.assign(indexItem, {
-            numeroReporte: updatedReport.numeroReporte,
-            timestamp: updatedReport.timestamp,
-            creadoPor: updatedReport.creadoPor,
-            region: updatedReport.region,
-            provincia: updatedReport.provincia,
-            municipio: updatedReport.municipio,
-            tipoIntervencion: updatedReport.tipoIntervencion,
-            estado: updatedReport.estado
+            numeroReporte: savedReport.numeroReporte,
+            timestamp: savedReport.timestamp,
+            creadoPor: savedReport.creadoPor,
+            region: savedReport.region,
+            provincia: savedReport.provincia,
+            municipio: savedReport.municipio,
+            tipoIntervencion: savedReport.tipoIntervencion,
+            estado: savedReport.estado
           });
         }
 
@@ -285,7 +432,7 @@ class ReportStorage {
         this.saveIndex(index);
         this.updateMetadata({ lastModified: now });
 
-        return updatedReport;
+        return savedReport;
       }
     } catch (error) {
       console.error('Error al guardar reporte:', error);
@@ -619,6 +766,80 @@ class ReportStorage {
       console.error('Error al importar base de datos:', error);
       return false;
     }
+  }
+
+  /**
+   * Descargar archivo PDF generado de un reporte
+   */
+  downloadGeneratedPDF(reportId: string): void {
+    const report = this.getReportById(reportId);
+    if (!report || !report.generatedFiles?.pdf) {
+      throw new Error('No se encontró el archivo PDF generado para este reporte');
+    }
+
+    const blob = this.base64ToBlob(report.generatedFiles.pdf.data, 'application/pdf');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = report.generatedFiles.pdf.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Descargar archivo Excel generado de un reporte
+   */
+  downloadGeneratedExcel(reportId: string): void {
+    const report = this.getReportById(reportId);
+    if (!report || !report.generatedFiles?.excel) {
+      throw new Error('No se encontró el archivo Excel generado para este reporte');
+    }
+
+    const blob = this.base64ToBlob(
+      report.generatedFiles.excel.data, 
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = report.generatedFiles.excel.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Descargar archivo Word generado de un reporte
+   */
+  downloadGeneratedWord(reportId: string): void {
+    const report = this.getReportById(reportId);
+    if (!report || !report.generatedFiles?.word) {
+      throw new Error('No se encontró el archivo Word generado para este reporte');
+    }
+
+    const blob = this.base64ToBlob(
+      report.generatedFiles.word.data, 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = report.generatedFiles.word.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Verificar si un reporte tiene archivos generados
+   */
+  hasGeneratedFiles(reportId: string): boolean {
+    const report = this.getReportById(reportId);
+    return !!(report?.generatedFiles?.pdf && report?.generatedFiles?.excel && report?.generatedFiles?.word);
   }
 
   /**

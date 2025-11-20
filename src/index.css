@@ -59,11 +59,16 @@
   --font-size-xl: 24px;
   --font-size-2xl: 32px;
   
-  /* Z-index */
-  --z-dropdown: 1000;
-  --z-modal: 1100;
-  --z-topbar: 999;
-  --z-tooltip: 1200;
+  /* Z-index - Jerarquía completa */
+  --z-base: 1;
+  --z-sticky-header: 850;
+  --z-topbar: 900;
+  --z-dropdown: 1001;
+  --z-modal-base: 9996;
+  --z-modal: 9997;
+  --z-modal-region: 9998;
+  --z-modal-notification: 9999;
+  --z-tooltip: 10000;
 }
 
 * {

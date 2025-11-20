@@ -495,7 +495,7 @@
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 850;
   transition: all 0.3s ease;
 }
 
@@ -905,7 +905,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 80px;
-  z-index: 90;
+  z-index: 800;
 }
 
 .view-btn {
@@ -1353,6 +1353,193 @@
 .provincia-stat .stat-text strong {
   color: var(--primary-orange);
   margin-right: 0.25rem;
+}
+
+/* Provincias expandibles */
+.provincia-card-expandable {
+  margin-bottom: 1rem;
+}
+
+.provincia-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.provincia-card.clickable:active {
+  transform: translateX(5px) scale(0.98);
+}
+
+.provincia-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.expand-icon {
+  font-size: 0.85rem;
+  color: var(--primary-orange);
+  transition: transform 0.3s ease;
+  font-weight: bold;
+  min-width: 16px;
+  display: inline-block;
+}
+
+/* Lista de municipios */
+.municipios-list {
+  margin-top: 0.75rem;
+  padding: 1rem 1rem 1rem 2.5rem;
+  background: linear-gradient(135deg, #fff9f5 0%, #fff5ed 100%);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary-orange);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+    transform: translateY(0);
+  }
+}
+
+.municipios-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid rgba(255, 122, 0, 0.2);
+}
+
+.municipios-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.municipios-title::before {
+  content: '📂';
+  font-size: 1.1rem;
+}
+
+.municipios-count {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  background: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.municipio-item {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border-left: 3px solid #ffd4a3;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.municipio-item:hover {
+  transform: translateX(5px);
+  box-shadow: 0 3px 8px rgba(255, 122, 0, 0.15);
+  border-left-color: var(--primary-orange);
+}
+
+.municipio-item:last-child {
+  margin-bottom: 0;
+}
+
+.municipio-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.municipio-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.municipio-nombre {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2c3e50;
+  flex: 1;
+}
+
+.municipio-total {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #ffa500 0%, var(--primary-orange) 100%);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+}
+
+.municipio-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.5rem;
+}
+
+.municipio-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.municipio-stat:hover {
+  background: #fff5e6;
+  transform: scale(1.05);
+}
+
+.municipio-stat-label {
+  font-size: 0.7rem;
+  color: #7f8c8d;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.municipio-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.municipio-stat-value.completados {
+  color: #00C49F;
+}
+
+.municipio-stat-value.pendientes {
+  color: #FFBB28;
+}
+
+.municipio-stat-value.en-progreso {
+  color: #FF8042;
+}
+
+.municipio-stat-value.kilometraje {
+  color: var(--primary-orange);
+  font-size: 0.95rem;
 }
 
 
@@ -3350,7 +3537,7 @@
 .reports-topbar-modern {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 850;
   background: linear-gradient(135deg, #ffffff 0%, #fff5f0 100%);
   padding: 20px 32px;
   border-radius: 16px;

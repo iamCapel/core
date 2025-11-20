@@ -16,7 +16,7 @@
   padding: 0 var(--spacing-lg);
   background: linear-gradient(135deg, var(--white) 0%, var(--cream) 100%);
   box-shadow: var(--shadow-md);
-  z-index: var(--z-topbar);
+  z-index: 900;
   border-bottom: 3px solid var(--primary-orange);
   backdrop-filter: blur(10px);
   transition: var(--transition-normal);
@@ -36,13 +36,19 @@
   min-width: 120px;
 }
 
+.topbar-right {
+  transform: scale(0.80);
+  transform-origin: right center;
+}
+
 /* logos en el lado izquierdo del topbar - MODERNOS */
 .topbar-left {
   display: flex;
   align-items: center;
   gap: var(--spacing-lg);
   padding-left: var(--spacing-md);
-  z-index: calc(var(--z-topbar) + 2);
+  position: relative;
+  z-index: 1;
 }
 
 .dashboard-logos {
@@ -240,7 +246,7 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   min-width: 250px;
-  z-index: var(--z-dropdown);
+  z-index: 1001;
   overflow: hidden;
   border: 1px solid rgba(255, 122, 0, 0.1);
   animation: slideDown 0.3s ease;
@@ -1260,7 +1266,7 @@ input[type="radio"]:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 9996;
   animation: fadeIn 0.3s ease-out;
 }
 
@@ -2137,7 +2143,7 @@ select option[value="otros"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9995;
   padding: 20px;
 }
 
@@ -2442,10 +2448,10 @@ select option[value="otros"] {
 /* ===== NOTIFICACIÓN DE PERFIL INCOMPLETO ===== */
 .profile-incomplete-notification {
   position: fixed;
-  top: 88px;
+  top: 80px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: var(--z-dropdown);
+  z-index: 950;
   animation: slideInDown 0.5s ease;
   width: 90%;
   max-width: 600px;
