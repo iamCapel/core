@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import './DetailedReportView.css';
 
@@ -26,6 +26,11 @@ interface Report {
   images?: string[];
   // Otros campos
   observations?: string;
+  fechaCreacion?: string;
+  numeroReporte?: string;
+  creadoPor?: string;
+  estado?: string;
+  kilometraje?: number;
 }
 
 interface District {
@@ -48,9 +53,23 @@ interface Region {
 
 interface DetailedReportViewProps {
   onClose?: (() => void) | null;
+  user?: {
+    username: string;
+    name: string;
+    role?: string;
+  };
 }
 
-const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null }) => {
+type ViewMode = 'hierarchy' | 'table' | 'stats';
+type FilterPeriod = 'todo' | 'hoy' | 'semana' | 'mes' | 'trimestre' | 'año' | 'personalizado';
+type SortField = 'fecha' | 'numero' | 'tipo' | 'provincia' | 'kilometraje';
+type SortOrder = 'asc' | 'desc';
+
+const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, user }) => {
+  // Estados de vista
+  const [viewMode, setViewMode] = useState<ViewMode>('hierarchy');
+  
+  // Estados originales
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
@@ -59,15 +78,37 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
   const [expandedProvinces, setExpandedProvinces] = useState<Set<string>>(new Set());
   const [expandedDistricts, setExpandedDistricts] = useState<Set<string>>(new Set());
 
+  // Estados de filtros avanzados
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('mes');
+  const [filterTipo, setFilterTipo] = useState<string>('todos');
+  const [filterEstado, setFilterEstado] = useState<string>('todos');
+  const [filterRegion, setFilterRegion] = useState<string>('todas');
+  const [filterProvincia, setFilterProvincia] = useState<string>('todas');
+  const [filterUsuario, setFilterUsuario] = useState<string>('todos');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
+  
+  // Estados de ordenamiento
+  const [sortField, setSortField] = useState<SortField>('fecha');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
   // Cargar datos reales desde reportStorage
   const [regionsData, setRegionsData] = useState<Region[]>([]);
+  const [allReportsFlat, setAllReportsFlat] = useState<Report[]>([]);
 
   useEffect(() => {
     // Cargar todos los reportes y organizarlos por jerarquía
-    const allReports = reportStorage.getAllReports();
+    let allReports = reportStorage.getAllReports();
+    
+    // Filtrar por rol si es técnico
+    if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+      allReports = allReports.filter(report => report.creadoPor === user.username);
+    }
     
     // Estructura jerárquica: Región > Provincia > Distrito > Reportes
     const hierarchyMap: Record<string, Record<string, Record<string, any[]>>> = {};
+    const flatReports: Report[] = [];
     
     allReports.forEach(report => {
       const region = report.region || 'Sin región';
@@ -78,8 +119,21 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
       if (!hierarchyMap[region][provincia]) hierarchyMap[region][provincia] = {};
       if (!hierarchyMap[region][provincia][distrito]) hierarchyMap[region][provincia][distrito] = [];
       
+      // Calcular kilometraje
+      let km = 0;
+      if (report.gpsData?.start && report.gpsData?.end) {
+        const R = 6371;
+        const lat1 = report.gpsData.start.latitude * Math.PI / 180;
+        const lat2 = report.gpsData.end.latitude * Math.PI / 180;
+        const dLat = (report.gpsData.end.latitude - report.gpsData.start.latitude) * Math.PI / 180;
+        const dLon = (report.gpsData.end.longitude - report.gpsData.start.longitude) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        km = R * c;
+      }
+      
       // Convertir reporte al formato esperado
-      hierarchyMap[region][provincia][distrito].push({
+      const formattedReport = {
         id: report.id,
         reportNumber: report.numeroReporte,
         createdBy: report.creadoPor,
@@ -94,8 +148,16 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
         subTipoCanal: report.subTipoCanal,
         metricData: report.metricData || {},
         gpsData: report.gpsData,
-        observations: report.observaciones
-      });
+        observations: report.observaciones,
+        fechaCreacion: report.fechaCreacion,
+        numeroReporte: report.numeroReporte,
+        creadoPor: report.creadoPor,
+        estado: report.estado,
+        kilometraje: km
+      };
+      
+      hierarchyMap[region][provincia][distrito].push(formattedReport);
+      flatReports.push(formattedReport);
     });
     
     // Construir estructura de regiones
@@ -130,7 +192,214 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
     });
     
     setRegionsData(regions);
-  }, []);
+    setAllReportsFlat(flatReports);
+  }, [user]);
+
+  // Aplicar filtros avanzados
+  const filteredReports = useMemo(() => {
+    let filtered = [...allReportsFlat];
+
+    // Filtro de búsqueda
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(report =>
+        report.reportNumber?.toLowerCase().includes(query) ||
+        report.tipoIntervencion?.toLowerCase().includes(query) ||
+        report.province?.toLowerCase().includes(query) ||
+        report.municipio?.toLowerCase().includes(query) ||
+        report.createdBy?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filtro de período
+    if (filterPeriod !== 'todo' && filtered.length > 0) {
+      const now = new Date();
+      let startDate: Date;
+
+      switch (filterPeriod) {
+        case 'hoy':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'semana':
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - now.getDay());
+          break;
+        case 'mes':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'trimestre':
+          const quarter = Math.floor(now.getMonth() / 3);
+          startDate = new Date(now.getFullYear(), quarter * 3, 1);
+          break;
+        case 'año':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        case 'personalizado':
+          if (customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            filtered = filtered.filter(r => {
+              const fecha = new Date(r.fechaCreacion || r.date);
+              return fecha >= start && fecha <= end;
+            });
+          }
+          startDate = new Date(0);
+          break;
+        default:
+          startDate = new Date(0);
+      }
+
+      if (filterPeriod !== 'personalizado') {
+        filtered = filtered.filter(r => {
+          const fecha = new Date(r.fechaCreacion || r.date);
+          return fecha >= startDate;
+        });
+      }
+    }
+
+    // Filtro de tipo
+    if (filterTipo !== 'todos') {
+      filtered = filtered.filter(r => r.tipoIntervencion === filterTipo);
+    }
+
+    // Filtro de estado
+    if (filterEstado !== 'todos') {
+      filtered = filtered.filter(r => r.estado === filterEstado);
+    }
+
+    // Filtro de región
+    if (filterRegion !== 'todas') {
+      filtered = filtered.filter(r => r.region === filterRegion);
+    }
+
+    // Filtro de provincia
+    if (filterProvincia !== 'todas') {
+      filtered = filtered.filter(r => r.province === filterProvincia);
+    }
+
+    // Filtro de usuario
+    if (filterUsuario !== 'todos') {
+      filtered = filtered.filter(r => r.createdBy === filterUsuario);
+    }
+
+    // Ordenamiento
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'fecha':
+          const dateA = new Date(a.fechaCreacion || a.date).getTime();
+          const dateB = new Date(b.fechaCreacion || b.date).getTime();
+          comparison = dateA - dateB;
+          break;
+        case 'numero':
+          comparison = (a.numeroReporte || a.reportNumber || '').localeCompare(b.numeroReporte || b.reportNumber || '');
+          break;
+        case 'tipo':
+          comparison = (a.tipoIntervencion || '').localeCompare(b.tipoIntervencion || '');
+          break;
+        case 'provincia':
+          comparison = (a.province || '').localeCompare(b.province || '');
+          break;
+        case 'kilometraje':
+          comparison = (a.kilometraje || 0) - (b.kilometraje || 0);
+          break;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [allReportsFlat, searchQuery, filterPeriod, filterTipo, filterEstado, filterRegion, 
+      filterProvincia, filterUsuario, customStartDate, customEndDate, sortField, sortOrder]);
+
+  // Opciones únicas para filtros
+  const uniqueOptions = useMemo(() => {
+    return {
+      tipos: Array.from(new Set(allReportsFlat.map(r => r.tipoIntervencion).filter(Boolean))).sort(),
+      estados: Array.from(new Set(allReportsFlat.map(r => r.estado).filter(Boolean))).sort(),
+      regiones: Array.from(new Set(allReportsFlat.map(r => r.region).filter(Boolean))).sort(),
+      provincias: Array.from(new Set(allReportsFlat.map(r => r.province).filter(Boolean))).sort(),
+      usuarios: Array.from(new Set(allReportsFlat.map(r => r.createdBy).filter(Boolean))).sort()
+    };
+  }, [allReportsFlat]);
+
+  // Estadísticas calculadas
+  const stats = useMemo(() => {
+    const totalKm = filteredReports.reduce((sum, r) => sum + (r.kilometraje || 0), 0);
+    const completados = filteredReports.filter(r => r.estado === 'completado' || r.estado === 'aprobado').length;
+    const pendientes = filteredReports.filter(r => r.estado === 'pendiente').length;
+    const enProgreso = filteredReports.filter(r => r.estado === 'en progreso').length;
+
+    return {
+      total: filteredReports.length,
+      completados,
+      pendientes,
+      enProgreso,
+      totalKm,
+      promedioKm: filteredReports.length > 0 ? totalKm / filteredReports.length : 0
+    };
+  }, [filteredReports]);
+
+  // Funciones de utilidad
+  const limpiarFiltros = () => {
+    setSearchQuery('');
+    setFilterPeriod('mes');
+    setFilterTipo('todos');
+    setFilterEstado('todos');
+    setFilterRegion('todas');
+    setFilterProvincia('todas');
+    setFilterUsuario('todos');
+    setCustomStartDate('');
+    setCustomEndDate('');
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const exportarCSV = () => {
+    const headers = ['Número', 'Fecha', 'Tipo', 'Región', 'Provincia', 'Municipio', 'Estado', 'Creado Por', 'Kilometraje (km)'];
+    const rows = filteredReports.map(r => [
+      r.reportNumber || r.numeroReporte,
+      new Date(r.fechaCreacion || r.date).toLocaleDateString('es-ES'),
+      r.tipoIntervencion,
+      r.region,
+      r.province,
+      r.municipio,
+      r.estado || 'N/A',
+      r.createdBy,
+      (r.kilometraje || 0).toFixed(2)
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `informe_detallado_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const exportarJSON = () => {
+    const dataStr = JSON.stringify(filteredReports, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `informe_detallado_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   const toggleRegion = (regionName: string) => {
     const newExpanded = new Set(expandedRegions);
@@ -210,6 +479,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
     return Math.max(...province.districts.map(d => d.interventions));
   };
 
+  // Modal de detalle del reporte (cuando se selecciona uno)
   if (selectedReport) {
     return (
       <div className="detailed-report-modal">
@@ -379,37 +649,264 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
     return units[key] || '';
   }
 
-
+  // Vista principal con filtros avanzados y múltiples modos
   return (
-    <div className="detailed-report-modal">
-      <div className="detailed-report-container">
-        <div className="detailed-report-header">
-          <h2>📄 Informe Detallado por Regiones</h2>
-          {onClose && <button className="close-btn" onClick={onClose}>✕</button>}
+    <div className="detailed-report-view">
+      {/* Header mejorado */}
+      <div className="header">
+        <div className="header-left">
+          <h2>📊 Informes y Estadísticas Detalladas</h2>
+          <p className="header-subtitle">Análisis completo de intervenciones viales</p>
+        </div>
+        <div className="header-right">
+          <div className="view-mode-selector">
+            <button 
+              className={`view-mode-btn ${viewMode === 'hierarchy' ? 'active' : ''}`}
+              onClick={() => setViewMode('hierarchy')}
+            >
+              🌳 Jerarquía
+            </button>
+            <button 
+              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+            >
+              📋 Tabla
+            </button>
+            <button 
+              className={`view-mode-btn ${viewMode === 'stats' ? 'active' : ''}`}
+              onClick={() => setViewMode('stats')}
+            >
+              📈 Estadísticas
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Panel de filtros avanzados */}
+      <div className="advanced-filters-panel">
+        <div className="filters-header-row">
+          <h3>🔍 Filtros Avanzados</h3>
+          <button className="btn-clear-filters" onClick={limpiarFiltros}>
+            🗑️ Limpiar Filtros
+          </button>
         </div>
 
-        <div className="detailed-report-content">
-          <div className="hierarchy-list">
+        <div className="filters-grid-compact">
+          {/* Búsqueda */}
+          <div className="filter-item">
+            <input
+              type="text"
+              className="filter-input-search"
+              placeholder="🔎 Buscar en informes..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </div>
+
+          {/* Período */}
+          <div className="filter-item">
+            <select 
+              className="filter-select-compact"
+              value={filterPeriod}
+              onChange={(e) => setFilterPeriod(e.target.value as FilterPeriod)}
+            >
+              <option value="todos">📅 Todos los períodos</option>
+              <option value="hoy">Hoy</option>
+              <option value="semana">Esta semana</option>
+              <option value="mes">Este mes</option>
+              <option value="trimestre">Este trimestre</option>
+              <option value="año">Este año</option>
+              <option value="personalizado">Personalizado</option>
+            </select>
+          </div>
+
+          {/* Fechas personalizadas */}
+          {filterPeriod === 'personalizado' && (
+            <>
+              <div className="filter-item">
+                <input
+                  type="date"
+                  className="filter-input-date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                />
+              </div>
+              <div className="filter-item">
+                <input
+                  type="date"
+                  className="filter-input-date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Región */}
+          <div className="filter-item">
+            <select 
+              className="filter-select-compact"
+              value={filterRegion}
+              onChange={(e) => setFilterRegion(e.target.value)}
+            >
+              <option value="">🗺️ Todas las regiones</option>
+              {uniqueOptions.regions.map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Provincia */}
+          <div className="filter-item">
+            <select 
+              className="filter-select-compact"
+              value={filterProvincia}
+              onChange={(e) => setFilterProvincia(e.target.value)}
+            >
+              <option value="">🏙️ Todas las provincias</option>
+              {uniqueOptions.provincias.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tipo */}
+          <div className="filter-item">
+            <select 
+              className="filter-select-compact"
+              value={filterTipo}
+              onChange={(e) => setFilterTipo(e.target.value)}
+            >
+              <option value="">🛣️ Todos los tipos</option>
+              {uniqueOptions.tipos.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Estado */}
+          <div className="filter-item">
+            <select 
+              className="filter-select-compact"
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+            >
+              <option value="">📌 Todos los estados</option>
+              {uniqueOptions.estados.map(e => (
+                <option key={e} value={e}>{e}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Usuario (solo para roles con permisos) */}
+          {user.role !== 'Técnico' && (
+            <div className="filter-item">
+              <select 
+                className="filter-select-compact"
+                value={filterUsuario}
+                onChange={(e) => setFilterUsuario(e.target.value)}
+              >
+                <option value="">👤 Todos los usuarios</option>
+                {uniqueOptions.usuarios.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Estadísticas resumidas */}
+      <div className="stats-summary-compact">
+        <div className="stat-box-compact">
+          <div className="stat-icon-compact">📊</div>
+          <div className="stat-text-compact">
+            <div className="stat-value-compact">{stats.total}</div>
+            <div className="stat-label-compact">Total Informes</div>
+          </div>
+        </div>
+        <div className="stat-box-compact">
+          <div className="stat-icon-compact">✅</div>
+          <div className="stat-text-compact">
+            <div className="stat-value-compact">{stats.completados}</div>
+            <div className="stat-label-compact">Completados</div>
+          </div>
+        </div>
+        <div className="stat-box-compact">
+          <div className="stat-icon-compact">⏳</div>
+          <div className="stat-text-compact">
+            <div className="stat-value-compact">{stats.pendientes}</div>
+            <div className="stat-label-compact">Pendientes</div>
+          </div>
+        </div>
+        <div className="stat-box-compact">
+          <div className="stat-icon-compact">🔄</div>
+          <div className="stat-text-compact">
+            <div className="stat-value-compact">{stats.enProgreso}</div>
+            <div className="stat-label-compact">En Progreso</div>
+          </div>
+        </div>
+        <div className="stat-box-compact">
+          <div className="stat-icon-compact">📏</div>
+          <div className="stat-text-compact">
+            <div className="stat-value-compact">{stats.totalKm.toFixed(1)}</div>
+            <div className="stat-label-compact">Km Totales</div>
+          </div>
+        </div>
+        <div className="stat-box-compact">
+          <div className="stat-icon-compact">📐</div>
+          <div className="stat-text-compact">
+            <div className="stat-value-compact">{stats.promedioKm.toFixed(2)}</div>
+            <div className="stat-label-compact">Km Promedio</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de acciones y exportación */}
+      <div className="actions-toolbar">
+        <div className="results-info">
+          Mostrando <strong>{filteredReports.length}</strong> de <strong>{allReportsFlat.length}</strong> informes
+        </div>
+        <div className="export-buttons">
+          <button className="btn-export" onClick={exportarCSV}>
+            📄 Exportar CSV
+          </button>
+          <button className="btn-export" onClick={exportarJSON}>
+            📋 Exportar JSON
+          </button>
+          <button className="btn-export" onClick={handlePrint}>
+            🖨️ Imprimir
+          </button>
+        </div>
+      </div>
+
+      {/* Contenido según modo de vista */}
+      {viewMode === 'hierarchy' && (
+        <div className="hierarchy-container">
+          <div className="hierarchy-tree">
             {regionsData.map((region) => (
               <div key={region.name} className="hierarchy-item region-item">
                 <div 
                   className="hierarchy-row"
-                  onClick={() => toggleRegion(region.name)}
-                  data-count={region.interventions > 0 ? `${region.interventions} reportes` : 'Sin datos'}
+                  onClick={(e) => toggleRegion(region.name, e)}
+                  data-count={`${region.interventions} reportes`}
                 >
                   <div className="hierarchy-info">
                     <span className="expand-icon">{expandedRegions.has(region.name) ? '▼' : '▶'}</span>
                     <span className="hierarchy-name">{region.name}</span>
+                  </div>
+                  <div className="progress-bar-container">
+                    <div 
+                      className="progress-bar-fill"
+                      style={{ width: `${getProgressPercentage(region.interventions, maxRegionInterventions)}%` }}
+                    />
                   </div>
                 </div>
 
                 {expandedRegions.has(region.name) && (
                   <div className="hierarchy-children">
                     {region.provinces.length === 0 ? (
-                      <div className="empty-folder">
-                        <span className="empty-icon">📭</span>
-                        <span className="empty-text">No hay datos registrados para esta región</span>
-                      </div>
+                      <div className="empty-message">No hay provincias con intervenciones registradas</div>
                     ) : (
                       region.provinces.map((province) => (
                         <div key={province.name} className="hierarchy-item province-item">
@@ -421,6 +918,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
                             <div className="hierarchy-info">
                               <span className="expand-icon">{expandedProvinces.has(province.name) ? '▼' : '▶'}</span>
                               <span className="hierarchy-name">{province.name}</span>
+                            </div>
+                            <div className="progress-bar-container">
+                              <div 
+                                className="progress-bar-fill"
+                                style={{ width: `${getProgressPercentage(province.interventions, getMaxProvinceInterventions(region.name))}%` }}
+                              />
                             </div>
                           </div>
 
@@ -469,7 +972,87 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null 
             ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {viewMode === 'table' && (
+        <div className="table-view-container">
+          <table className="detailed-table">
+            <thead>
+              <tr>
+                <th className="sortable" onClick={() => handleSort('reportNumber')}>
+                  # Reporte {sortField === 'reportNumber' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('date')}>
+                  Fecha {sortField === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th>Región</th>
+                <th>Provincia</th>
+                <th>Distrito</th>
+                <th className="sortable" onClick={() => handleSort('tipo')}>
+                  Tipo {sortField === 'tipo' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('estado')}>
+                  Estado {sortField === 'estado' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="sortable" onClick={() => handleSort('kilometraje')}>
+                  Km {sortField === 'kilometraje' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th>Usuario</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredReports.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="no-data-cell">
+                    <div className="no-data-content">
+                      <div className="no-data-icon">📭</div>
+                      <p>No se encontraron informes con los filtros aplicados</p>
+                      <button className="btn-clear-inline" onClick={limpiarFiltros}>
+                        Limpiar Filtros
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredReports.map((report) => (
+                  <tr key={report.id}>
+                    <td className="report-num-cell">#{report.reportNumber}</td>
+                    <td>{report.date}</td>
+                    <td>{report.region}</td>
+                    <td>{report.provincia}</td>
+                    <td>{report.distrito}</td>
+                    <td>{report.tipo}</td>
+                    <td>
+                      <span className={`badge-status badge-${report.estado.toLowerCase().replace(' ', '-')}`}>
+                        {report.estado}
+                      </span>
+                    </td>
+                    <td className="km-cell">{report.kilometraje?.toFixed(2) || 'N/A'} km</td>
+                    <td className="user-cell">{report.createdBy}</td>
+                    <td>
+                      <button 
+                        className="btn-view-icon"
+                        onClick={(e) => viewReport(report, e)}
+                        title="Ver detalles"
+                      >
+                        👁️
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {viewMode === 'stats' && (
+        <div className="stats-view-container">
+          <h3>📊 Vista de Estadísticas Avanzadas</h3>
+          <p>Próximamente: Gráficos interactivos, análisis de tendencias y más...</p>
+        </div>
+      )}
     </div>
   );
 };

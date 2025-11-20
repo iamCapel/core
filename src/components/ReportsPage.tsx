@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import PendingReportsModal from './PendingReportsModal';
+import DetailedReportView from './DetailedReportView';
 import './ReportsPage.css';
 
 interface User {
@@ -485,10 +486,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
           )}
 
           {currentView === 'detallado' && (
-            <div className="view-content">
-              <h2>Informe Detallado</h2>
-              <p>Vista de informe detallado en desarrollo...</p>
-            </div>
+            <DetailedReportView user={user} />
           )}
         </div>
       </div>
