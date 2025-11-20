@@ -1049,8 +1049,104 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
 
       {viewMode === 'stats' && (
         <div className="stats-view-container">
-          <h3>📊 Vista de Estadísticas Avanzadas</h3>
-          <p>Próximamente: Gráficos interactivos, análisis de tendencias y más...</p>
+          <h3>📊 Estadísticas por Tipo de Intervención</h3>
+          <p className="stats-subtitle">Totales calculados desde punto inicial hasta punto final (GPS)</p>
+          
+          <div className="intervention-stats-grid">
+            {(() => {
+              // Agrupar por tipo de intervención
+              const statsByType: Record<string, {
+                count: number;
+                totalKm: number;
+                reports: Report[];
+              }> = {};
+
+              filteredReports.forEach(report => {
+                const tipo = report.tipoIntervencion || 'Sin clasificar';
+                if (!statsByType[tipo]) {
+                  statsByType[tipo] = {
+                    count: 0,
+                    totalKm: 0,
+                    reports: []
+                  };
+                }
+                statsByType[tipo].count++;
+                statsByType[tipo].totalKm += report.kilometraje || 0;
+                statsByType[tipo].reports.push(report);
+              });
+
+              // Convertir a array y ordenar por total de km descendente
+              const statsArray = Object.entries(statsByType)
+                .map(([tipo, data]) => ({ tipo, ...data }))
+                .sort((a, b) => b.totalKm - a.totalKm);
+
+              return statsArray.map((stat, index) => {
+                const promedio = stat.count > 0 ? stat.totalKm / stat.count : 0;
+                const porcentaje = stats.totalKm > 0 ? (stat.totalKm / stats.totalKm) * 100 : 0;
+
+                return (
+                  <div key={stat.tipo} className="intervention-stat-card">
+                    <div className="stat-card-header">
+                      <div className="stat-rank">#{index + 1}</div>
+                      <h4 className="stat-tipo-title">{stat.tipo}</h4>
+                    </div>
+                    
+                    <div className="stat-card-body">
+                      <div className="stat-metric">
+                        <div className="stat-metric-label">Total Reportes</div>
+                        <div className="stat-metric-value">{stat.count}</div>
+                      </div>
+                      
+                      <div className="stat-metric primary">
+                        <div className="stat-metric-label">Kilometraje Total</div>
+                        <div className="stat-metric-value large">{stat.totalKm.toFixed(2)} km</div>
+                      </div>
+                      
+                      <div className="stat-metric">
+                        <div className="stat-metric-label">Promedio por Reporte</div>
+                        <div className="stat-metric-value">{promedio.toFixed(2)} km</div>
+                      </div>
+                      
+                      <div className="stat-metric">
+                        <div className="stat-metric-label">% del Total</div>
+                        <div className="stat-metric-value">{porcentaje.toFixed(1)}%</div>
+                      </div>
+                    </div>
+
+                    <div className="stat-progress-bar">
+                      <div 
+                        className="stat-progress-fill"
+                        style={{ width: `${porcentaje}%` }}
+                      />
+                    </div>
+
+                    <div className="stat-card-footer">
+                      <button 
+                        className="btn-view-details"
+                        onClick={() => {
+                          // Filtrar por este tipo
+                          setFilterTipo(stat.tipo);
+                          setViewMode('table');
+                        }}
+                      >
+                        Ver Detalles →
+                      </button>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+
+          {filteredReports.length === 0 && (
+            <div className="no-stats-data">
+              <div className="no-data-icon">📊</div>
+              <p>No hay datos suficientes para generar estadísticas</p>
+              <button className="btn-clear-inline" onClick={limpiarFiltros}>
+                Limpiar Filtros
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
