@@ -1,0 +1,401 @@
+.my-reports-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Estadísticas */
+.reports-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+}
+
+.stat-icon {
+  font-size: 32px;
+  opacity: 0.9;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Controles de vista */
+.view-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.view-btn {
+  padding: 10px 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.view-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* Calendario */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+.calendar-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.calendar-nav-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: white;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-nav-btn:hover {
+  background: #667eea;
+  color: white;
+  transform: scale(1.1);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.calendar-day-name {
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: #666;
+  padding: 10px;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.calendar-day.empty {
+  border: none;
+  background: transparent;
+}
+
+.calendar-day.today {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.calendar-day.has-reports {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-color: #4caf50;
+}
+
+.calendar-day.has-reports:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  cursor: pointer;
+}
+
+.day-number {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.reports-indicator {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: #4caf50;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.reports-count {
+  line-height: 1;
+}
+
+/* Detalle de fecha seleccionada */
+.selected-date-reports {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.selected-date-title {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  text-transform: capitalize;
+}
+
+.close-details-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  border: none;
+  background: #6c757d;
+  color: white;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.close-details-btn:hover {
+  background: #5a6268;
+}
+
+/* Lista de reportes */
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-item {
+  background: white;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+.report-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateX(5px);
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.report-number {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 14px;
+}
+
+.report-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.report-status.completado {
+  background: #d4edda;
+  color: #155724;
+}
+
+.report-status.en-progreso {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.report-status.pendiente {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.report-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-type {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.report-location,
+.report-time {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+/* Vista de lista */
+.reports-list-view {
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.date-group {
+  margin-bottom: 25px;
+}
+
+.date-group-title {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-count {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 400;
+}
+
+/* Sin reportes */
+.no-reports {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+}
+
+.no-reports-icon {
+  font-size: 64px;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
+.no-reports p {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Scrollbar personalizado */
+.reports-list-view::-webkit-scrollbar {
+  width: 8px;
+}
+
+.reports-list-view::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.reports-list-view::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.reports-list-view::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .reports-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .calendar-day-name {
+    font-size: 10px;
+    padding: 5px;
+  }
+
+  .day-number {
+    font-size: 12px;
+  }
+
+  .reports-indicator {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+}

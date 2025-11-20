@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpieza de Usuarios de Prueba - MOPC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .info-box {
+            background: #ecf0f1;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #34495e;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .warning-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .warning-box p {
+            color: #856404;
+            margin: 0;
+        }
+
+        .stats {
+            background: #e8f5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stats h3 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .stat-label {
+            color: #424242;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-analyze {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-analyze:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-clean {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-clean:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-clean:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .user-item.test-user {
+            border-left-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .user-item strong {
+            color: #2c3e50;
+        }
+
+        .user-item small {
+            color: #7f8c8d;
+            display: block;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Limpieza de Usuarios de Prueba</h1>
+        <p class="subtitle">Sistema de Gestión MOPC v0.1</p>
+
+        <div class="info-box">
+            <h3>ℹ️ Información</h3>
+            <p>Esta herramienta eliminará todos los datos temporales y usuarios de prueba del sistema.</p>
+            <p style="margin-top: 10px;"><strong>Se mantendrán únicamente los usuarios registrados en userStorage.</strong></p>
+        </div>
+
+        <div class="warning-box">
+            <h3>⚠️ Advertencia</h3>
+            <p>Esta acción NO eliminará usuarios reales del sistema userStorage. Solo limpia datos temporales y perfiles de prueba.</p>
+        </div>
+
+        <div class="stats" id="statsContainer" style="display: none;">
+            <h3>📊 Estado Actual del Sistema</h3>
+            <div class="stat-item">
+                <span class="stat-label">Usuarios en userStorage:</span>
+                <span class="stat-value" id="userStorageCount">-</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Usuario activo:</span>
+                <span class="stat-value" id="currentUser">-</span>
+            </div>
+        </div>
+
+        <div class="user-list" id="userList" style="display: none;"></div>
+
+        <div class="button-group">
+            <button class="btn-analyze" onclick="analyzeUsers()">
+                🔍 Analizar Sistema
+            </button>
+            <button class="btn-clean" id="cleanButton" onclick="cleanTestUsers()" disabled>
+                🗑️ Limpiar Usuarios de Prueba
+            </button>
+        </div>
+
+        <div class="success-message" id="successMessage">
+            ✅ ¡Limpieza completada! Solo quedan usuarios válidos del sistema.
+        </div>
+    </div>
+
+    <script>
+        function analyzeUsers() {
+            const statsContainer = document.getElementById('statsContainer');
+            const userList = document.getElementById('userList');
+            const cleanButton = document.getElementById('cleanButton');
+            const userStorageCountEl = document.getElementById('userStorageCount');
+            const currentUserEl = document.getElementById('currentUser');
+
+            // Obtener usuarios de userStorage
+            const userStorageData = localStorage.getItem('mopc_users_db');
+            const userStorage = userStorageData ? JSON.parse(userStorageData) : {};
+            const userCount = Object.keys(userStorage).length;
+
+            // Obtener usuario actual
+            const currentUserData = localStorage.getItem('mopc_user');
+            const currentUser = currentUserData ? JSON.parse(currentUserData) : null;
+
+            // Actualizar estadísticas
+            userStorageCountEl.textContent = userCount;
+            currentUserEl.textContent = currentUser ? `${currentUser.name} (@${currentUser.username})` : 'Ninguno';
+
+            // Mostrar estadísticas
+            statsContainer.style.display = 'block';
+
+            // Listar usuarios
+            userList.innerHTML = '<h3 style="margin-bottom: 10px; color: #2c3e50;">Usuarios en el Sistema:</h3>';
+            
+            if (userCount > 0) {
+                Object.values(userStorage).forEach(user => {
+                    const userItem = document.createElement('div');
+                    userItem.className = 'user-item';
+                    userItem.innerHTML = `
+                        <strong>${user.name}</strong> (@${user.username})
+                        <small>Rol: ${user.role} | Email: ${user.email} | Estado: ${user.isActive ? 'Activo' : 'Inactivo'}</small>
+                    `;
+                    userList.appendChild(userItem);
+                });
+            } else {
+                userList.innerHTML += '<p style="color: #7f8c8d; padding: 20px; text-align: center;">No hay usuarios en userStorage</p>';
+            }
+
+            userList.style.display = 'block';
+
+            // Habilitar botón de limpieza
+            cleanButton.disabled = false;
+        }
+
+        function cleanTestUsers() {
+            if (!confirm('¿Está seguro de que desea limpiar todos los datos temporales y usuarios de prueba?\n\nSolo se mantendrán los usuarios de userStorage.')) {
+                return;
+            }
+
+            try {
+                // Obtener datos actuales de userStorage
+                const userStorageData = localStorage.getItem('mopc_users_db');
+                const userStorageIndex = localStorage.getItem('mopc_users_index');
+                const userStorageMetadata = localStorage.getItem('mopc_users_metadata');
+
+                // Limpiar usuario actual si no está en userStorage
+                const currentUserData = localStorage.getItem('mopc_user');
+                if (currentUserData) {
+                    const currentUser = JSON.parse(currentUserData);
+                    
+                    // Verificar si el usuario está en userStorage
+                    const userStorage = userStorageData ? JSON.parse(userStorageData) : {};
+                    const isInUserStorage = Object.values(userStorage).some(u => u.username === currentUser.username);
+                    
+                    // Si no está en userStorage, eliminar
+                    if (!isInUserStorage) {
+                        localStorage.removeItem('mopc_user');
+                        localStorage.removeItem('mopc_user_profile');
+                    }
+                }
+
+                // Limpiar todos los perfiles de usuarios de prueba
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('profile_')) {
+                        // Verificar si el perfil corresponde a un usuario en userStorage
+                        const username = key.replace('profile_', '');
+                        const userStorage = userStorageData ? JSON.parse(userStorageData) : {};
+                        const isInUserStorage = Object.values(userStorage).some(u => u.username === username);
+                        
+                        if (!isInUserStorage) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                }
+
+                // Eliminar perfiles identificados
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                // Mostrar mensaje de éxito
+                const successMessage = document.getElementById('successMessage');
+                successMessage.classList.add('show');
+
+                // Actualizar análisis
+                setTimeout(() => {
+                    analyzeUsers();
+                    successMessage.classList.remove('show');
+                }, 3000);
+
+                console.log('✅ Limpieza completada');
+                console.log(`📊 Perfiles eliminados: ${keysToRemove.length}`);
+
+            } catch (error) {
+                alert('❌ Error durante la limpieza: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        // Análisis automático al cargar
+        window.addEventListener('load', () => {
+            console.log('🔍 Herramienta de limpieza de usuarios cargada');
+        });
+    </script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import './ReportsPage.css';
 interface User {
   username: string;
   name: string;
+  role?: string;
 }
 
 interface ReportsPageProps {
@@ -121,7 +122,12 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
 
   const cargarDatosRegiones = () => {
     const stats = reportStorage.getStatistics();
-    const allReports = reportStorage.getAllReports();
+    let allReports = reportStorage.getAllReports();
+    
+    // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
+    if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+      allReports = allReports.filter(report => report.creadoPor === user.username);
+    }
 
     const regiones = REGIONES_BASE.map(region => {
       const regionKey = region.name.toLowerCase();

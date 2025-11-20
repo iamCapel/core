@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Usuario Administrador - MOPC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .info-box p {
+            color: #424242;
+            margin: 5px 0;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-box.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .success-box h3 {
+            color: #155724;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .error-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-box.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .error-box h3 {
+            color: #721c24;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-status {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .user-status h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .status-label {
+            color: #424242;
+            font-weight: 500;
+        }
+
+        .status-value {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .status-value.good {
+            color: #28a745;
+        }
+
+        .status-value.bad {
+            color: #dc3545;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .btn-check {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-check:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-setup {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-setup:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-setup:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .user-details {
+            background: #fff3cd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .user-details.show {
+            display: block;
+        }
+
+        .user-details h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .user-details p {
+            color: #856404;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👤 Configuración de Usuario Administrador</h1>
+        <p class="subtitle">Sistema de Gestión MOPC v0.1</p>
+
+        <div class="info-box">
+            <h3>ℹ️ Acerca de esta herramienta</h3>
+            <p>Esta herramienta verifica y configura el usuario administrador del sistema:</p>
+            <p style="margin-top: 10px;"><strong>Miguel de Jesús Cabrera Cruz</strong></p>
+        </div>
+
+        <div class="success-box" id="successBox">
+            <h3>✅ Usuario Administrador Configurado</h3>
+            <p id="successMessage"></p>
+        </div>
+
+        <div class="error-box" id="errorBox">
+            <h3>❌ Error</h3>
+            <p id="errorMessage"></p>
+        </div>
+
+        <div class="user-status" id="userStatus" style="display: none;">
+            <h3>📊 Estado del Usuario Administrador</h3>
+            <div class="status-item">
+                <span class="status-label">Nombre:</span>
+                <span class="status-value" id="userName">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Usuario:</span>
+                <span class="status-value" id="userUsername">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Email:</span>
+                <span class="status-value" id="userEmail">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Rol:</span>
+                <span class="status-value" id="userRole">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Estado:</span>
+                <span class="status-value" id="userActive">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Verificado:</span>
+                <span class="status-value" id="userVerified">-</span>
+            </div>
+
+            <div class="user-details" id="userDetails">
+                <h4>🔧 Acciones Necesarias</h4>
+                <p id="actionsNeeded"></p>
+            </div>
+        </div>
+
+        <button class="btn-check" onclick="checkAdminUser()">
+            🔍 Verificar Usuario Administrador
+        </button>
+
+        <button class="btn-setup" id="setupButton" onclick="setupAdminUser()" disabled>
+            ⚙️ Configurar como Administrador
+        </button>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        function checkAdminUser() {
+            const successBox = document.getElementById('successBox');
+            const errorBox = document.getElementById('errorBox');
+            const userStatus = document.getElementById('userStatus');
+            const setupButton = document.getElementById('setupButton');
+            const userDetails = document.getElementById('userDetails');
+
+            // Ocultar mensajes previos
+            successBox.classList.remove('show');
+            errorBox.classList.remove('show');
+            userDetails.classList.remove('show');
+
+            try {
+                // Obtener usuarios de userStorage
+                const userStorageData = localStorage.getItem('mopc_users_db');
+                
+                if (!userStorageData) {
+                    showError('No se encontró la base de datos de usuarios. El sistema userStorage no está inicializado.');
+                    userStatus.style.display = 'none';
+                    setupButton.disabled = true;
+                    return;
+                }
+
+                const userStorage = JSON.parse(userStorageData);
+                
+                // Buscar usuario por nombre
+                currentUser = Object.values(userStorage).find(u => 
+                    u.name.toLowerCase().includes('miguel') && 
+                    u.name.toLowerCase().includes('cabrera')
+                );
+
+                if (!currentUser) {
+                    showError('No se encontró el usuario "Miguel de Jesús Cabrera Cruz" en userStorage. Debe ser creado primero.');
+                    userStatus.style.display = 'none';
+                    setupButton.disabled = true;
+                    return;
+                }
+
+                // Mostrar información del usuario
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userUsername').textContent = currentUser.username;
+                document.getElementById('userEmail').textContent = currentUser.email;
+                
+                const roleEl = document.getElementById('userRole');
+                roleEl.textContent = currentUser.role;
+                roleEl.className = 'status-value ' + (currentUser.role === 'Administrador' ? 'good' : 'bad');
+                
+                const activeEl = document.getElementById('userActive');
+                activeEl.textContent = currentUser.isActive ? 'Activo ✓' : 'Inactivo ✗';
+                activeEl.className = 'status-value ' + (currentUser.isActive ? 'good' : 'bad');
+                
+                const verifiedEl = document.getElementById('userVerified');
+                verifiedEl.textContent = currentUser.isVerified ? 'Verificado ✓' : 'No Verificado ✗';
+                verifiedEl.className = 'status-value ' + (currentUser.isVerified ? 'good' : 'bad');
+
+                userStatus.style.display = 'block';
+
+                // Verificar si necesita configuración
+                const needsSetup = currentUser.role !== 'Administrador' || 
+                                   !currentUser.isActive || 
+                                   !currentUser.isVerified;
+
+                if (needsSetup) {
+                    const actions = [];
+                    if (currentUser.role !== 'Administrador') actions.push('Cambiar rol a Administrador');
+                    if (!currentUser.isActive) actions.push('Activar cuenta');
+                    if (!currentUser.isVerified) actions.push('Verificar cuenta');
+
+                    document.getElementById('actionsNeeded').textContent = 
+                        'El usuario necesita: ' + actions.join(', ');
+                    userDetails.classList.add('show');
+                    setupButton.disabled = false;
+                } else {
+                    showSuccess('El usuario ya está configurado correctamente como Administrador.');
+                    setupButton.disabled = true;
+                }
+
+            } catch (error) {
+                showError('Error al verificar el usuario: ' + error.message);
+                console.error('Error:', error);
+                userStatus.style.display = 'none';
+                setupButton.disabled = true;
+            }
+        }
+
+        function setupAdminUser() {
+            if (!currentUser) {
+                showError('Primero debe verificar el usuario.');
+                return;
+            }
+
+            if (!confirm('¿Está seguro de que desea configurar a "' + currentUser.name + '" como Administrador del sistema?')) {
+                return;
+            }
+
+            try {
+                // Obtener userStorage
+                const userStorageData = localStorage.getItem('mopc_users_db');
+                const userStorage = JSON.parse(userStorageData);
+
+                // Actualizar usuario
+                const updatedUser = {
+                    ...currentUser,
+                    role: 'Administrador',
+                    isActive: true,
+                    isVerified: true,
+                    updatedAt: new Date().toISOString(),
+                    version: currentUser.version + 1
+                };
+
+                // Guardar en userStorage
+                userStorage[currentUser.id] = updatedUser;
+                localStorage.setItem('mopc_users_db', JSON.stringify(userStorage));
+
+                // Actualizar índice
+                const indexData = localStorage.getItem('mopc_users_index');
+                if (indexData) {
+                    const index = JSON.parse(indexData);
+                    const userIndex = index.find(u => u.id === currentUser.id);
+                    if (userIndex) {
+                        userIndex.role = 'Administrador';
+                        userIndex.isActive = true;
+                    }
+                    localStorage.setItem('mopc_users_index', JSON.stringify(index));
+                }
+
+                showSuccess('✅ Usuario configurado exitosamente como Administrador. Puede iniciar sesión con privilegios completos.');
+                
+                // Actualizar verificación
+                setTimeout(() => {
+                    checkAdminUser();
+                }, 1500);
+
+            } catch (error) {
+                showError('Error al configurar el usuario: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        function showSuccess(message) {
+            const successBox = document.getElementById('successBox');
+            const successMessage = document.getElementById('successMessage');
+            const errorBox = document.getElementById('errorBox');
+            
+            errorBox.classList.remove('show');
+            successMessage.textContent = message;
+            successBox.classList.add('show');
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            const errorMessage = document.getElementById('errorMessage');
+            const successBox = document.getElementById('successBox');
+            
+            successBox.classList.remove('show');
+            errorMessage.textContent = message;
+            errorBox.classList.add('show');
+        }
+
+        // Verificación automática al cargar
+        window.addEventListener('load', () => {
+            console.log('🔧 Herramienta de configuración de administrador cargada');
+        });
+    </script>
+</body>
+</html>

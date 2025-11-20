@@ -394,7 +394,13 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
 
   useEffect(() => {
     // Cargar intervenciones desde reportStorage
-    const reports = reportStorage.getAllReports();
+    let reports = reportStorage.getAllReports();
+    
+    // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
+    if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+      reports = reports.filter(report => report.creadoPor === user.username);
+    }
+    
     const interventionsData = reports.map((report, index) => ({
       id: index,
       timestamp: report.timestamp,
@@ -418,7 +424,7 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
     const types = Array.from(typeSet) as string[];
     setAllTypes(types);
     setSelectedTypes(types); // Mostrar todos por defecto
-  }, []);
+  }, [user]);
 
   const filteredInterventions = interventions.filter(intervention => 
     selectedTypes.includes(intervention.tipoIntervencion)

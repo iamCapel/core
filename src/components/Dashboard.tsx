@@ -6,8 +6,10 @@ import UsersPage from './UsersPage';
 import GoogleMapView from './GoogleMapView';
 import LeafletMapView from './LeafletMapView';
 import PendingReportsModal from './PendingReportsModal';
+import MyReportsCalendar from './MyReportsCalendar';
 import { UserRole, applyUserTheme, getRoleConfig, getRoleBadge, UserWithRole } from '../types/userRoles';
 import { pendingReportStorage } from '../services/pendingReportStorage';
+import { userStorage } from '../services/userStorage';
 import './Dashboard.css';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
@@ -534,7 +536,7 @@ const Dashboard: React.FC = () => {
   // Estado para el menú desplegable del usuario
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMyReportsModal, setShowMyReportsModal] = useState(false);
   const [showCompleteProfileModal, setShowCompleteProfileModal] = useState(false);
   
   // Estados para el formulario de completar perfil
@@ -542,6 +544,7 @@ const Dashboard: React.FC = () => {
   const [fullName, setFullName] = useState<string>('');
   const [birthDate, setBirthDate] = useState<string>('');
   const [idCardPhoto, setIdCardPhoto] = useState<string>('');
+  const [idCardNumber, setIdCardNumber] = useState<string>(''); // Nuevo estado para cédula
   const [showProfileIncompleteNotification, setShowProfileIncompleteNotification] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
 
@@ -647,21 +650,32 @@ const Dashboard: React.FC = () => {
   // Verificar si el perfil del usuario está completo
   useEffect(() => {
     if (user) {
-      const profileData = localStorage.getItem(`profile_${user.username}`);
-      if (profileData) {
-        const profile = JSON.parse(profileData);
-        setProfilePhoto(profile.profilePhoto || '');
-        setFullName(profile.fullName || '');
-        setBirthDate(profile.birthDate || '');
-        setIdCardPhoto(profile.idCardPhoto || '');
-        
-        // Verificar si todos los campos están completos
-        const isComplete = profile.profilePhoto && profile.fullName && profile.birthDate && profile.idCardPhoto;
-        setShowProfileIncompleteNotification(!isComplete);
-        setIsProfileComplete(isComplete);
+      // Verificar si el usuario requiere verificación de perfil
+      const storedUser = userStorage.getUserByUsername(user.username);
+      const requiresVerification = storedUser ? !storedUser.isVerified : true;
+      
+      if (requiresVerification) {
+        // Solo mostrar solicitud de verificación si isVerified es false
+        const profileData = localStorage.getItem(`profile_${user.username}`);
+        if (profileData) {
+          const profile = JSON.parse(profileData);
+          setProfilePhoto(profile.profilePhoto || '');
+          setFullName(profile.fullName || '');
+          setBirthDate(profile.birthDate || '');
+          setIdCardPhoto(profile.idCardPhoto || '');
+          
+          // Verificar si todos los campos están completos
+          const isComplete = profile.profilePhoto && profile.fullName && profile.birthDate && profile.idCardPhoto;
+          setShowProfileIncompleteNotification(!isComplete);
+          setIsProfileComplete(isComplete);
+        } else {
+          setShowProfileIncompleteNotification(true);
+          setIsProfileComplete(false);
+        }
       } else {
-        setShowProfileIncompleteNotification(true);
-        setIsProfileComplete(false);
+        // Usuario con isVerified = true no necesita verificación de perfil
+        setShowProfileIncompleteNotification(false);
+        setIsProfileComplete(true);
       }
     }
   }, [user]);
@@ -742,57 +756,53 @@ const Dashboard: React.FC = () => {
     await new Promise(r => setTimeout(r, 1000));
 
     try {
-      // Asignar rol según el usuario (simulación temporal)
-      let userRole: UserRole = UserRole.ADMIN;
-      let userName = `Usuario ${loginUser}`;
+      // Primero, intentar validar credenciales en userStorage
+      const validatedUser = userStorage.validateCredentials(loginUser, loginPass);
       
-      // Usuarios de prueba con roles específicos
-      if (loginUser.toLowerCase() === 'admin') {
-        userRole = UserRole.ADMIN;
-        userName = 'Miguel Administrador';
-      } else if (loginUser.toLowerCase() === 'eng') {
-        userRole = UserRole.ADMIN;
-        userName = 'Engineer User';
-      } else if (loginUser.toLowerCase() === 'supervisor' || loginUser.toLowerCase().startsWith('sup')) {
-        userRole = UserRole.SUPERVISOR;
-        userName = `${loginUser} Supervisor`;
-      } else if (loginUser.toLowerCase() === 'tecnico' || loginUser.toLowerCase().startsWith('tec')) {
-        userRole = UserRole.TECNICO;
-        userName = `${loginUser} Técnico`;
-      }
-      
-      const newUser: User = {
-        username: loginUser,
-        name: userName,
-        role: userRole
-      };
-      
-      localStorage.setItem('mopc_user', JSON.stringify(newUser));
-      setUser(newUser);
-      setLoginUser('');
-      setLoginPass('');
-      
-      // Usuario "eng" tiene perfil pre-verificado
-      if (loginUser.toLowerCase() === 'eng') {
-        const verifiedProfile = {
-          profilePhoto: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Ccircle cx=%22100%22 cy=%22100%22 r=%2280%22 fill=%22%234CAF50%22/%3E%3Ctext x=%22100%22 y=%22120%22 font-size=%2280%22 text-anchor=%22middle%22 fill=%22white%22%3EE%3C/text%3E%3C/svg%3E',
-          fullName: 'Engineer User',
-          birthDate: '1990-01-01',
-          idCardPhoto: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22250%22%3E%3Crect width=%22400%22 height=%22250%22 fill=%22%23e0e0e0%22/%3E%3Ctext x=%22200%22 y=%22125%22 font-size=%2224%22 text-anchor=%22middle%22%3EC%C3%A9dula Verificada%3C/text%3E%3C/svg%3E',
-          profileCompleted: true
+      if (validatedUser) {
+        // Verificar si la cuenta está activa
+        if (!validatedUser.isActive) {
+          setLoginError('⚠️ Lo sentimos, su cuenta está temporalmente desactivada. Comuníquese con su superior.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Credenciales válidas y cuenta activa - usuario autenticado
+        const userRole: UserRole = validatedUser.role === 'Administrador' ? UserRole.ADMIN :
+                                     validatedUser.role === 'Supervisor' ? UserRole.SUPERVISOR :
+                                     UserRole.TECNICO;
+        
+        const newUser: User = {
+          username: validatedUser.username,
+          name: validatedUser.name,
+          role: userRole
         };
-        localStorage.setItem('mopc_user_profile', JSON.stringify(verifiedProfile));
-        setProfilePhoto(verifiedProfile.profilePhoto);
-        setFullName(verifiedProfile.fullName);
-        setBirthDate(verifiedProfile.birthDate);
-        setIdCardPhoto(verifiedProfile.idCardPhoto);
-        setIsProfileComplete(true);
+        
+        localStorage.setItem('mopc_user', JSON.stringify(newUser));
+        setUser(newUser);
+        setLoginUser('');
+        setLoginPass('');
+        
+        console.log(`✅ Usuario autenticado como: ${getRoleBadge(userRole)}`);
+        setIsLoading(false);
+        return;
       }
       
-      console.log(`✅ Usuario autenticado como: ${getRoleBadge(userRole)}`);
+      // Si las credenciales no son válidas, verificar si el usuario existe
+      const userExists = userStorage.getUserByUsername(loginUser);
+      if (userExists) {
+        // Usuario existe pero contraseña incorrecta
+        setLoginError('❌ Contraseña incorrecta. Intente nuevamente.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Usuario no existe en userStorage
+      setLoginError('❌ Usuario no encontrado. Contacte con un administrador.');
+      setIsLoading(false);
+      
     } catch (err) {
       setLoginError('Error al iniciar sesión');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -824,9 +834,26 @@ const Dashboard: React.FC = () => {
     if (!user) return;
 
     // Validar que todos los campos estén completos
-    if (!profilePhoto || !fullName || !birthDate || !idCardPhoto) {
+    if (!profilePhoto || !fullName || !idCardNumber || !idCardPhoto) {
       alert('⚠️ Por favor complete todos los campos requeridos');
       return;
+    }
+
+    // Verificar si el usuario está en userStorage
+    const storedUser = userStorage.getUserByUsername(user.username);
+    
+    if (storedUser && storedUser.cedula) {
+      // Validar que el número de cédula coincida con el registrado
+      const storedCedula = storedUser.cedula;
+      
+      // Normalizar los números de cédula (quitar guiones, espacios, puntos)
+      const normalizedInput = idCardNumber.replace(/[-.\s]/g, '');
+      const normalizedStored = storedCedula.replace(/[-.\s]/g, '');
+      
+      if (normalizedInput !== normalizedStored) {
+        alert('❌ Error de verificación');
+        return;
+      }
     }
 
     // Guardar en localStorage
@@ -834,6 +861,7 @@ const Dashboard: React.FC = () => {
       profilePhoto,
       fullName,
       birthDate,
+      idCardNumber,
       idCardPhoto,
       profileCompleted: true
     };
@@ -1183,10 +1211,10 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="user-dropdown-item" onClick={() => {
                       setShowUserMenu(false);
-                      setShowSettingsModal(true);
+                      setShowMyReportsModal(true);
                     }}>
-                      <span>⚙️</span>
-                      <span>Configuración</span>
+                      <span>📋</span>
+                      <span>Mis Reportes</span>
                     </div>
                     <div className="user-dropdown-divider"></div>
                     <div className="user-dropdown-item" onClick={() => {
@@ -1361,88 +1389,16 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Configuración */}
-      {showSettingsModal && (
-        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
-          <div className="modal-content settings-modal" onClick={(e) => e.stopPropagation()}>
+      {/* Modal de Mis Reportes */}
+      {showMyReportsModal && (
+        <div className="modal-overlay" onClick={() => setShowMyReportsModal(false)}>
+          <div className="modal-content my-reports-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh' }}>
             <div className="modal-header">
-              <h2>⚙️ Configuración</h2>
-              <button className="modal-close" onClick={() => setShowSettingsModal(false)}>✕</button>
+              <h2>📋 Mis Reportes</h2>
+              <button className="modal-close" onClick={() => setShowMyReportsModal(false)}>✕</button>
             </div>
-            <div className="modal-body">
-              <div className="settings-section">
-                <h3>🎨 Apariencia</h3>
-                <div className="setting-item">
-                  <label>
-                    <input type="checkbox" defaultChecked />
-                    Usar tema naranja
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <label>
-                    <input type="checkbox" />
-                    Modo oscuro (próximamente)
-                  </label>
-                </div>
-              </div>
-
-              <div className="settings-section">
-                <h3>📍 GPS y Ubicación</h3>
-                <div className="setting-item">
-                  <label>
-                    <input type="checkbox" checked={isGpsEnabled} readOnly />
-                    GPS habilitado
-                  </label>
-                  <span className="setting-description">
-                    {isGpsEnabled ? '✅ GPS activo' : '❌ GPS desactivado'}
-                  </span>
-                </div>
-                {gpsPosition && (
-                  <div className="setting-item">
-                    <span className="setting-description">
-                      📍 Ubicación actual: {gpsPosition.lat.toFixed(6)}, {gpsPosition.lon.toFixed(6)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="settings-section">
-                <h3>🔔 Notificaciones</h3>
-                <div className="setting-item">
-                  <label>
-                    <input type="checkbox" defaultChecked />
-                    Notificaciones de reportes pendientes
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <label>
-                    <input type="checkbox" defaultChecked />
-                    Alertas de aprobación
-                  </label>
-                </div>
-              </div>
-
-              <div className="settings-section">
-                <h3>💾 Datos</h3>
-                <div className="setting-item">
-                  <button className="btn btn-secondary" onClick={() => {
-                    const count = Object.keys(localStorage).filter(k => 
-                      k.startsWith('intervencion_') || k.startsWith('borrador_')
-                    ).length;
-                    alert(`Tienes ${count} reportes guardados localmente`);
-                  }}>
-                    Ver datos almacenados
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowSettingsModal(false)}>
-                Cerrar
-              </button>
-              <button className="btn btn-primary">
-                Guardar cambios
-              </button>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <MyReportsCalendar username={user?.username || ''} onClose={() => setShowMyReportsModal(false)} />
             </div>
           </div>
         </div>
@@ -1500,15 +1456,20 @@ const Dashboard: React.FC = () => {
                 />
               </div>
 
-              {/* Fecha de Nacimiento */}
+              {/* Número de Cédula */}
               <div className="profile-field-section">
-                <label className="profile-field-label">📅 Fecha de Nacimiento *</label>
+                <label className="profile-field-label">🆔 Número de Cédula *</label>
                 <input
-                  type="date"
+                  type="text"
                   className="form-input"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
+                  placeholder="Ej: 001-1234567-8"
+                  value={idCardNumber}
+                  onChange={(e) => setIdCardNumber(e.target.value)}
+                  maxLength={15}
                 />
+                <small style={{ color: '#6c757d', fontSize: '12px', marginTop: '5px', display: 'block' }}>
+                  Debe coincidir con el número registrado en el sistema
+                </small>
               </div>
 
               {/* Foto del Carnet */}

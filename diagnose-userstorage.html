@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico UserStorage - MOPC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .info-label {
+            color: #424242;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .info-value.good {
+            color: #28a745;
+        }
+
+        .info-value.bad {
+            color: #dc3545;
+        }
+
+        .info-value.warning {
+            color: #ffc107;
+        }
+
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            max-height: 300px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .user-table th,
+        .user-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .user-table th {
+            background: #34495e;
+            color: white;
+            font-weight: 600;
+        }
+
+        .user-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-verified {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-unverified {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico UserStorage</h1>
+        <p class="subtitle">Sistema de Gestión MOPC v0.1 - Herramienta de Diagnóstico</p>
+
+        <div class="section">
+            <h2>📊 Estado General</h2>
+            <div class="info-item">
+                <span class="info-label">Base de datos inicializada:</span>
+                <span class="info-value" id="dbInitialized">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Total de usuarios:</span>
+                <span class="info-value" id="totalUsers">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Usuarios activos:</span>
+                <span class="info-value" id="activeUsers">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Usuarios administradores:</span>
+                <span class="info-value" id="adminUsers">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Usuario 'super' existe:</span>
+                <span class="info-value" id="superUserExists">-</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>👥 Lista de Usuarios</h2>
+            <div id="usersTableContainer">
+                <p>Cargando usuarios...</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Acciones</h2>
+            <button class="btn-primary" onclick="refreshDiagnostic()">
+                🔄 Actualizar Diagnóstico
+            </button>
+            <button class="btn-primary" onclick="exportData()">
+                📤 Exportar Datos
+            </button>
+            <button class="btn-danger" onclick="clearUserStorage()">
+                🗑️ Limpiar UserStorage
+            </button>
+        </div>
+
+        <div class="section" id="rawDataSection" style="display: none;">
+            <h2>📋 Datos Brutos (JSON)</h2>
+            <pre id="rawData"></pre>
+        </div>
+    </div>
+
+    <script>
+        function refreshDiagnostic() {
+            try {
+                // Obtener datos de userStorage
+                const userStorageData = localStorage.getItem('mopc_users_db');
+                const userIndexData = localStorage.getItem('mopc_users_index');
+                const userMetadataData = localStorage.getItem('mopc_users_metadata');
+
+                // Estado general
+                const dbInitialized = userStorageData !== null;
+                document.getElementById('dbInitialized').textContent = dbInitialized ? 'Sí ✓' : 'No ✗';
+                document.getElementById('dbInitialized').className = 'info-value ' + (dbInitialized ? 'good' : 'bad');
+
+                if (dbInitialized) {
+                    const userStorage = JSON.parse(userStorageData);
+                    const users = Object.values(userStorage);
+                    
+                    // Estadísticas
+                    const totalCount = users.length;
+                    const activeCount = users.filter(u => u.isActive).length;
+                    const adminCount = users.filter(u => u.role === 'Administrador').length;
+                    const superUser = users.find(u => u.username === 'super');
+
+                    document.getElementById('totalUsers').textContent = totalCount;
+                    document.getElementById('totalUsers').className = 'info-value ' + (totalCount > 0 ? 'good' : 'warning');
+
+                    document.getElementById('activeUsers').textContent = activeCount + ' / ' + totalCount;
+                    document.getElementById('activeUsers').className = 'info-value ' + (activeCount > 0 ? 'good' : 'warning');
+
+                    document.getElementById('adminUsers').textContent = adminCount;
+                    document.getElementById('adminUsers').className = 'info-value ' + (adminCount > 0 ? 'good' : 'warning');
+
+                    document.getElementById('superUserExists').textContent = superUser ? 'Sí ✓' : 'No ✗';
+                    document.getElementById('superUserExists').className = 'info-value ' + (superUser ? 'good' : 'bad');
+
+                    // Tabla de usuarios
+                    renderUsersTable(users);
+
+                } else {
+                    // Base de datos no inicializada
+                    document.getElementById('totalUsers').textContent = 'N/A';
+                    document.getElementById('totalUsers').className = 'info-value bad';
+                    
+                    document.getElementById('activeUsers').textContent = 'N/A';
+                    document.getElementById('activeUsers').className = 'info-value bad';
+                    
+                    document.getElementById('adminUsers').textContent = 'N/A';
+                    document.getElementById('adminUsers').className = 'info-value bad';
+                    
+                    document.getElementById('superUserExists').textContent = 'N/A';
+                    document.getElementById('superUserExists').className = 'info-value bad';
+
+                    // Mostrar mensaje de base de datos no inicializada
+                    document.getElementById('usersTableContainer').innerHTML = 
+                        '<p style="color: #e74c3c; font-weight: bold;">⚠️ Base de datos no inicializada</p>';
+                }
+
+            } catch (error) {
+                console.error('Error en diagnóstico:', error);
+                document.getElementById('usersTableContainer').innerHTML = 
+                    '<p style="color: #e74c3c;">Error al cargar diagnóstico: ' + error.message + '</p>';
+            }
+        }
+
+        function renderUsersTable(users) {
+            const container = document.getElementById('usersTableContainer');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p style="color: #856404;">No hay usuarios registrados</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th>Verificado</th>
+                            <th>Reportes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach(user => {
+                tableHTML += `
+                    <tr>
+                        <td><strong>${user.username}</strong></td>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td>
+                            <span class="status-badge ${user.isActive ? 'status-active' : 'status-inactive'}">
+                                ${user.isActive ? 'Activo' : 'Inactivo'}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge ${user.isVerified ? 'status-verified' : 'status-unverified'}">
+                                ${user.isVerified ? 'Verificado' : 'Pendiente'}
+                            </span>
+                        </td>
+                        <td>${user.reportsCount || 0}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHTML;
+        }
+
+        function exportData() {
+            try {
+                const userStorageData = localStorage.getItem('mopc_users_db');
+                const userIndexData = localStorage.getItem('mopc_users_index');
+                const userMetadataData = localStorage.getItem('mopc_users_metadata');
+
+                const exportData = {
+                    timestamp: new Date().toISOString(),
+                    userStorage: userStorageData ? JSON.parse(userStorageData) : null,
+                    userIndex: userIndexData ? JSON.parse(userIndexData) : null,
+                    userMetadata: userMetadataData ? JSON.parse(userMetadataData) : null
+                };
+
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'mopc-userstorage-export-' + new Date().toISOString().split('T')[0] + '.json';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                URL.revokeObjectURL(url);
+                
+                alert('✅ Datos exportados exitosamente');
+                
+            } catch (error) {
+                alert('❌ Error al exportar datos: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        function clearUserStorage() {
+            if (!confirm('⚠️ ¿Está seguro de que desea eliminar TODOS los datos de usuarios?\n\nEsta acción NO se puede deshacer.')) {
+                return;
+            }
+
+            if (!confirm('🚨 CONFIRMACIÓN FINAL: Esto eliminará permanentemente todos los usuarios del sistema.\n\n¿Continuar?')) {
+                return;
+            }
+
+            try {
+                localStorage.removeItem('mopc_users_db');
+                localStorage.removeItem('mopc_users_index');
+                localStorage.removeItem('mopc_users_metadata');
+                
+                alert('✅ UserStorage limpiado exitosamente');
+                refreshDiagnostic();
+                
+            } catch (error) {
+                alert('❌ Error al limpiar UserStorage: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        function toggleRawData() {
+            const section = document.getElementById('rawDataSection');
+            const rawDataEl = document.getElementById('rawData');
+            
+            if (section.style.display === 'none') {
+                try {
+                    const userStorageData = localStorage.getItem('mopc_users_db');
+                    const userIndexData = localStorage.getItem('mopc_users_index');
+                    const userMetadataData = localStorage.getItem('mopc_users_metadata');
+                    
+                    const data = {
+                        mopc_users_db: userStorageData ? JSON.parse(userStorageData) : null,
+                        mopc_users_index: userIndexData ? JSON.parse(userIndexData) : null,
+                        mopc_users_metadata: userMetadataData ? JSON.parse(userMetadataData) : null
+                    };
+                    
+                    rawDataEl.textContent = JSON.stringify(data, null, 2);
+                    section.style.display = 'block';
+                    
+                } catch (error) {
+                    rawDataEl.textContent = 'Error al cargar datos: ' + error.message;
+                    section.style.display = 'block';
+                }
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        // Agregar botón para mostrar datos brutos
+        document.addEventListener('DOMContentLoaded', function() {
+            const actionsSection = document.querySelector('.section:last-of-type');
+            const rawDataButton = document.createElement('button');
+            rawDataButton.className = 'btn-primary';
+            rawDataButton.textContent = '📋 Mostrar/Ocultar Datos Brutos';
+            rawDataButton.onclick = toggleRawData;
+            actionsSection.appendChild(rawDataButton);
+        });
+
+        // Cargar diagnóstico al cargar la página
+        window.addEventListener('load', () => {
+            console.log('🔍 Herramienta de diagnóstico cargada');
+            refreshDiagnostic();
+        });
+    </script>
+</body>
+</html>
