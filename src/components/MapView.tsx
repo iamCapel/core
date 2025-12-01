@@ -109,8 +109,6 @@ const MapView: React.FC<MapViewProps> = ({ user, onBack }) => {
   const [showModal, setShowModal] = useState(false);
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
-  const [showDetailView, setShowDetailView] = useState(false);
-  const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
 
   useEffect(() => {
     // Cargar intervenciones desde reportStorage

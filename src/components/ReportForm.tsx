@@ -293,7 +293,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setSector(data.sector || '');
       setTipoIntervencion(data.tipoIntervencion || '');
       setSubTipoCanal(data.subTipoCanal || '');
-      setPlantillaValues(data.plantillaValues || {});
+      setPlantillaValues(data.metricData || {});
       setObservaciones(data.observaciones || '');
       setCurrentPendingReportId(reportId);
       setShowPendingModal(false);
@@ -1167,19 +1167,19 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 const pendingReport = {
                   id: reportId,
                   timestamp: new Date().toISOString(),
+                  lastModified: new Date().toISOString(),
                   userId: user.username,
+                  userName: user.name || user.username,
                   formData: {
                     region,
                     provincia,
                     distrito,
                     municipio,
                     sector,
-                    sectorPersonalizado,
                     tipoIntervencion,
                     subTipoCanal,
-                    plantillaValues,
-                    observaciones,
-                    autoGpsFields
+                    metricData: plantillaValues,
+                    observaciones
                   },
                   progress: 0,
                   fieldsCompleted: []

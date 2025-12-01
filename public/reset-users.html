@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Usuarios - MOPC Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #FF7A00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #E66A00;
+        }
+        button.secondary {
+            background: #4CAF50;
+        }
+        button.secondary:hover {
+            background: #45a049;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #da190b;
+        }
+        .info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .info h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .user-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-left: 4px solid #FF7A00;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Resetear Usuarios</h1>
+        <p class="subtitle">MOPC Dashboard - Sistema de Gestión</p>
+        
+        <button onclick="resetUsers()">🔄 Restablecer Usuarios Predefinidos</button>
+        <button class="secondary" onclick="showUsers()">👥 Ver Usuarios Actuales</button>
+        <button class="danger" onclick="clearAll()">🗑️ Limpiar Todos los Datos</button>
+        
+        <div class="info">
+            <h3>📋 Usuarios Predefinidos:</h3>
+            
+            <div class="user-info">
+                <strong>👑 Administrador Principal</strong><br>
+                Usuario: <code>admin</code><br>
+                Contraseña: <code>admin123</code><br>
+                Rol: Administrador
+            </div>
+            
+            <div class="user-info">
+                <strong>👨‍💼 Usuario Capel (Tu usuario)</strong><br>
+                Usuario: <code>capel</code><br>
+                Contraseña: <code>02260516</code><br>
+                Rol: Administrador
+            </div>
+            
+            <div class="user-info">
+                <strong>👷 Técnico Demo</strong><br>
+                Usuario: <code>tecnico</code><br>
+                Contraseña: <code>tecnico123</code><br>
+                Rol: Técnico
+            </div>
+        </div>
+        
+        <div id="success" class="success"></div>
+        <div id="error" class="error"></div>
+        <div id="userList" style="margin-top: 20px;"></div>
+    </div>
+
+    <a href="/" class="back-link">← Volver al Dashboard</a>
+
+    <script>
+        function resetUsers() {
+            try {
+                // Limpiar todos los datos de usuarios
+                localStorage.removeItem('mopc_users_db');
+                localStorage.removeItem('mopc_users_index');
+                localStorage.removeItem('mopc_users_metadata');
+                
+                // Crear usuarios predefinidos
+                const defaultUsers = [
+                    {
+                        username: "admin",
+                        password: "admin123",
+                        name: "Administrador",
+                        email: "admin@mopc.gob.do",
+                        phone: "809-000-0000",
+                        cedula: "001-0000000-0",
+                        role: "Administrador",
+                        department: "Dirección General",
+                        isActive: true,
+                        isVerified: true
+                    },
+                    {
+                        username: "capel",
+                        password: "02260516",
+                        name: "Usuario Capel",
+                        email: "capel@mopc.gob.do",
+                        phone: "809-000-0001",
+                        cedula: "001-0000000-1",
+                        role: "Administrador",
+                        department: "Coordinación Regional",
+                        isActive: true,
+                        isVerified: true
+                    },
+                    {
+                        username: "tecnico",
+                        password: "tecnico123",
+                        name: "Técnico Demo",
+                        email: "tecnico@mopc.gob.do",
+                        phone: "809-000-0002",
+                        cedula: "001-0000000-2",
+                        role: "Técnico",
+                        department: "Campo",
+                        isActive: true,
+                        isVerified: true
+                    }
+                ];
+
+                const now = new Date().toISOString();
+                const usersDb = {};
+                
+                defaultUsers.forEach((user, index) => {
+                    const userId = `user-${Date.now()}-${index}`;
+                    usersDb[userId] = {
+                        id: userId,
+                        username: user.username,
+                        password: user.password,
+                        name: user.name,
+                        email: user.email,
+                        phone: user.phone,
+                        cedula: user.cedula,
+                        role: user.role,
+                        department: user.department,
+                        isActive: user.isActive,
+                        isVerified: user.isVerified,
+                        lastSeen: 'Nunca',
+                        joinDate: now,
+                        currentLocation: {
+                            province: 'Santo Domingo',
+                            municipality: 'Distrito Nacional',
+                            coordinates: {
+                                lat: 18.4861,
+                                lng: -69.9312
+                            },
+                            lastUpdated: now
+                        },
+                        reportsCount: 0,
+                        pendingReportsCount: 0,
+                        notes: [],
+                        createdAt: now,
+                        updatedAt: now,
+                        createdBy: 'system',
+                        version: 1
+                    };
+                });
+
+                localStorage.setItem('mopc_users_db', JSON.stringify(usersDb));
+                
+                // Crear índice
+                const index = Object.values(usersDb).map(user => ({
+                    id: user.id,
+                    username: user.username,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    department: user.department,
+                    isActive: user.isActive
+                }));
+                localStorage.setItem('mopc_users_index', JSON.stringify(index));
+
+                // Crear metadata
+                const metadata = {
+                    version: 1,
+                    createdAt: now,
+                    lastModified: now,
+                    totalUsers: defaultUsers.length,
+                    activeUsers: defaultUsers.filter(u => u.isActive).length
+                };
+                localStorage.setItem('mopc_users_metadata', JSON.stringify(metadata));
+
+                showSuccess(`✅ Usuarios restablecidos exitosamente. ${defaultUsers.length} usuarios creados.`);
+                showUsers();
+            } catch (error) {
+                showError(`❌ Error al restablecer usuarios: ${error.message}`);
+            }
+        }
+
+        function showUsers() {
+            try {
+                const usersDb = JSON.parse(localStorage.getItem('mopc_users_db') || '{}');
+                const users = Object.values(usersDb);
+                
+                if (users.length === 0) {
+                    document.getElementById('userList').innerHTML = `
+                        <div class="info">
+                            <h3>⚠️ No hay usuarios registrados</h3>
+                            <p>Haga clic en "Restablecer Usuarios Predefinidos" para crear los usuarios iniciales.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `<div class="info"><h3>👥 Usuarios Registrados (${users.length}):</h3>`;
+                users.forEach(user => {
+                    html += `
+                        <div class="user-info">
+                            <strong>${user.name}</strong><br>
+                            Usuario: <code>${user.username}</code><br>
+                            Email: ${user.email}<br>
+                            Rol: ${user.role}<br>
+                            Estado: ${user.isActive ? '✅ Activo' : '❌ Inactivo'}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                document.getElementById('userList').innerHTML = html;
+            } catch (error) {
+                showError(`❌ Error al mostrar usuarios: ${error.message}`);
+            }
+        }
+
+        function clearAll() {
+            if (confirm('⚠️ ¿Está seguro? Esto borrará TODOS los datos del sistema (usuarios, reportes, etc.)')) {
+                if (confirm('⚠️⚠️ ÚLTIMA ADVERTENCIA: Esta acción NO se puede deshacer. ¿Continuar?')) {
+                    localStorage.clear();
+                    showSuccess('✅ Todos los datos han sido eliminados. La página se recargará en 2 segundos...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            }
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('success');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 5000);
+        }
+
+        function showError(message) {
+            const el = document.getElementById('error');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 5000);
+        }
+
+        // Mostrar usuarios al cargar la página
+        window.onload = showUsers;
+    </script>
+</body>
+</html>

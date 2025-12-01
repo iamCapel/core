@@ -76,6 +76,75 @@ class UserStorage {
 
   constructor() {
     this.initializeDatabase();
+    this.loadDefaultUsers();
+  }
+
+  /**
+   * Cargar usuarios predefinidos desde el archivo JSON si no existen
+   */
+  private loadDefaultUsers(): void {
+    try {
+      const users = this.getAllUsers();
+      
+      // Si ya hay usuarios, no cargar los predefinidos
+      if (users.length > 0) {
+        return;
+      }
+
+      // Importar usuarios predefinidos
+      const defaultUsers = require('../config/userstorage.json');
+      const now = new Date().toISOString();
+
+      defaultUsers.forEach((user: any) => {
+        const userId = this.generateUserId();
+        const newUser: UserData = {
+          id: userId,
+          username: user.username,
+          password: user.password,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          cedula: user.cedula,
+          role: user.role,
+          department: user.department,
+          isActive: user.isActive,
+          isVerified: user.isVerified,
+          lastSeen: 'Nunca',
+          joinDate: now,
+          currentLocation: {
+            province: 'Santo Domingo',
+            municipality: 'Distrito Nacional',
+            coordinates: {
+              lat: 18.4861,
+              lng: -69.9312
+            },
+            lastUpdated: now
+          },
+          reportsCount: 0,
+          pendingReportsCount: 0,
+          notes: [],
+          createdAt: now,
+          updatedAt: now,
+          createdBy: 'system',
+          version: 1
+        };
+
+        const db = this.getAllUsersFromStorage();
+        db[userId] = newUser;
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(db));
+      });
+
+      // Actualizar índice y metadata
+      this.updateIndex();
+      this.updateMetadata({
+        totalUsers: defaultUsers.length,
+        activeUsers: defaultUsers.filter((u: any) => u.isActive).length
+      });
+
+      console.log('✅ Usuarios predefinidos cargados exitosamente');
+    } catch (error) {
+      console.error('Error al cargar usuarios predefinidos:', error);
+    }
   }
 
   /**

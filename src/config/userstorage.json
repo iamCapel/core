@@ -1,7 +1,38 @@
 [
   {
-    "username": "super",
+    "username": "admin",
+    "password": "admin123",
+    "name": "Administrador",
+    "email": "admin@mopc.gob.do",
+    "phone": "809-000-0000",
+    "cedula": "001-0000000-0",
+    "role": "Administrador",
+    "department": "Dirección General",
+    "isActive": true,
+    "isVerified": true
+  },
+  {
+    "username": "capel",
     "password": "02260516",
-    "role": "admin"
+    "name": "Usuario Capel",
+    "email": "capel@mopc.gob.do",
+    "phone": "809-000-0001",
+    "cedula": "001-0000000-1",
+    "role": "Administrador",
+    "department": "Coordinación Regional",
+    "isActive": true,
+    "isVerified": true
+  },
+  {
+    "username": "tecnico",
+    "password": "tecnico123",
+    "name": "Técnico Demo",
+    "email": "tecnico@mopc.gob.do",
+    "phone": "809-000-0002",
+    "cedula": "001-0000000-2",
+    "role": "Técnico",
+    "department": "Campo",
+    "isActive": true,
+    "isVerified": true
   }
 ]

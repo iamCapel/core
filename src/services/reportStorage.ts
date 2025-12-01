@@ -318,9 +318,9 @@ class ReportStorage {
           };
 
           console.log('Archivos generados exitosamente:', {
-            pdf: savedReport.generatedFiles.pdf.filename,
-            excel: savedReport.generatedFiles.excel.filename,
-            word: savedReport.generatedFiles.word.filename
+            pdf: savedReport.generatedFiles?.pdf?.filename || 'N/A',
+            excel: savedReport.generatedFiles?.excel?.filename || 'N/A',
+            word: savedReport.generatedFiles?.word?.filename || 'N/A'
           });
         } catch (error) {
           console.error('Error al generar archivos automáticamente:', error);

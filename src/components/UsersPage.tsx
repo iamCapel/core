@@ -29,6 +29,15 @@ interface UserProfile {
   reportsCount: number;
   joinDate: string;
   pendingReportsCount?: number;
+  password?: string;  // Contraseña (opcional para edición)
+  cedula?: string;  // Número de cédula
+  notes?: Array<{
+    id: string;
+    tipo: string;
+    contenido: string;
+    creadoPor: string;
+    fecha: string;
+  }>;
   currentLocation: {
     province: string;
     municipality: string;
@@ -197,6 +206,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
         role: newUserForm.role,
         department: 'Sin asignar',
         isActive: true,
+        isVerified: false,  // Nuevo usuario no verificado por defecto
         lastSeen: 'Ahora',
         joinDate: new Date().toISOString(),
         currentLocation: {
@@ -696,7 +706,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                           <span className="performance-percentage">{percentage.toFixed(0)}%</span>
                         </div>
 
-                        {userProfile.pendingReportsCount > 0 && (
+                        {userProfile.pendingReportsCount !== undefined && userProfile.pendingReportsCount > 0 && (
                           <div className="performance-pending">
                             ⚠️ {userProfile.pendingReportsCount} reporte{userProfile.pendingReportsCount > 1 ? 's' : ''} pendiente{userProfile.pendingReportsCount > 1 ? 's' : ''}
                           </div>

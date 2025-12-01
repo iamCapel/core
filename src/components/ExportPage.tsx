@@ -793,7 +793,8 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
               transformation: {
                 width: 150,
                 height: 82.5
-              }
+              },
+              type: 'png'
             })
           ],
           spacing: { after: 300 }

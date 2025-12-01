@@ -110,9 +110,8 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     if (isConfirmed) {
       try {
         reportStorage.deleteReport(reportId);
-        // Recargar datos
-        loadReportsData();
-        alert(`Reporte ${reportNumber} eliminado exitosamente.`);
+        // Forzar recarga del componente
+        window.location.reload();
       } catch (error) {
         console.error('Error al eliminar reporte:', error);
         alert('Error al eliminar el reporte. Por favor intente nuevamente.');
@@ -825,7 +824,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           </div>
 
           {/* Usuario (solo para roles con permisos) */}
-          {user.role !== 'Técnico' && (
+          {user && user.role !== 'Técnico' && (
             <div className="filter-item">
               <select 
                 className="filter-select-compact"
@@ -914,7 +913,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               <div key={region.name} className="hierarchy-item region-item">
                 <div 
                   className="hierarchy-row"
-                  onClick={(e) => toggleRegion(region.name, e)}
+                  onClick={() => toggleRegion(region.name)}
                   data-count={`${region.interventions} reportes`}
                 >
                   <div className="hierarchy-info">
@@ -1057,12 +1056,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     <td className="report-num-cell">#{report.reportNumber}</td>
                     <td>{report.date}</td>
                     <td>{report.region}</td>
-                    <td>{report.provincia}</td>
-                    <td>{report.distrito}</td>
-                    <td>{report.tipo}</td>
+                    <td>{report.province}</td>
+                    <td>{report.district}</td>
+                    <td>{report.tipoIntervencion}</td>
                     <td>
-                      <span className={`badge-status badge-${report.estado.toLowerCase().replace(' ', '-')}`}>
-                        {report.estado}
+                      <span className={`badge-status badge-${report.estado?.toLowerCase().replace(' ', '-') || 'pendiente'}`}>
+                        {report.estado || 'Pendiente'}
                       </span>
                     </td>
                     <td className="km-cell">{report.kilometraje?.toFixed(2) || 'N/A'} km</td>

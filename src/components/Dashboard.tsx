@@ -572,7 +572,7 @@ const Dashboard: React.FC = () => {
         };
       } catch {
         return {
-          id: key,
+          id: report.id,
           reportNumber: `ERR-${Date.now().toString().slice(-6)}`,
           timestamp: new Date().toISOString(),
           estado: 'error',
