@@ -3,6 +3,8 @@
  * Proporciona una capa de abstracción sobre localStorage con estructura de base de datos
  */
 
+import defaultUsersData from '../config/userstorage.json';
+
 export interface UserNote {
   id: string;
   tipo: 'observacion' | 'amonestacion' | 'pendiente';
@@ -88,12 +90,15 @@ class UserStorage {
       
       // Si ya hay usuarios, no cargar los predefinidos
       if (users.length > 0) {
+        console.log('✅ Usuarios ya existen en localStorage:', users.length);
         return;
       }
 
-      // Importar usuarios predefinidos
-      const defaultUsers = require('../config/userstorage.json');
+      // Usar usuarios predefinidos importados
+      const defaultUsers = defaultUsersData;
       const now = new Date().toISOString();
+
+      console.log('🔄 Cargando usuarios predefinidos...', defaultUsers.length);
 
       defaultUsers.forEach((user: any) => {
         const userId = this.generateUserId();

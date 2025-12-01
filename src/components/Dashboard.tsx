@@ -756,6 +756,10 @@ const Dashboard: React.FC = () => {
     await new Promise(r => setTimeout(r, 1000));
 
     try {
+      // Debug: Verificar cuántos usuarios hay en el sistema
+      const allUsers = userStorage.getAllUsers();
+      console.log('📊 Usuarios en sistema:', allUsers.length);
+      
       // Primero, intentar validar credenciales en userStorage
       const validatedUser = userStorage.validateCredentials(loginUser, loginPass);
       
@@ -797,12 +801,14 @@ const Dashboard: React.FC = () => {
         return;
       }
       
-      // Usuario no existe en userStorage
-      setLoginError('❌ Usuario no encontrado. Contacte con un administrador.');
+      // Usuario no existe en userStorage - mostrar mensaje informativo
+      console.warn(`⚠️ Usuario "${loginUser}" no encontrado. Total usuarios: ${allUsers.length}`);
+      setLoginError(`❌ Usuario "${loginUser}" no encontrado. Pruebe: admin, capel o tecnico`);
       setIsLoading(false);
       
     } catch (err) {
-      setLoginError('Error al iniciar sesión');
+      console.error('❌ Error en login:', err);
+      setLoginError('⚠️ Error del sistema. Recargue la página e intente nuevamente.');
       setIsLoading(false);
     }
   };
