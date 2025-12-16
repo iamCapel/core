@@ -535,7 +535,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           <div className="report-viewer-header">
             <h2>📄 Informe Completo - #{selectedReport.reportNumber}</h2>
             <div className="report-readonly-badge">🔒 Solo Lectura</div>
-            <button className="close-report-btn" onClick={closeReportView}>✕</button>
           </div>
           <div className="report-viewer-content">
             {/* Información General */}
