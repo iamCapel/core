@@ -20,12 +20,21 @@ class FirebaseReportStorage {
    * Guardar un reporte en Firestore
    */
   async saveReport(report: ReportData): Promise<void> {
-    const reportRef = doc(db, REPORTS_COLLECTION, report.id);
-    await setDoc(reportRef, {
-      ...report,
-      timestamp: report.timestamp || new Date().toISOString(),
-      fechaModificacion: new Date().toISOString()
-    });
+    try {
+      const reportRef = doc(db, REPORTS_COLLECTION, report.id);
+      
+      // Limpiar campos undefined para Firebase
+      const cleanReport = JSON.parse(JSON.stringify({
+        ...report,
+        timestamp: report.timestamp || new Date().toISOString(),
+        fechaModificacion: new Date().toISOString()
+      }));
+      
+      await setDoc(reportRef, cleanReport);
+    } catch (error) {
+      console.error('Error guardando en Firestore:', error);
+      throw error;
+    }
   }
 
   /**

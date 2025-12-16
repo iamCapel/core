@@ -435,18 +435,19 @@ const ReportForm: React.FC<ReportFormProps> = ({
       };
 
       try {
-        // Guardar en localStorage (backup local)
+        // Guardar en localStorage
         const savedReport = await reportStorage.saveReport(reportData);
         console.log('Reporte guardado localmente:', savedReport);
 
-        // Intentar guardar en Firebase (no bloqueante)
-        try {
-          await firebaseReportStorage.saveReport(savedReport);
-          console.log('Reporte guardado en Firebase exitosamente');
-        } catch (firebaseError) {
-          console.warn('No se pudo guardar en Firebase, pero el reporte se guardó localmente:', firebaseError);
-          // No mostrar error al usuario ya que el reporte se guardó localmente
-        }
+        // Intentar guardar en Firebase en segundo plano (sin bloquear)
+        setTimeout(async () => {
+          try {
+            await firebaseReportStorage.saveReport(savedReport);
+            console.log('✅ Reporte sincronizado con Firebase');
+          } catch (firebaseError) {
+            console.warn('⚠️ No se pudo sincronizar con Firebase:', firebaseError);
+          }
+        }, 100);
 
         // Ocultar animación después de 2 segundos
         setTimeout(() => {
@@ -454,7 +455,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
           limpiarFormulario();
         }, 2000);
       } catch (error) {
-        console.error('Error al guardar reporte:', error);
+        console.error('❌ Error al guardar reporte:', error);
         setShowSaveAnimation(false);
         alert('Error al guardar el reporte. Por favor intente nuevamente.');
       }
