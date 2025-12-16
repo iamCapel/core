@@ -7,8 +7,7 @@ import {
   setDoc, 
   deleteDoc, 
   query, 
-  where,
-  orderBy
+  where
 } from "firebase/firestore";
 import app from "../config/firebase";
 import { ReportData } from "./reportStorage";
@@ -52,11 +51,12 @@ class FirebaseReportStorage {
   async getUserReports(userId: string): Promise<ReportData[]> {
     const q = query(
       collection(db, REPORTS_COLLECTION), 
-      where("usuarioId", "==", userId),
-      orderBy("timestamp", "desc")
+      where("usuarioId", "==", userId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as ReportData);
+    const reports = snapshot.docs.map(doc => doc.data() as ReportData);
+    // Ordenar en el cliente en lugar de Firestore para evitar necesidad de índice
+    return reports.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }
 
   /**

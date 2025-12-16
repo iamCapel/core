@@ -439,9 +439,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
         const savedReport = await reportStorage.saveReport(reportData);
         console.log('Reporte guardado localmente:', savedReport);
 
-        // Guardar en Firebase (almacenamiento en la nube)
-        await firebaseReportStorage.saveReport(savedReport);
-        console.log('Reporte guardado en Firebase');
+        // Intentar guardar en Firebase (no bloqueante)
+        try {
+          await firebaseReportStorage.saveReport(savedReport);
+          console.log('Reporte guardado en Firebase exitosamente');
+        } catch (firebaseError) {
+          console.warn('No se pudo guardar en Firebase, pero el reporte se guardó localmente:', firebaseError);
+          // No mostrar error al usuario ya que el reporte se guardó localmente
+        }
 
         // Ocultar animación después de 2 segundos
         setTimeout(() => {
