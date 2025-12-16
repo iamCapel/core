@@ -2,13 +2,13 @@ import { initializeApp } from "firebase/app";
 // import { getAnalytics } from "firebase/analytics"; // Solo si usas analytics
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCPEi2V-ov7RcCkAbxcu1CQ-DoAnc9y4f0",
-  authDomain: "mopc-0-1.firebaseapp.com",
-  projectId: "mopc-0-1",
-  storageBucket: "mopc-0-1.firebasestorage.app",
-  messagingSenderId: "162210522832",
-  appId: "1:162210522832:web:f49b27d18ed99497b920d5",
-  measurementId: "G-CNVYCZ68QX"
+  apiKey: "AIzaSyBULoCr78BEnY8ovO1AdXvrn1JYfDqud6c",
+  authDomain: "coredatabase-206ac.firebaseapp.com",
+  projectId: "coredatabase-206ac",
+  storageBucket: "coredatabase-206ac.firebasestorage.app",
+  messagingSenderId: "204486232524",
+  appId: "1:204486232524:web:d705e374692a8290fb3569",
+  measurementId: "G-WWS6LZ5WR1"
 };
 
 const app = initializeApp(firebaseConfig);
