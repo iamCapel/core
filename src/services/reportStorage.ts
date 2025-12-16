@@ -283,45 +283,15 @@ class ReportStorage {
           categorias: report.categorias
         };
 
-        // Generar archivos PDF, Excel y Word automáticamente
+        // Generar archivos PDF, Excel y Word automáticamente (DESACTIVADO TEMPORALMENTE)
+        // La generación automática está causando errores de memoria
+        // Los archivos se pueden generar bajo demanda desde la página de reportes
         try {
-          console.log('Generando archivos automáticamente para el reporte:', savedReport.numeroReporte);
+          console.log('⏭️ Generación automática de archivos desactivada para evitar errores de memoria');
+          console.log('📄 Los archivos se pueden generar bajo demanda desde la página de reportes');
           
-          const [pdfBlob, excelBlob, wordBlob] = await Promise.all([
-            generatePDFBlob(savedReport),
-            generateExcelBlob(savedReport),
-            generateWordBlob(savedReport)
-          ]);
-
-          const [pdfBase64, excelBase64, wordBase64] = await Promise.all([
-            this.blobToBase64(pdfBlob),
-            this.blobToBase64(excelBlob),
-            this.blobToBase64(wordBlob)
-          ]);
-
-          savedReport.generatedFiles = {
-            pdf: {
-              filename: `${savedReport.numeroReporte}_reporte.pdf`,
-              data: pdfBase64,
-              generatedAt: now
-            },
-            excel: {
-              filename: `${savedReport.numeroReporte}_reporte.xlsx`,
-              data: excelBase64,
-              generatedAt: now
-            },
-            word: {
-              filename: `${savedReport.numeroReporte}_reporte.docx`,
-              data: wordBase64,
-              generatedAt: now
-            }
-          };
-
-          console.log('Archivos generados exitosamente:', {
-            pdf: savedReport.generatedFiles?.pdf?.filename || 'N/A',
-            excel: savedReport.generatedFiles?.excel?.filename || 'N/A',
-            word: savedReport.generatedFiles?.word?.filename || 'N/A'
-          });
+          // Nota: Los archivos se generarán cuando el usuario los solicite explícitamente
+          savedReport.generatedFiles = undefined;
         } catch (error) {
           console.error('Error al generar archivos automáticamente:', error);
           // Continuar guardando el reporte aunque falle la generación de archivos

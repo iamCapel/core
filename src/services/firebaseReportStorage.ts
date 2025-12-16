@@ -23,12 +23,21 @@ class FirebaseReportStorage {
     try {
       const reportRef = doc(db, REPORTS_COLLECTION, report.id);
       
-      // Limpiar campos undefined para Firebase
-      const cleanReport = JSON.parse(JSON.stringify({
+      // Preparar el reporte con valores por defecto
+      const reportToSave = {
         ...report,
         timestamp: report.timestamp || new Date().toISOString(),
         fechaModificacion: new Date().toISOString()
-      }));
+      };
+      
+      // Eliminar todos los campos undefined (Firebase no los acepta)
+      const cleanReport: any = {};
+      Object.keys(reportToSave).forEach(key => {
+        const value = (reportToSave as any)[key];
+        if (value !== undefined && value !== null) {
+          cleanReport[key] = value;
+        }
+      });
       
       await setDoc(reportRef, cleanReport);
     } catch (error) {
