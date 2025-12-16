@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { reportStorage } from '../services/reportStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import './DetailedReportView.css';
 
 interface Report {
@@ -123,13 +124,35 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   const isAdmin = user?.role === 'Administrador' || user?.role === 'administrador' || user?.role === 'Admin' || user?.role === 'admin';
 
   useEffect(() => {
-    // Cargar todos los reportes y organizarlos por jerarquía
-    let allReports = reportStorage.getAllReports();
+    // Cargar todos los reportes desde Firebase
+    const loadReports = async () => {
+      try {
+        let allReports = await firebaseReportStorage.getAllReports();
+        
+        // Filtrar por rol si es técnico
+        if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+          allReports = allReports.filter(report => report.creadoPor === user.username);
+        }
+        
+        processReports(allReports);
+      } catch (error) {
+        console.error('Error cargando reportes de Firebase:', error);
+        // Fallback a localStorage
+        let allReports = reportStorage.getAllReports();
+        
+        // Filtrar por rol si es técnico
+        if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+          allReports = allReports.filter(report => report.creadoPor === user.username);
+        }
+        
+        processReports(allReports);
+      }
+    };
     
-    // Filtrar por rol si es técnico
-    if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-      allReports = allReports.filter(report => report.creadoPor === user.username);
-    }
+    loadReports();
+  }, [user]);
+
+  const processReports = (allReports: any[]) => {
     
     // Estructura jerárquica: Región > Provincia > Distrito > Reportes
     const hierarchyMap: Record<string, Record<string, Record<string, any[]>>> = {};
@@ -218,7 +241,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     
     setRegionsData(regions);
     setAllReportsFlat(flatReports);
-  }, [user]);
+  };
 
   // Aplicar filtros avanzados
   const filteredReports = useMemo(() => {

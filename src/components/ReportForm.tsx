@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import PendingClockAnimation from './PendingClockAnimation';
 import PendingReportsModal from './PendingReportsModal';
 
@@ -434,8 +435,13 @@ const ReportForm: React.FC<ReportFormProps> = ({
       };
 
       try {
+        // Guardar en localStorage (backup local)
         const savedReport = await reportStorage.saveReport(reportData);
-        console.log('Reporte guardado:', savedReport);
+        console.log('Reporte guardado localmente:', savedReport);
+
+        // Guardar en Firebase (almacenamiento en la nube)
+        await firebaseReportStorage.saveReport(savedReport);
+        console.log('Reporte guardado en Firebase');
 
         // Ocultar animación después de 2 segundos
         setTimeout(() => {

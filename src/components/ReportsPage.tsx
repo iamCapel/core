@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import PendingReportsModal from './PendingReportsModal';
 import DetailedReportView from './DetailedReportView';
 import './ReportsPage.css';
@@ -133,13 +134,28 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const cargarDatosRegiones = () => {
-    const stats = reportStorage.getStatistics();
-    let allReports = reportStorage.getAllReports();
+  const cargarDatosRegiones = async () => {
+    let allReports: any[] = [];
+    let stats: any = { porRegion: {} };
     
-    // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
-    if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-      allReports = allReports.filter(report => report.creadoPor === user.username);
+    try {
+      // Obtener reportes de Firebase
+      allReports = await firebaseReportStorage.getAllReports();
+      
+      // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
+      if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+        allReports = allReports.filter(report => report.creadoPor === user.username);
+      }
+    } catch (error) {
+      console.error('Error cargando reportes de Firebase:', error);
+      // Fallback a localStorage si falla Firebase
+      stats = reportStorage.getStatistics();
+      allReports = reportStorage.getAllReports();
+      
+      // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
+      if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+        allReports = allReports.filter(report => report.creadoPor === user.username);
+      }
     }
 
     const regiones = REGIONES_BASE.map(region => {

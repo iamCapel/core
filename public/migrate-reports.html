@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migrar Reportes a Firebase</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .success {
+      background: rgba(76, 175, 80, 0.3);
+      border-left: 4px solid #4CAF50;
+    }
+    .error {
+      background: rgba(244, 67, 54, 0.3);
+      border-left: 4px solid #f44336;
+    }
+    .info {
+      background: rgba(33, 150, 243, 0.3);
+      border-left: 4px solid #2196F3;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 10px 0;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+    .progress {
+      width: 100%;
+      height: 30px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 15px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Migración de Reportes a Firebase</h1>
+    
+    <div class="status info" id="info">
+      <strong>ℹ️ Información:</strong>
+      <p>Este script migrará todos los reportes almacenados en localStorage a Firebase Firestore.</p>
+      <p>Los reportes existentes en Firebase no serán duplicados.</p>
+    </div>
+
+    <div id="reportCount" class="status" style="display:none;">
+      <strong>📊 Reportes encontrados:</strong>
+      <p id="countText"></p>
+    </div>
+
+    <div id="progressContainer" style="display:none;">
+      <div class="progress">
+        <div class="progress-bar" id="progressBar" style="width: 0%">0%</div>
+      </div>
+    </div>
+
+    <button id="migrateBtn" onclick="startMigration()">Iniciar Migración</button>
+    
+    <div id="results" style="margin-top: 20px;"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBULoCr78BEnY8ovO1AdXvrn1JYfDqud6c",
+      authDomain: "coredatabase-206ac.firebaseapp.com",
+      projectId: "coredatabase-206ac",
+      storageBucket: "coredatabase-206ac.firebasestorage.app",
+      messagingSenderId: "204486232524",
+      appId: "1:204486232524:web:d705e374692a8290fb3569",
+      measurementId: "G-WWS6LZ5WR1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.startMigration = async function() {
+      const migrateBtn = document.getElementById('migrateBtn');
+      const results = document.getElementById('results');
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const reportCountDiv = document.getElementById('reportCount');
+      const countText = document.getElementById('countText');
+      
+      migrateBtn.disabled = true;
+      results.innerHTML = '';
+      progressContainer.style.display = 'block';
+      
+      try {
+        // Leer reportes de localStorage
+        const reportsData = localStorage.getItem('mopc_reports_db');
+        
+        if (!reportsData) {
+          results.innerHTML = '<div class="status error">❌ No se encontraron reportes en localStorage</div>';
+          migrateBtn.disabled = false;
+          progressContainer.style.display = 'none';
+          return;
+        }
+
+        const reports = JSON.parse(reportsData);
+        const reportIds = Object.keys(reports);
+        const total = reportIds.length;
+
+        reportCountDiv.style.display = 'block';
+        countText.textContent = `Se encontraron ${total} reportes para migrar`;
+
+        if (total === 0) {
+          results.innerHTML = '<div class="status info">ℹ️ No hay reportes para migrar</div>';
+          migrateBtn.disabled = false;
+          progressContainer.style.display = 'none';
+          return;
+        }
+
+        let migrated = 0;
+        let skipped = 0;
+        let errors = 0;
+
+        for (let i = 0; i < reportIds.length; i++) {
+          const reportId = reportIds[i];
+          const report = reports[reportId];
+          
+          try {
+            // Verificar si ya existe en Firebase
+            const docRef = doc(db, 'reports', reportId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+              skipped++;
+              console.log(`Reporte ${reportId} ya existe, omitiendo...`);
+            } else {
+              // Migrar el reporte
+              await setDoc(docRef, report);
+              migrated++;
+              console.log(`Reporte ${reportId} migrado exitosamente`);
+            }
+          } catch (error) {
+            errors++;
+            console.error(`Error migrando reporte ${reportId}:`, error);
+          }
+
+          // Actualizar barra de progreso
+          const progress = Math.round(((i + 1) / total) * 100);
+          progressBar.style.width = progress + '%';
+          progressBar.textContent = progress + '%';
+        }
+
+        // Mostrar resultados
+        let resultHTML = '<div class="status success">';
+        resultHTML += '<strong>✅ Migración completada</strong><br>';
+        resultHTML += `<p>Reportes migrados: <strong>${migrated}</strong></p>`;
+        resultHTML += `<p>Reportes omitidos (ya existían): <strong>${skipped}</strong></p>`;
+        if (errors > 0) {
+          resultHTML += `<p style="color: #ffeb3b;">Errores: <strong>${errors}</strong></p>`;
+        }
+        resultHTML += '</div>';
+        
+        results.innerHTML = resultHTML;
+        
+      } catch (error) {
+        console.error('Error durante la migración:', error);
+        results.innerHTML = `<div class="status error">❌ Error: ${error.message}</div>`;
+      } finally {
+        migrateBtn.disabled = false;
+      }
+    };
+
+    // Cargar contador de reportes al iniciar
+    window.addEventListener('load', function() {
+      const reportsData = localStorage.getItem('mopc_reports_db');
+      if (reportsData) {
+        const reports = JSON.parse(reportsData);
+        const count = Object.keys(reports).length;
+        document.getElementById('reportCount').style.display = 'block';
+        document.getElementById('countText').textContent = `Tienes ${count} reportes en localStorage listos para migrar`;
+      }
+    });
+  </script>
+</body>
+</html>
