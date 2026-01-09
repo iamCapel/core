@@ -9,8 +9,10 @@ import PendingReportsModal from './PendingReportsModal';
 import MyReportsCalendar from './MyReportsCalendar';
 import { UserRole, applyUserTheme, getRoleConfig, getRoleBadge, UserWithRole } from '../types/userRoles';
 import { pendingReportStorage } from '../services/pendingReportStorage';
+import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import { userStorage } from '../services/userStorage';
 import * as firebaseUserStorage from '../services/firebaseUserStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import './Dashboard.css';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
@@ -532,6 +534,7 @@ const Dashboard: React.FC = () => {
 
   // Estado para el contador de notificaciones
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
   
   // Estado para el menú desplegable del usuario
@@ -550,67 +553,103 @@ const Dashboard: React.FC = () => {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
 
   // Función para actualizar el contador de pendientes
-  const updatePendingCount = () => {
-    const pendientes = pendingReportStorage.getPendingCount();
-    setPendingCount(pendientes);
+  const updatePendingCount = async () => {
+    try {
+      const pendientes = await firebasePendingReportStorage.getAllPendingReports();
+      setPendingCount(pendientes.length);
+    } catch (error) {
+      console.error('❌ Error actualizando contador de pendientes desde Firebase:', error);
+      setPendingCount(0);
+    }
   };
 
   // Función para obtener lista detallada de reportes pendientes
-  const getPendingReports = () => {
-    const pendingReports = pendingReportStorage.getAllPendingReports();
+  const getPendingReports = async () => {
+    try {
+      const pendingReports = await firebasePendingReportStorage.getAllPendingReports();
 
-    return pendingReports.map(report => {
-      try {
-        return {
-          id: report.id,
-          reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
-          timestamp: report.timestamp,
-          estado: 'pendiente',
-          region: report.formData.region || 'N/A',
-          provincia: report.formData.provincia || 'N/A',
-          municipio: report.formData.municipio || 'N/A',
-          tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
-        };
-      } catch {
-        return {
-          id: report.id,
-          reportNumber: `ERR-${Date.now().toString().slice(-6)}`,
-          timestamp: new Date().toISOString(),
-          estado: 'error',
-          region: 'Error',
-          provincia: 'Error',
-          municipio: 'Error',
-          tipoIntervencion: 'Error al cargar'
-        };
-      }
-    });
+      const formatted = pendingReports.map(report => {
+        try {
+          return {
+            id: report.id,
+            reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
+            timestamp: report.timestamp,
+            estado: 'pendiente',
+            region: report.formData.region || 'N/A',
+            provincia: report.formData.provincia || 'N/A',
+            municipio: report.formData.municipio || 'N/A',
+            tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
+          };
+        } catch {
+          return {
+            id: report.id,
+            reportNumber: `ERR-${Date.now().toString().slice(-6)}`,
+            timestamp: new Date().toISOString(),
+            estado: 'error',
+            region: 'Error',
+            provincia: 'Error',
+            municipio: 'Error',
+            tipoIntervencion: 'Error al cargar'
+          };
+        }
+      });
+      setPendingReportsList(formatted);
+      return formatted;
+    } catch (error) {
+      console.error('❌ Error obteniendo reportes pendientes desde Firebase:', error);
+      setPendingReportsList([]);
+      return [];
+    }
   };
 
   // Función para continuar un reporte pendiente
-  const handleContinuePendingReport = (reportId: string) => {
+  const handleContinuePendingReport = async (reportId: string) => {
     try {
-      const pendingReport = pendingReportStorage.getPendingReport(reportId);
+      console.log('📋 Cargando reporte pendiente desde Firebase:', reportId);
+      
+      // Cargar desde Firebase para obtener los datos más recientes
+      const pendingReport = await firebasePendingReportStorage.getPendingReport(reportId);
+      
+      console.log('� Datos del reporte desde Firebase:', pendingReport);
+      
       if (pendingReport && pendingReport.formData) {
         // Cargar el formData completo del reporte pendiente
-        setInterventionToEdit(pendingReport.formData);
+        // Agregamos el reportId para que el ReportForm pueda identificarlo
+        const dataToLoad = {
+          ...pendingReport.formData,
+          _pendingReportId: reportId // Campo especial para identificar el reporte pendiente
+        };
+        
+        console.log('✅ Datos a cargar en el formulario:', dataToLoad);
+        
+        setInterventionToEdit(dataToLoad);
         setShowPendingModal(false);
+        setShowMyReportsModal(false); // Cerrar el modal de "Mis Reportes"
         setShowReportForm(true);
       } else {
+        console.error('❌ No se encontró el reporte pendiente en Firebase:', reportId);
         alert('No se pudo cargar el reporte pendiente');
       }
     } catch (error) {
-      console.error('Error al cargar el reporte pendiente:', error);
+      console.error('❌ Error al cargar el reporte pendiente desde Firebase:', error);
       alert('Error al cargar el reporte pendiente');
     }
   };
 
   // Función para cancelar/eliminar un reporte pendiente
-  const handleCancelPendingReport = (reportId: string) => {
-    pendingReportStorage.deletePendingReport(reportId);
-    updatePendingCount();
-    // Actualizar la vista del modal
-    setShowPendingModal(false);
-    setTimeout(() => setShowPendingModal(true), 100);
+  const handleCancelPendingReport = async (reportId: string) => {
+    try {
+      // Eliminar SOLO de Firebase
+      await firebasePendingReportStorage.deletePendingReport(reportId);
+      console.log('✅ Reporte pendiente eliminado de Firebase');
+      await updatePendingCount();
+      // Actualizar la vista del modal
+      setShowPendingModal(false);
+      setTimeout(() => setShowPendingModal(true), 100);
+    } catch (error) {
+      console.error('❌ Error eliminando reporte pendiente:', error);
+      alert('Error al eliminar el reporte pendiente. Verifique su conexión a internet.');
+    }
   };
 
   // Actualizar contador al cargar y cada vez que cambie localStorage
@@ -632,6 +671,14 @@ const Dashboard: React.FC = () => {
       clearInterval(interval);
     };
   }, []);
+
+  // Cargar reportes pendientes cuando se abre el modal
+  useEffect(() => {
+    if (showPendingModal) {
+      console.log('📥 Modal de pendientes abierto, cargando reportes desde Firebase...');
+      getPendingReports();
+    }
+  }, [showPendingModal]);
 
   // Cerrar menú desplegable al hacer clic fuera
   useEffect(() => {
@@ -1025,7 +1072,25 @@ const Dashboard: React.FC = () => {
 
   // Si se debe mostrar la página de informes
   if (showReportsPage && user) {
-    return <ReportsPage user={user} onBack={handleBackToDashboard} />;
+    return (
+      <ReportsPage 
+        user={user} 
+        onBack={handleBackToDashboard}
+        onEditReport={(reportId) => {
+          // Cargar el reporte desde Firebase
+          firebaseReportStorage.getReport(reportId).then((report) => {
+            if (report) {
+              setInterventionToEdit(report);
+              setShowReportsPage(false);
+              setShowReportForm(true);
+            }
+          }).catch((error) => {
+            console.error('Error al cargar reporte para editar:', error);
+            alert('Error al cargar el reporte. Por favor intente nuevamente.');
+          });
+        }}
+      />
+    );
   }
 
   // Si se debe mostrar la página de exportar
@@ -1392,7 +1457,7 @@ const Dashboard: React.FC = () => {
       <PendingReportsModal
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
-        reports={getPendingReports()}
+        reports={pendingReportsList}
         onContinueReport={handleContinuePendingReport}
         onCancelReport={handleCancelPendingReport}
       />
@@ -1448,7 +1513,11 @@ const Dashboard: React.FC = () => {
               <button className="modal-close" onClick={() => setShowMyReportsModal(false)}>✕</button>
             </div>
             <div className="modal-body" style={{ padding: '20px' }}>
-              <MyReportsCalendar username={user?.username || ''} onClose={() => setShowMyReportsModal(false)} />
+              <MyReportsCalendar 
+                username={user?.username || ''} 
+                onClose={() => setShowMyReportsModal(false)}
+                onContinuePendingReport={handleContinuePendingReport}
+              />
             </div>
           </div>
         </div>

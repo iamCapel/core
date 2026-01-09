@@ -54,6 +54,7 @@ interface Region {
 
 interface DetailedReportViewProps {
   onClose?: (() => void) | null;
+  onEditReport?: (report: Report) => void;
   user?: {
     username: string;
     name: string;
@@ -66,7 +67,7 @@ type FilterPeriod = 'todos' | 'hoy' | 'semana' | 'mes' | 'trimestre' | 'año' | 
 type SortField = 'reportNumber' | 'date' | 'tipo' | 'estado' | 'kilometraje';
 type SortOrder = 'asc' | 'desc';
 
-const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, user }) => {
+const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user }) => {
   // Estados de vista
   const [viewMode, setViewMode] = useState<ViewMode>('hierarchy');
   
@@ -410,41 +411,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     }
   };
 
-  const exportarCSV = () => {
-    const headers = ['Número', 'Fecha', 'Tipo', 'Región', 'Provincia', 'Municipio', 'Estado', 'Creado Por', 'Kilometraje (km)'];
-    const rows = filteredReports.map(r => [
-      r.reportNumber || r.numeroReporte,
-      new Date(r.fechaCreacion || r.date).toLocaleDateString('es-ES'),
-      r.tipoIntervencion,
-      r.region,
-      r.province,
-      r.municipio,
-      r.estado || 'N/A',
-      r.createdBy,
-      (r.kilometraje || 0).toFixed(2)
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `informe_detallado_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
-  const exportarJSON = () => {
-    const dataStr = JSON.stringify(filteredReports, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `informe_detallado_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-  };
-
   const handlePrint = () => {
     window.print();
   };
@@ -534,7 +500,30 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         <div className="report-viewer">
           <div className="report-viewer-header">
             <h2>📄 Informe Completo - #{selectedReport.reportNumber}</h2>
-            <div className="report-readonly-badge">🔒 Solo Lectura</div>
+            <div className="report-actions-buttons">
+              <button 
+                className="report-edit-btn"
+                onClick={() => {
+                  if (onEditReport) {
+                    onEditReport(selectedReport);
+                  } else {
+                    alert('No se ha configurado la función de edición');
+                  }
+                }}
+                title="Editar reporte"
+              >
+                ✏️ Editar
+              </button>
+              {isAdmin && (
+                <button 
+                  className="report-delete-btn"
+                  onClick={() => deleteReport(selectedReport.id, selectedReport.reportNumber)}
+                  title="Eliminar reporte"
+                >
+                  🗑️ Eliminar
+                </button>
+              )}
+            </div>
           </div>
           <div className="report-viewer-content">
             {/* Información General */}
@@ -659,12 +648,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                 </div>
               </div>
             )}
-
-            {/* Aviso de Solo Lectura */}
-            <div className="readonly-notice-footer">
-              <span className="lock-icon">🔒</span>
-              <span>Este informe no puede ser modificado. Solo se puede visualizar la información registrada.</span>
-            </div>
           </div>
           <div className="report-viewer-footer">
             <button className="btn-secondary" onClick={closeReportView}>Cerrar Informe</button>
@@ -915,12 +898,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           Mostrando <strong>{filteredReports.length}</strong> de <strong>{allReportsFlat.length}</strong> informes
         </div>
         <div className="export-buttons">
-          <button className="btn-export" onClick={exportarCSV}>
-            📄 Exportar CSV
-          </button>
-          <button className="btn-export" onClick={exportarJSON}>
-            📋 Exportar JSON
-          </button>
           <button className="btn-export" onClick={handlePrint}>
             🖨️ Imprimir
           </button>
@@ -996,7 +973,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                                           key={report.id}
                                           className="report-item"
                                         >
-                                          <div 
+                                          <div
                                             className="report-info"
                                             onClick={(e) => viewReport(report, e)}
                                           >
@@ -1004,15 +981,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                                             <span className="report-creator">{report.createdBy}</span>
                                             <span className="report-date">{report.date}</span>
                                           </div>
-                                          {isAdmin && (
-                                            <button
-                                              className="btn-delete-report"
-                                              onClick={(e) => deleteReport(report.id, report.reportNumber, e)}
-                                              title="Eliminar reporte"
-                                            >
-                                              🗑️
-                                            </button>
-                                          )}
                                         </div>
                                       ))}
                                     </div>
@@ -1097,18 +1065,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                         >
                           👁️
                         </button>
-                        {isAdmin && (
-                          <button
-                            className="btn-delete-icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteReport(report.id, report.reportNumber);
-                            }}
-                            title="Eliminar reporte"
-                          >
-                            🗑️
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

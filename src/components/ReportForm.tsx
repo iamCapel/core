@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
+import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import PendingClockAnimation from './PendingClockAnimation';
 import PendingReportsModal from './PendingReportsModal';
@@ -70,6 +71,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [currentPendingReportId, setCurrentPendingReportId] = useState<string | null>(null);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
 
   // GPS state
   const [gpsEnabled, setGpsEnabled] = useState(parentGpsEnabled);
@@ -100,6 +102,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
     }
   }, [parentGpsEnabled, parentGpsPosition]);
 
+  // Cargar reportes pendientes cuando se abre el modal
+  useEffect(() => {
+    if (showPendingModal) {
+      console.log('📥 Modal de pendientes abierto, cargando reportes...');
+      getPendingReports();
+    }
+  }, [showPendingModal]);
+
   // Lógica de habilitación de campos
   const provinciasDisponibles = region ? provinciasPorRegion[region] || [] : [];
   const municipiosDisponibles = provincia ? municipiosPorProvincia[provincia] || [] : [];
@@ -113,6 +123,22 @@ const ReportForm: React.FC<ReportFormProps> = ({
   // Cargar intervención para editar si se proporciona
   useEffect(() => {
     if (interventionToEdit) {
+      console.log('🔄 ReportForm: Cargando interventionToEdit:', interventionToEdit);
+      
+      // Si viene de un reporte pendiente, guardar el ID
+      if (interventionToEdit._pendingReportId) {
+        console.log('📌 Estableciendo currentPendingReportId:', interventionToEdit._pendingReportId);
+        setCurrentPendingReportId(interventionToEdit._pendingReportId);
+      }
+      
+      console.log('📍 Cargando campos geográficos:', {
+        region: interventionToEdit.region,
+        provincia: interventionToEdit.provincia,
+        municipio: interventionToEdit.municipio,
+        distrito: interventionToEdit.distrito,
+        sector: interventionToEdit.sector
+      });
+      
       setRegion(interventionToEdit.region || '');
       setProvincia(interventionToEdit.provincia || '');
       setDistrito(interventionToEdit.distrito || '');
@@ -130,6 +156,13 @@ const ReportForm: React.FC<ReportFormProps> = ({
         setSectorPersonalizado(interventionToEdit.sector || '');
       }
       
+      // Manejar distrito personalizado
+      if (interventionToEdit.mostrarDistritoPersonalizado) {
+        setDistrito('otros');
+        setMostrarDistritoPersonalizado(true);
+        setDistritoPersonalizado(interventionToEdit.distritoPersonalizado || '');
+      }
+      
       // Manejar tipo de intervención
       let tipoBase = interventionToEdit.tipoIntervencion;
       let subTipo = '';
@@ -140,25 +173,38 @@ const ReportForm: React.FC<ReportFormProps> = ({
         subTipo = partes[1];
       }
       
-      setTipoIntervencion(tipoBase);
-      setSubTipoCanal(subTipo);
-      
-      // Cargar observaciones
-      setObservaciones(interventionToEdit.observaciones || '');
-      
-      // Cargar valores de plantilla
-      const valoresPlantilla: Record<string, string> = {};
-      plantillaDefault.forEach(field => {
-        if (interventionToEdit[field.key]) {
-          valoresPlantilla[field.key] = interventionToEdit[field.key];
-        }
+      console.log('🔧 Cargando tipo de intervención:', {
+        tipoBase,
+        subTipo: subTipo || interventionToEdit.subTipoCanal
       });
       
-      if (interventionToEdit.nombre_mina) {
-        valoresPlantilla.nombre_mina = interventionToEdit.nombre_mina;
+      setTipoIntervencion(tipoBase);
+      setSubTipoCanal(subTipo || interventionToEdit.subTipoCanal || '');
+      
+      // Cargar observaciones
+      console.log('📝 Cargando observaciones:', interventionToEdit.observaciones);
+      setObservaciones(interventionToEdit.observaciones || '');
+      
+      // Cargar valores de plantilla (metricData si viene de pendiente)
+      const valoresPlantilla: Record<string, string> = interventionToEdit.metricData || {};
+      
+      // Si no hay metricData, cargar desde los campos individuales (reporte normal)
+      if (!interventionToEdit.metricData) {
+        plantillaDefault.forEach(field => {
+          if (interventionToEdit[field.key]) {
+            valoresPlantilla[field.key] = interventionToEdit[field.key];
+          }
+        });
+        
+        if (interventionToEdit.nombre_mina) {
+          valoresPlantilla.nombre_mina = interventionToEdit.nombre_mina;
+        }
       }
       
+      console.log('📊 Cargando valores de plantilla (metricData):', valoresPlantilla);
       setPlantillaValues(valoresPlantilla);
+      
+      console.log('✅ ReportForm: Datos cargados completamente');
     }
   }, [interventionToEdit, plantillaDefault, sectoresPorProvincia]);
 
@@ -263,49 +309,110 @@ const ReportForm: React.FC<ReportFormProps> = ({
   };
 
   // Funciones de notificaciones
-  const updatePendingCount = () => {
-    const pendientes = pendingReportStorage.getPendingCount();
-    setPendingCount(pendientes);
+  const updatePendingCount = async () => {
+    try {
+      const pendientes = await firebasePendingReportStorage.getAllPendingReports();
+      setPendingCount(pendientes.length);
+    } catch (error) {
+      console.error('❌ Error actualizando contador de pendientes desde Firebase:', error);
+      setPendingCount(0);
+    }
   };
 
-  const getPendingReports = () => {
-    const pendingReports = pendingReportStorage.getAllPendingReports();
-    return pendingReports.map(report => ({
-      id: report.id,
-      reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
-      timestamp: report.timestamp,
-      estado: 'pendiente',
-      region: report.formData.region || 'N/A',
-      provincia: report.formData.provincia || 'N/A',
-      municipio: report.formData.municipio || 'N/A',
-      tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
-    }));
+  const getPendingReports = async () => {
+    try {
+      const pendingReports = await firebasePendingReportStorage.getAllPendingReports();
+      const formattedReports = pendingReports.map(report => ({
+        id: report.id,
+        reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
+        timestamp: report.timestamp,
+        estado: 'pendiente',
+        region: report.formData.region || 'N/A',
+        provincia: report.formData.provincia || 'N/A',
+        municipio: report.formData.municipio || 'N/A',
+        tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
+      }));
+      setPendingReportsList(formattedReports);
+      return formattedReports;
+    } catch (error) {
+      console.error('❌ Error obteniendo reportes pendientes desde Firebase:', error);
+      setPendingReportsList([]);
+      return [];
+    }
   };
 
-  const handleContinuePendingReport = (reportId: string) => {
-    const pendingReport = pendingReportStorage.getPendingReport(reportId);
+  const handleContinuePendingReport = async (reportId: string) => {
+    console.log('📋 Continuando reporte pendiente desde ReportForm:', reportId);
+    try {
+      const pendingReport = await firebasePendingReportStorage.getPendingReport(reportId);
+      if (!pendingReport) {
+        console.error('❌ Reporte pendiente no encontrado en Firebase');
+        alert('No se encontró el reporte pendiente. Puede que haya sido eliminado.');
+        return;
+      }
+      await loadPendingReportData(pendingReport, reportId);
+    } catch (error) {
+      console.error('❌ Error cargando reporte pendiente desde Firebase:', error);
+      alert('Error al cargar el reporte pendiente. Verifique su conexión a internet.');
+    }
+  };
+
+  const loadPendingReportData = async (pendingReport: any, reportId: string) => {
     if (pendingReport && pendingReport.formData) {
-      // Cargar datos del reporte pendiente
+      // Cargar TODOS los datos del reporte pendiente
       const data = pendingReport.formData;
       setRegion(data.region || '');
       setProvincia(data.provincia || '');
       setMunicipio(data.municipio || '');
       setDistrito(data.distrito || '');
-      setSector(data.sector || '');
+      
+      // Restaurar sector personalizado si existe
+      if (data.mostrarSectorPersonalizado) {
+        setSector('otros');
+        setMostrarSectorPersonalizado(true);
+        setSectorPersonalizado(data.sectorPersonalizado || '');
+      } else {
+        setSector(data.sector || '');
+        setMostrarSectorPersonalizado(false);
+        setSectorPersonalizado('');
+      }
+      
+      // Restaurar distrito personalizado si existe
+      if (data.mostrarDistritoPersonalizado) {
+        setDistrito('otros');
+        setMostrarDistritoPersonalizado(true);
+        setDistritoPersonalizado(data.distritoPersonalizado || '');
+      } else {
+        setDistrito(data.distrito || '');
+        setMostrarDistritoPersonalizado(false);
+        setDistritoPersonalizado('');
+      }
+      
       setTipoIntervencion(data.tipoIntervencion || '');
       setSubTipoCanal(data.subTipoCanal || '');
       setPlantillaValues(data.metricData || {});
       setObservaciones(data.observaciones || '');
       setCurrentPendingReportId(reportId);
       setShowPendingModal(false);
+      
+      console.log('✅ Reporte pendiente cargado:', reportId);
     }
   };
 
-  const handleCancelPendingReport = (reportId: string) => {
-    pendingReportStorage.deletePendingReport(reportId);
-    updatePendingCount();
-    setShowPendingModal(false);
-    setTimeout(() => setShowPendingModal(true), 100);
+  const handleCancelPendingReport = async (reportId: string) => {
+    console.log('❌ Cancelando reporte pendiente:', reportId);
+    try {
+      // Eliminar SOLO de Firebase
+      await firebasePendingReportStorage.deletePendingReport(reportId);
+      console.log('✅ Reporte eliminado exitosamente de Firebase');
+      
+      await updatePendingCount();
+      setShowPendingModal(false);
+      setTimeout(() => setShowPendingModal(true), 100);
+    } catch (error) {
+      console.error('❌ Error eliminando reporte pendiente:', error);
+      alert('Error al eliminar el reporte pendiente. Verifique su conexión a internet.');
+    }
   };
 
   useEffect(() => {
@@ -313,6 +420,70 @@ const ReportForm: React.FC<ReportFormProps> = ({
     const interval = setInterval(updatePendingCount, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  // Efecto para guardar automáticamente los cambios en reportes pendientes
+  useEffect(() => {
+    // Si hay un reporte pendiente activo, guardar automáticamente los cambios
+    if (currentPendingReportId) {
+      const timer = setTimeout(async () => {
+        const pendingReport = {
+          id: currentPendingReportId,
+          timestamp: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+          userId: user.username,
+          userName: user.name || user.username,
+          formData: {
+            region,
+            provincia,
+            distrito,
+            municipio,
+            sector,
+            sectorPersonalizado,
+            mostrarSectorPersonalizado,
+            distritoPersonalizado,
+            mostrarDistritoPersonalizado,
+            tipoIntervencion,
+            subTipoCanal,
+            metricData: plantillaValues,
+            observaciones
+          },
+          progress: 0,
+          fieldsCompleted: []
+        };
+        
+        console.log('💾 Guardando automáticamente reporte pendiente en Firebase:', currentPendingReportId);
+        console.log('📦 Datos a guardar:', pendingReport.formData);
+        
+        try {
+          // Guardar SOLO en Firebase
+          await firebasePendingReportStorage.savePendingReport(pendingReport);
+          console.log('✅ Cambios guardados automáticamente en Firebase');
+        } catch (error) {
+          console.error('❌ Error al guardar en Firebase:', error);
+          console.error('⚠️ No se pudo guardar. Verifique su conexión a internet.');
+        }
+      }, 1000); // Guardar después de 1 segundo de inactividad
+      
+      return () => clearTimeout(timer);
+    }
+  }, [
+    currentPendingReportId,
+    region,
+    provincia,
+    distrito,
+    municipio,
+    sector,
+    sectorPersonalizado,
+    mostrarSectorPersonalizado,
+    distritoPersonalizado,
+    mostrarDistritoPersonalizado,
+    tipoIntervencion,
+    subTipoCanal,
+    plantillaValues,
+    observaciones,
+    user.username,
+    user.name
+  ]);
 
   const handleMunicipioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setMunicipio(e.target.value);
@@ -435,19 +606,15 @@ const ReportForm: React.FC<ReportFormProps> = ({
       };
 
       try {
-        // Guardar en localStorage
+        console.log('💾 Guardando reporte en Firebase...');
+        
+        // PRIMERO: Guardar en localStorage para generar campos requeridos (numeroReporte, timestamp, etc.)
         const savedReport = await reportStorage.saveReport(reportData);
-        console.log('Reporte guardado localmente:', savedReport);
-
-        // Intentar guardar en Firebase en segundo plano (sin bloquear)
-        setTimeout(async () => {
-          try {
-            await firebaseReportStorage.saveReport(savedReport);
-            console.log('✅ Reporte sincronizado con Firebase');
-          } catch (firebaseError) {
-            console.warn('⚠️ No se pudo sincronizar con Firebase:', firebaseError);
-          }
-        }, 100);
+        console.log('📦 Reporte procesado con campos generados');
+        
+        // SEGUNDO: Guardar en Firebase con todos los campos completos
+        await firebaseReportStorage.saveReport(savedReport);
+        console.log('✅ Reporte guardado exitosamente en Firebase');
 
         // Ocultar animación después de 2 segundos
         setTimeout(() => {
@@ -457,7 +624,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
       } catch (error) {
         console.error('❌ Error al guardar reporte:', error);
         setShowSaveAnimation(false);
-        alert('Error al guardar el reporte. Por favor intente nuevamente.');
+        alert('Error al guardar el reporte. Verifique su conexión a internet e intente nuevamente.');
       }
     }, 500);
   };
@@ -742,36 +909,6 @@ const ReportForm: React.FC<ReportFormProps> = ({
       </div>
 
       <div className="dashboard-content">
-        {/* Header profesional con logo y número de reporte */}
-        <div className="report-header-professional">
-          <div className="report-header-left">
-            <div className="report-number-section">
-              <h2 className="report-main-title">MINISTERIO DE OBRAS PÚBLICAS Y COMUNICACIONES</h2>
-              <h3 className="report-subtitle">DIRECCIÓN DE COORDINACIÓN REGIONAL</h3>
-              <div className="report-number-container">
-                <span className="report-number-label">Nº de Reporte:</span>
-                <span className="report-number-value">
-                  {interventionToEdit?.numeroReporte || 
-                    `DCR-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`
-                  }
-                </span>
-              </div>
-              <div className="report-date">
-                <span>Fecha: {new Date().toLocaleDateString('es-ES', { 
-                  day: '2-digit', 
-                  month: '2-digit', 
-                  year: 'numeric' 
-                })}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="report-header-right">
-          </div>
-        </div>
-
-        <div className="report-form-separator"></div>
-
         <h3 className="records-header">
           {interventionToEdit ? '📝 Editar Intervención' : '📋 Registro de Obras Realizadas'}
         </h3>
@@ -1173,8 +1310,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
             {/* Botón Naranja - Pendiente */}
             <button 
               type="button" 
-              onClick={() => {
-                // Guardar como pendiente usando el servicio
+              onClick={async () => {
+                // Guardar como pendiente usando Firebase
                 const reportId = currentPendingReportId || 'pending_' + Date.now();
                 const pendingReport = {
                   id: reportId,
@@ -1188,6 +1325,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
                     distrito,
                     municipio,
                     sector,
+                    sectorPersonalizado,
+                    mostrarSectorPersonalizado,
+                    distritoPersonalizado,
+                    mostrarDistritoPersonalizado,
                     tipoIntervencion,
                     subTipoCanal,
                     metricData: plantillaValues,
@@ -1197,14 +1338,22 @@ const ReportForm: React.FC<ReportFormProps> = ({
                   fieldsCompleted: []
                 };
                 
-                // Guardar en pendingReportStorage
-                pendingReportStorage.savePendingReport(pendingReport);
+                console.log('💾 Guardando reporte pendiente manualmente en Firebase:', reportId);
                 
-                // Guardar el ID en el estado
-                setCurrentPendingReportId(reportId);
-                
-                // Mostrar animación
-                setShowPendingAnimation(true);
+                try {
+                  // Guardar SOLO en Firebase
+                  await firebasePendingReportStorage.savePendingReport(pendingReport);
+                  console.log('✅ Reporte guardado exitosamente en Firebase');
+                  
+                  // Guardar el ID en el estado
+                  setCurrentPendingReportId(reportId);
+                  
+                  // Mostrar animación
+                  setShowPendingAnimation(true);
+                } catch (error) {
+                  console.error('❌ Error al guardar en Firebase:', error);
+                  alert('Error al guardar el reporte pendiente. Verifique su conexión a internet.');
+                }
               }}
             
               style={{
@@ -1241,11 +1390,18 @@ const ReportForm: React.FC<ReportFormProps> = ({
             {/* Botón Rojo - Cancelar */}
             <button 
               type="button" 
-              onClick={() => {
+              onClick={async () => {
                 if (window.confirm('¿Está seguro de que desea cancelar? Se perderán los datos no guardados.')) {
-                  // Si existe un reporte pendiente, eliminarlo de las notificaciones
+                  // Si existe un reporte pendiente, eliminarlo
                   if (currentPendingReportId) {
-                    pendingReportStorage.deletePendingReport(currentPendingReportId);
+                    console.log('❌ Cancelando y eliminando reporte pendiente:', currentPendingReportId);
+                    try {
+                      // Eliminar SOLO de Firebase
+                      await firebasePendingReportStorage.deletePendingReport(currentPendingReportId);
+                      console.log('✅ Reporte eliminado exitosamente de Firebase');
+                    } catch (error) {
+                      console.error('❌ Error eliminando reporte de Firebase:', error);
+                    }
                     setCurrentPendingReportId(null);
                   }
                   
@@ -1422,7 +1578,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
       <PendingReportsModal
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
-        reports={getPendingReports()}
+        reports={pendingReportsList}
         onContinueReport={handleContinuePendingReport}
         onCancelReport={handleCancelPendingReport}
       />

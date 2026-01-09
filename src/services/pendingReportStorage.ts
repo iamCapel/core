@@ -19,6 +19,12 @@ export interface PendingReport {
     distrito?: string;
     sector?: string;
     
+    // Campos personalizados adicionales
+    sectorPersonalizado?: string;
+    mostrarSectorPersonalizado?: boolean;
+    distritoPersonalizado?: string;
+    mostrarDistritoPersonalizado?: boolean;
+    
     // Tipo de intervención
     tipoIntervencion?: string;
     subTipoCanal?: string;

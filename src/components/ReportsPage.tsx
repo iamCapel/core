@@ -15,9 +15,10 @@ interface User {
 interface ReportsPageProps {
   user: User;
   onBack: () => void;
+  onEditReport?: (reportId: string) => void;
 }
 
-type PageView = 'estadisticas' | 'detallado';
+type PageView = 'estadisticas' | 'detallado' | 'exportar';
 type StatsMode = 'intervenciones' | 'kilometraje';
 
 interface RegionData {
@@ -81,7 +82,7 @@ function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: num
   return R * c;
 }
 
-const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
+const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport }) => {
   const [currentView, setCurrentView] = useState<PageView>('estadisticas');
   const [statsMode, setStatsMode] = useState<StatsMode>('intervenciones');
   const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
@@ -89,6 +90,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [expandedProvincias, setExpandedProvincias] = useState<Set<string>>(new Set());
+  
+  // Estados para el sistema de exportación
+  const [exportSelectedRegion, setExportSelectedRegion] = useState<RegionData | null>(null);
+  const [exportSelectedProvincia, setExportSelectedProvincia] = useState<ProvinciaData | null>(null);
+  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportType, setExportType] = useState<'region' | 'provincia' | 'municipio'>('region');
 
   useEffect(() => {
     cargarDatosRegiones();
@@ -313,6 +322,286 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
     });
   };
 
+  // Funciones de exportación
+  const handleExportRegion = (region: RegionData) => {
+    setExportSelectedRegion(region);
+    setExportSelectedProvincia(null);
+    setExportType('region');
+    setShowDateRangeModal(true);
+  };
+
+  const handleExportProvincia = (region: RegionData, provincia: ProvinciaData) => {
+    setExportSelectedRegion(region);
+    setExportSelectedProvincia(provincia);
+    setExportType('provincia');
+    setShowDateRangeModal(true);
+  };
+
+  const handleExportMunicipio = (region: RegionData, provincia: ProvinciaData, municipio: MunicipioData) => {
+    setExportSelectedRegion(region);
+    setExportSelectedProvincia(provincia);
+    setExportType('municipio');
+    // Para municipio exportamos directamente sin rango de fechas
+    exportarMunicipioDetalle(region, provincia, municipio);
+  };
+
+  const confirmarExportacion = async () => {
+    if (!exportStartDate || !exportEndDate) {
+      alert('Por favor seleccione un rango de fechas válido');
+      return;
+    }
+
+    if (exportType === 'region' && exportSelectedRegion) {
+      await exportarRegionConFechas(exportSelectedRegion, exportStartDate, exportEndDate);
+    } else if (exportType === 'provincia' && exportSelectedRegion && exportSelectedProvincia) {
+      await exportarProvinciaDetalle(exportSelectedRegion, exportSelectedProvincia, exportStartDate, exportEndDate);
+    }
+
+    setShowDateRangeModal(false);
+    setExportStartDate('');
+    setExportEndDate('');
+  };
+
+  const exportarRegionConFechas = async (region: RegionData, fechaInicio: string, fechaFin: string) => {
+    try {
+      const reportes = await firebaseReportStorage.getAllReports();
+      const reportesFiltrados = reportes.filter(r => {
+        const fechaReporte = new Date(r.fechaCreacion);
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+        return r.region === region.name && fechaReporte >= inicio && fechaReporte <= fin;
+      });
+
+      const contenido = `
+INFORME DE REGIÓN: ${region.name}
+Período: ${new Date(fechaInicio).toLocaleDateString('es-ES')} - ${new Date(fechaFin).toLocaleDateString('es-ES')}
+==================================================
+
+RESUMEN GENERAL
+- Total de Intervenciones: ${region.total}
+- Completadas: ${region.completados}
+- En Progreso: ${region.enProgreso}
+- Pendientes: ${region.pendientes}
+- Kilometraje Total: ${region.kilometraje.toFixed(2)} km
+
+PROVINCIAS DE LA REGIÓN:
+${region.provincias.map(p => `
+  ${p.nombre}:
+  - Intervenciones: ${p.total}
+  - Completadas: ${p.completados}
+  - En Progreso: ${p.enProgreso}
+  - Pendientes: ${p.pendientes}
+  - Kilometraje: ${p.kilometraje.toFixed(2)} km
+  
+  Municipios:
+${p.municipios.map(m => `    • ${m.nombre}: ${m.total} intervenciones (${m.kilometraje.toFixed(2)} km)`).join('\n')}
+`).join('\n')}
+
+REPORTES DETALLADOS (${reportesFiltrados.length}):
+${reportesFiltrados.map((r, i) => {
+  let kmReporte = 'N/A';
+  if (r.gpsData?.start && r.gpsData?.end) {
+    const km = calcularDistanciaKm(
+      r.gpsData.start.latitude,
+      r.gpsData.start.longitude,
+      r.gpsData.end.latitude,
+      r.gpsData.end.longitude
+    );
+    kmReporte = km.toFixed(2);
+  }
+  
+  return `
+${i + 1}. Reporte #${r.numeroReporte}
+   Fecha: ${new Date(r.fechaCreacion).toLocaleDateString('es-ES')}
+   Tipo: ${r.tipoIntervencion}
+   Ubicación: ${r.provincia}, ${r.municipio}
+   Creado por: ${r.creadoPor}
+   Estado: ${r.estado || 'N/A'}
+   Kilometraje: ${kmReporte} km
+`;
+}).join('\n')}
+      `.trim();
+
+      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Informe_${region.name}_${fechaInicio}_${fechaFin}.txt`;
+      link.click();
+      
+      alert(`Informe de ${region.name} exportado exitosamente`);
+    } catch (error) {
+      console.error('Error al exportar región:', error);
+      alert('Error al exportar el informe');
+    }
+  };
+
+  const exportarProvinciaDetalle = async (region: RegionData, provincia: ProvinciaData, fechaInicio: string, fechaFin: string) => {
+    try {
+      const reportes = await firebaseReportStorage.getAllReports();
+      const reportesFiltrados = reportes.filter(r => {
+        const fechaReporte = new Date(r.fechaCreacion);
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+        return r.provincia === provincia.nombre && fechaReporte >= inicio && fechaReporte <= fin;
+      });
+
+      const contenido = `
+INFORME DETALLADO DE PROVINCIA: ${provincia.nombre}
+Región: ${region.name}
+Período: ${new Date(fechaInicio).toLocaleDateString('es-ES')} - ${new Date(fechaFin).toLocaleDateString('es-ES')}
+==================================================
+
+RESUMEN DE LA PROVINCIA
+- Total de Intervenciones: ${provincia.total}
+- Completadas: ${provincia.completados}
+- En Progreso: ${provincia.enProgreso}
+- Pendientes: ${provincia.pendientes}
+- Kilometraje Total: ${provincia.kilometraje.toFixed(2)} km
+
+MUNICIPIOS Y SECTORES TRABAJADOS:
+${provincia.municipios.map(m => `
+  MUNICIPIO: ${m.nombre}
+  - Intervenciones: ${m.total}
+  - Completadas: ${m.completados}
+  - En Progreso: ${m.enProgreso}
+  - Pendientes: ${m.pendientes}
+  - Kilometraje: ${m.kilometraje.toFixed(2)} km
+  
+  Sectores trabajados:
+${reportesFiltrados
+  .filter(r => r.municipio === m.nombre)
+  .map(r => `    • ${r.sector || 'N/A'} - ${r.tipoIntervencion}`)
+  .filter((v, i, a) => a.indexOf(v) === i)
+  .join('\n')}
+`).join('\n')}
+
+DATOS DETALLADOS DE REPORTES (${reportesFiltrados.length}):
+${reportesFiltrados.map((r, i) => {
+  let kmReporte = 'N/A';
+  if (r.gpsData?.start && r.gpsData?.end) {
+    const km = calcularDistanciaKm(
+      r.gpsData.start.latitude,
+      r.gpsData.start.longitude,
+      r.gpsData.end.latitude,
+      r.gpsData.end.longitude
+    );
+    kmReporte = km.toFixed(2);
+  }
+  
+  return `
+${i + 1}. Reporte #${r.numeroReporte}
+   Fecha: ${new Date(r.fechaCreacion).toLocaleDateString('es-ES')}
+   Municipio: ${r.municipio}
+   Sector: ${r.sector || 'N/A'}
+   Distrito: ${r.distrito || 'N/A'}
+   Tipo Intervención: ${r.tipoIntervencion}
+   Creado por: ${r.creadoPor}
+   Estado: ${r.estado || 'N/A'}
+   Kilometraje: ${kmReporte} km
+   Observaciones: ${r.observaciones || 'Ninguna'}
+`;
+}).join('\n')}
+      `.trim();
+
+      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Informe_Provincia_${provincia.nombre}_${fechaInicio}_${fechaFin}.txt`;
+      link.click();
+      
+      alert(`Informe de ${provincia.nombre} exportado exitosamente`);
+    } catch (error) {
+      console.error('Error al exportar provincia:', error);
+      alert('Error al exportar el informe');
+    }
+  };
+
+  const exportarMunicipioDetalle = async (region: RegionData, provincia: ProvinciaData, municipio: MunicipioData) => {
+    try {
+      const reportes = await firebaseReportStorage.getAllReports();
+      const reportesMunicipio = reportes.filter(r => r.municipio === municipio.nombre);
+
+      const contenido = `
+INFORME DETALLADO DE MUNICIPIO: ${municipio.nombre}
+Provincia: ${provincia.nombre}
+Región: ${region.name}
+==================================================
+
+RESUMEN DEL MUNICIPIO
+- Total de Intervenciones: ${municipio.total}
+- Completadas: ${municipio.completados}
+- En Progreso: ${municipio.enProgreso}
+- Pendientes: ${municipio.pendientes}
+- Kilometraje Total: ${municipio.kilometraje.toFixed(2)} km
+
+TIPOS DE INTERVENCIÓN REALIZADAS:
+${Object.entries(
+  reportesMunicipio.reduce((acc, r) => {
+    acc[r.tipoIntervencion] = (acc[r.tipoIntervencion] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>)
+).map(([tipo, cantidad]) => `  • ${tipo}: ${cantidad} intervenciones`).join('\n')}
+
+SECTORES INTERVENIDOS:
+${Array.from(new Set(reportesMunicipio.map(r => r.sector).filter(Boolean))).map(s => `  • ${s}`).join('\n')}
+
+DISTRITOS TRABAJADOS:
+${Array.from(new Set(reportesMunicipio.map(r => r.distrito).filter(Boolean))).map(d => `  • ${d}`).join('\n')}
+
+LISTA COMPLETA DE INTERVENCIONES (${reportesMunicipio.length}):
+${reportesMunicipio.map((r, i) => {
+  let kmReporte = 'N/A';
+  if (r.gpsData?.start && r.gpsData?.end) {
+    const km = calcularDistanciaKm(
+      r.gpsData.start.latitude,
+      r.gpsData.start.longitude,
+      r.gpsData.end.latitude,
+      r.gpsData.end.longitude
+    );
+    kmReporte = km.toFixed(2);
+  }
+  
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INTERVENCIÓN #${i + 1}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Número de Reporte: ${r.numeroReporte}
+Fecha: ${new Date(r.fechaCreacion).toLocaleDateString('es-ES')}
+Tipo de Intervención: ${r.tipoIntervencion}
+Ubicación Específica:
+  - Sector: ${r.sector || 'N/A'}
+  - Distrito: ${r.distrito || 'N/A'}
+Responsable: ${r.creadoPor}
+Estado: ${r.estado || 'N/A'}
+Kilometraje: ${kmReporte} km
+
+Datos Métricos:
+${Object.entries(r.metricData || {}).map(([key, value]) => `  - ${key}: ${value}`).join('\n')}
+
+Coordenadas GPS:
+${r.gpsData ? `
+  Punto Inicial: ${r.gpsData.punto_inicial ? `Lat ${r.gpsData.punto_inicial.lat}, Lon ${r.gpsData.punto_inicial.lon}` : 'N/A'}
+  Punto Alcanzado: ${r.gpsData.punto_alcanzado ? `Lat ${r.gpsData.punto_alcanzado.lat}, Lon ${r.gpsData.punto_alcanzado.lon}` : 'N/A'}
+` : '  No disponible'}
+
+Observaciones: ${r.observaciones || 'Ninguna'}
+`;
+}).join('\n')}
+      `.trim();
+
+      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Informe_Municipio_${municipio.nombre}_${new Date().toISOString().split('T')[0]}.txt`;
+      link.click();
+      
+      alert(`Informe detallado de ${municipio.nombre} exportado exitosamente`);
+    } catch (error) {
+      console.error('Error al exportar municipio:', error);
+      alert('Error al exportar el informe');
+    }
+  };
+
   return (
     <div className="reports-page">
       <div className="reports-container">
@@ -394,6 +683,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
               >
                 <span className="view-icon">📄</span>
                 <span className="view-label">Informe Detallado</span>
+              </button>
+              <button 
+                className={`view-btn-topbar ${currentView === 'exportar' ? 'active' : ''}`}
+                onClick={() => setCurrentView('exportar')}
+              >
+                <span className="view-icon">📥</span>
+                <span className="view-label">Exportar Informe</span>
               </button>
             </div>
           </div>
@@ -627,10 +923,182 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack }) => {
           )}
 
           {currentView === 'detallado' && (
-            <DetailedReportView user={user} />
+            <DetailedReportView 
+              user={user} 
+              onEditReport={(report) => {
+                if (onEditReport) {
+                  onEditReport(report.id);
+                }
+              }}
+            />
+          )}
+
+          {currentView === 'exportar' && (
+            <div className="export-view-container">
+              <div className="export-header">
+                <h2 className="export-title">📥 Sistema de Exportación de Informes</h2>
+                <p className="export-subtitle">Seleccione una región para exportar informes detallados</p>
+              </div>
+
+              <div className="export-regions-grid">
+                {regionesData.map(region => (
+                  <div key={region.id} className="export-region-card">
+                    <div className="export-card-header" onClick={() => {
+                      if (exportSelectedRegion?.id === region.id) {
+                        setExportSelectedRegion(null);
+                      } else {
+                        setExportSelectedRegion(region);
+                        setExportSelectedProvincia(null);
+                      }
+                    }}>
+                      <div className="export-card-icon">{region.icon}</div>
+                      <div className="export-card-info">
+                        <h3 className="export-card-title">{region.name}</h3>
+                        <p className="export-card-stats">
+                          {region.total} intervenciones • {region.kilometraje.toFixed(2)} km
+                        </p>
+                      </div>
+                      <button 
+                        className="export-card-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleExportRegion(region);
+                        }}
+                        title="Exportar región con rango de fechas"
+                      >
+                        📄 Exportar
+                      </button>
+                    </div>
+
+                    {exportSelectedRegion?.id === region.id && (
+                      <div className="export-provincias-container">
+                        <h4 className="export-section-title">Provincias de {region.name}</h4>
+                        <div className="export-provincias-grid">
+                          {region.provincias.map(provincia => (
+                            <div key={provincia.nombre} className="export-provincia-card">
+                              <div className="export-provincia-header" onClick={() => {
+                                if (exportSelectedProvincia?.nombre === provincia.nombre) {
+                                  setExportSelectedProvincia(null);
+                                } else {
+                                  setExportSelectedProvincia(provincia);
+                                }
+                              }}>
+                                <div className="export-provincia-info">
+                                  <h4 className="export-provincia-name">📍 {provincia.nombre}</h4>
+                                  <p className="export-provincia-stats">
+                                    {provincia.total} intervenciones • {provincia.kilometraje.toFixed(2)} km
+                                  </p>
+                                </div>
+                                <button 
+                                  className="export-provincia-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleExportProvincia(region, provincia);
+                                  }}
+                                  title="Exportar provincia con lista detallada"
+                                >
+                                  📋 Exportar
+                                </button>
+                              </div>
+
+                              {exportSelectedProvincia?.nombre === provincia.nombre && (
+                                <div className="export-municipios-container">
+                                  <h5 className="export-municipios-title">Municipios de {provincia.nombre}</h5>
+                                  <div className="export-municipios-grid">
+                                    {provincia.municipios.map(municipio => (
+                                      <div key={municipio.nombre} className="export-municipio-card">
+                                        <div className="export-municipio-info">
+                                          <h5 className="export-municipio-name">🏘️ {municipio.nombre}</h5>
+                                          <p className="export-municipio-stats">
+                                            {municipio.total} intervenciones
+                                          </p>
+                                          <p className="export-municipio-km">
+                                            {municipio.kilometraje.toFixed(2)} km
+                                          </p>
+                                        </div>
+                                        <button 
+                                          className="export-municipio-btn"
+                                          onClick={() => handleExportMunicipio(region, provincia, municipio)}
+                                          title="Exportar municipio con detalles completos"
+                                        >
+                                          📥 Exportar
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Modal de selección de rango de fechas */}
+      {showDateRangeModal && (
+        <div className="date-range-modal-overlay" onClick={() => setShowDateRangeModal(false)}>
+          <div className="date-range-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="date-range-header">
+              <h3>📅 Seleccionar Rango de Fechas</h3>
+              <button className="date-range-close" onClick={() => setShowDateRangeModal(false)}>✕</button>
+            </div>
+            
+            <div className="date-range-content">
+              <p className="date-range-info">
+                {exportType === 'region' && `Exportando: Región ${exportSelectedRegion?.name}`}
+                {exportType === 'provincia' && `Exportando: Provincia ${exportSelectedProvincia?.nombre}`}
+              </p>
+
+              <div className="date-range-inputs">
+                <div className="date-input-group">
+                  <label htmlFor="startDate">Fecha Inicio:</label>
+                  <input
+                    id="startDate"
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="date-input"
+                  />
+                </div>
+
+                <div className="date-input-group">
+                  <label htmlFor="endDate">Fecha Fin:</label>
+                  <input
+                    id="endDate"
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="date-input"
+                  />
+                </div>
+              </div>
+
+              <div className="date-range-actions">
+                <button 
+                  className="btn-cancel" 
+                  onClick={() => setShowDateRangeModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  className="btn-confirm" 
+                  onClick={confirmarExportacion}
+                  disabled={!exportStartDate || !exportEndDate}
+                >
+                  Exportar Informe
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de notificaciones pendientes */}
       <PendingReportsModal

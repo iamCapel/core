@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { reportStorage } from '../services/reportStorage';
+import { pendingReportStorage } from '../services/pendingReportStorage';
+import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import './MyReportsCalendar.css';
 
 interface MyReportsCalendarProps {
   username: string;
   onClose: () => void;
+  onContinuePendingReport?: (reportId: string) => void;
 }
 
 interface ReportByDate {
@@ -20,17 +23,18 @@ interface ReportByDate {
   }[];
 }
 
-const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose }) => {
+const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose, onContinuePendingReport }) => {
   const [reportsByDate, setReportsByDate] = useState<ReportByDate[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'pending'>('calendar');
   const [stats, setStats] = useState({
     total: 0,
     thisMonth: 0,
     thisWeek: 0,
     today: 0
   });
+  const [pendingReports, setPendingReports] = useState<any[]>([]);
 
   const loadUserReports = useCallback(() => {
     // Obtener todos los reportes del usuario
@@ -84,7 +88,25 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
 
   useEffect(() => {
     loadUserReports();
+    loadPendingReports();
   }, [loadUserReports]);
+
+  const loadPendingReports = async () => {
+    console.log('📥 Cargando reportes pendientes desde Firebase para usuario:', username);
+    try {
+      const allPending = await firebasePendingReportStorage.getAllPendingReports();
+      console.log('📦 Total reportes pendientes en Firebase:', allPending.length);
+      
+      const userPending = allPending.filter(report => report.userId === username);
+      console.log('✅ Reportes pendientes del usuario:', userPending.length);
+      
+      setPendingReports(userPending);
+    } catch (error) {
+      console.error('❌ Error cargando reportes pendientes desde Firebase:', error);
+      alert('Error al cargar reportes pendientes. Verifique su conexión a internet.');
+      setPendingReports([]);
+    }
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -185,6 +207,12 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
         >
           📝 Lista
         </button>
+        <button 
+          className={`view-btn ${viewMode === 'pending' ? 'active' : ''}`}
+          onClick={() => setViewMode('pending')}
+        >
+          ⏳ Reportes Pendientes {pendingReports.length > 0 && `(${pendingReports.length})`}
+        </button>
       </div>
 
       {viewMode === 'calendar' ? (
@@ -274,7 +302,7 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
             </div>
           )}
         </>
-      ) : (
+      ) : viewMode === 'list' ? (
         /* Vista de lista */
         <div className="reports-list-view">
           {reportsByDate.length > 0 ? (
@@ -317,6 +345,116 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
             <div className="no-reports">
               <div className="no-reports-icon">📭</div>
               <p>No has registrado reportes aún</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Vista de reportes pendientes */
+        <div className="pending-reports-view">
+          {pendingReports.length > 0 ? (
+            <div className="pending-reports-container">
+              <div className="pending-reports-header">
+                <h3>📋 Reportes Guardados como Pendientes</h3>
+                <p className="pending-reports-subtitle">
+                  Puedes continuar editando estos reportes en cualquier momento
+                </p>
+              </div>
+              <div className="pending-reports-grid">
+                {pendingReports.map(report => (
+                  <div key={report.id} className="pending-report-card">
+                    <div className="pending-card-header">
+                      <div className="pending-card-badge">⏳ Pendiente</div>
+                      <div className="pending-card-date">
+                        {new Date(report.lastModified).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div className="pending-card-content">
+                      <div className="pending-card-info">
+                        <strong>ID:</strong> {report.id.split('_').pop()?.slice(-8) || 'N/A'}
+                      </div>
+                      
+                      {report.formData.region && (
+                        <div className="pending-card-info">
+                          <strong>🌎 Región:</strong> {report.formData.region}
+                        </div>
+                      )}
+                      
+                      {report.formData.provincia && (
+                        <div className="pending-card-info">
+                          <strong>📍 Provincia:</strong> {report.formData.provincia}
+                        </div>
+                      )}
+                      
+                      {report.formData.municipio && (
+                        <div className="pending-card-info">
+                          <strong>🏘️ Municipio:</strong> {report.formData.municipio}
+                        </div>
+                      )}
+                      
+                      {report.formData.tipoIntervencion && (
+                        <div className="pending-card-info">
+                          <strong>🔧 Tipo:</strong> {report.formData.tipoIntervencion}
+                        </div>
+                      )}
+                      
+                      <div className="pending-card-meta">
+                        <div className="pending-card-time">
+                          🕒 Última modificación: {new Date(report.lastModified).toLocaleTimeString('es-ES', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="pending-card-actions">
+                      <button 
+                        className="pending-action-btn continue-btn"
+                        onClick={() => {
+                          if (onContinuePendingReport) {
+                            onContinuePendingReport(report.id);
+                            onClose(); // Cerrar el modal después de continuar
+                          } else {
+                            alert('Para continuar editando este reporte, ve a "Crear Reporte" y abre el modal de reportes pendientes.');
+                          }
+                        }}
+                      >
+                        ▶️ Continuar
+                      </button>
+                      <button 
+                        className="pending-action-btn delete-btn"
+                        onClick={async () => {
+                          if (window.confirm('¿Estás seguro de eliminar este reporte pendiente?')) {
+                            console.log('🗑️ Eliminando reporte pendiente desde Firebase:', report.id);
+                            try {
+                              // Eliminar SOLO de Firebase
+                              await firebasePendingReportStorage.deletePendingReport(report.id);
+                              console.log('✅ Reporte eliminado exitosamente de Firebase');
+                              await loadPendingReports();
+                            } catch (error) {
+                              console.error('❌ Error eliminando reporte de Firebase:', error);
+                              alert('Error al eliminar el reporte. Verifique su conexión a internet.');
+                            }
+                          }
+                        }}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="no-reports">
+              <div className="no-reports-icon">✅</div>
+              <h3>No tienes reportes pendientes</h3>
+              <p>Todos tus reportes están completados</p>
             </div>
           )}
         </div>
