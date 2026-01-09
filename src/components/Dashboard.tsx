@@ -10,6 +10,7 @@ import MyReportsCalendar from './MyReportsCalendar';
 import { UserRole, applyUserTheme, getRoleConfig, getRoleBadge, UserWithRole } from '../types/userRoles';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import { userStorage } from '../services/userStorage';
+import * as firebaseUserStorage from '../services/firebaseUserStorage';
 import './Dashboard.css';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
@@ -756,14 +757,14 @@ const Dashboard: React.FC = () => {
     await new Promise(r => setTimeout(r, 1000));
 
     try {
-      // Debug: Verificar cuántos usuarios hay en el sistema
-      const allUsers = userStorage.getAllUsers();
-      console.log('📊 Usuarios en sistema:', allUsers.length);
+      console.log('🔐 Intentando login con Firebase...');
       
-      // Primero, intentar validar credenciales en userStorage
-      const validatedUser = userStorage.validateCredentials(loginUser, loginPass);
+      // Intentar login con Firebase
+      const result = await firebaseUserStorage.loginWithUsername(loginUser, loginPass);
       
-      if (validatedUser) {
+      if (result.success && result.user) {
+        const validatedUser = result.user;
+        
         // Verificar si la cuenta está activa
         if (!validatedUser.isActive) {
           setLoginError('⚠️ Lo sentimos, su cuenta está temporalmente desactivada. Comuníquese con su superior.');
@@ -787,23 +788,47 @@ const Dashboard: React.FC = () => {
         setLoginUser('');
         setLoginPass('');
         
-        console.log(`✅ Usuario autenticado como: ${getRoleBadge(userRole)}`);
+        console.log(`✅ Usuario autenticado desde Firebase como: ${getRoleBadge(userRole)}`);
         setIsLoading(false);
         return;
       }
       
-      // Si las credenciales no son válidas, verificar si el usuario existe
-      const userExists = userStorage.getUserByUsername(loginUser);
-      if (userExists) {
-        // Usuario existe pero contraseña incorrecta
-        setLoginError('❌ Contraseña incorrecta. Intente nuevamente.');
+      // Si Firebase falla, intentar con localStorage como fallback
+      console.log('⚠️ Firebase login falló, intentando con localStorage...');
+      const allUsers = userStorage.getAllUsers();
+      console.log('📊 Usuarios en localStorage:', allUsers.length);
+      
+      const validatedUser = userStorage.validateCredentials(loginUser, loginPass);
+      
+      if (validatedUser) {
+        if (!validatedUser.isActive) {
+          setLoginError('⚠️ Lo sentimos, su cuenta está temporalmente desactivada. Comuníquese con su superior.');
+          setIsLoading(false);
+          return;
+        }
+        
+        const userRole: UserRole = validatedUser.role === 'Administrador' ? UserRole.ADMIN :
+                                     validatedUser.role === 'Supervisor' ? UserRole.SUPERVISOR :
+                                     UserRole.TECNICO;
+        
+        const newUser: User = {
+          username: validatedUser.username,
+          name: validatedUser.name,
+          role: userRole
+        };
+        
+        localStorage.setItem('mopc_user', JSON.stringify(newUser));
+        setUser(newUser);
+        setLoginUser('');
+        setLoginPass('');
+        
+        console.log(`✅ Usuario autenticado desde localStorage como: ${getRoleBadge(userRole)}`);
         setIsLoading(false);
         return;
       }
       
-      // Usuario no existe en userStorage - mostrar mensaje informativo
-      console.warn(`⚠️ Usuario "${loginUser}" no encontrado. Total usuarios: ${allUsers.length}`);
-      setLoginError(`❌ Usuario "${loginUser}" no encontrado. Pruebe: admin, capel o tecnico`);
+      // Usuario no encontrado en ningún lado
+      setLoginError(result.error || `❌ Usuario "${loginUser}" no encontrado`);
       setIsLoading(false);
       
     } catch (err) {
