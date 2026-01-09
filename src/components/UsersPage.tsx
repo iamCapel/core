@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import { userStorage } from '../services/userStorage';
+import * as firebaseUserStorage from '../services/firebaseUserStorage';
 import './UsersPage.css';
 import PendingReportsModal from './PendingReportsModal';
 
@@ -121,17 +122,21 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
     setTimeout(() => setShowPendingModal(true), 100);
   };
 
-  // Cargar usuarios desde userStorage
+  // Cargar usuarios desde Firebase
   useEffect(() => {
-    const loadedUsers = userStorage.getAllUsers();
-    
-    // Calcular pendingReportsCount para cada usuario desde pendingReportStorage
-    const usersWithPendingCounts = loadedUsers.map(user => ({
-      ...user,
-      pendingReportsCount: pendingReportStorage.getUserPendingReports(user.username).length
-    }));
+    const loadUsers = async () => {
+      const loadedUsers = await firebaseUserStorage.getAllUsers();
+      
+      // Calcular pendingReportsCount para cada usuario desde pendingReportStorage
+      const usersWithPendingCounts = loadedUsers.map(user => ({
+        ...user,
+        pendingReportsCount: pendingReportStorage.getUserPendingReports(user.username).length
+      }));
 
-    setUsers(usersWithPendingCounts);
+      setUsers(usersWithPendingCounts);
+    };
+    
+    loadUsers();
   }, []);
 
   // Actualizar contador al cargar y cada vez que cambie localStorage
@@ -180,7 +185,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
     setUserReports([]);
   };
 
-  const handleCreateUser = () => {
+  const handleCreateUser = async () => {
     // Validar campos obligatorios
     if (!newUserForm.name.trim() || !newUserForm.username.trim() || !newUserForm.password.trim() || !newUserForm.email.trim()) {
       alert('Por favor complete todos los campos obligatorios (Nombre, Usuario, Contraseña, Email)');
@@ -188,25 +193,24 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
     }
 
     // Validar que el username no exista
-    const existingUser = userStorage.getUserByUsername(newUserForm.username);
+    const existingUser = await firebaseUserStorage.getUserByUsername(newUserForm.username);
     if (existingUser) {
       alert('El nombre de usuario ya existe. Por favor elija otro.');
       return;
     }
 
     try {
-      // Crear el usuario en userStorage con valores por defecto
-      const userId = userStorage.saveUser({
+      // Crear el usuario en Firebase con Authentication + Firestore
+      const result = await firebaseUserStorage.createUser({
         username: newUserForm.username,
-        password: newUserForm.password,  // Guardar contraseña
         name: newUserForm.name,
         email: newUserForm.email,
         phone: newUserForm.phone,
-        cedula: newUserForm.cedula,  // Guardar número de cédula
+        cedula: newUserForm.cedula,
         role: newUserForm.role,
         department: 'Sin asignar',
         isActive: true,
-        isVerified: false,  // Nuevo usuario no verificado por defecto
+        isVerified: false,
         lastSeen: 'Ahora',
         joinDate: new Date().toISOString(),
         currentLocation: {
@@ -218,15 +222,21 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
           },
           lastUpdated: new Date().toISOString()
         },
-        reportsCount: 0
-      });
+        reportsCount: 0,
+        notes: []
+      }, newUserForm.password);
+
+      if (!result.success) {
+        alert(`Error creando usuario: ${result.error}`);
+        return;
+      }
 
       // Mostrar animación de éxito
       setShowSuccessAnimation(true);
 
       // Recargar la lista de usuarios
-      setTimeout(() => {
-        const loadedUsers = userStorage.getAllUsers();
+      setTimeout(async () => {
+        const loadedUsers = await firebaseUserStorage.getAllUsers();
         const usersWithPendingCounts = loadedUsers.map(u => ({
           ...u,
           pendingReportsCount: pendingReportStorage.getUserPendingReports(u.username).length

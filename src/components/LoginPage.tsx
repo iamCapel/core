@@ -1,27 +1,37 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import * as firebaseUserStorage from '../services/firebaseUserStorage';
 import mopcLogo from '../logo.svg';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
+    
     try {
-      const res = await axios.post('http://localhost:4000/api/login', { username, password });
-      if (res.data.success) {
+      const result = await firebaseUserStorage.loginWithUsername(username, password);
+      
+      if (result.success && result.user) {
+        // Guardar información del usuario en localStorage para sesión
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+        
         // Redirigir al Dashboard si el login es exitoso
         navigate('/dashboard');
       } else {
-        setError('Usuario o contraseña incorrectos');
+        setError(result.error || 'Usuario o contraseña incorrectos');
       }
-    } catch (err) {
+    } catch (err: any) {
       setError('Error de conexión o credenciales inválidas');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -36,6 +46,7 @@ const LoginPage: React.FC = () => {
           value={username}
           onChange={e => setUsername(e.target.value)}
           required
+          disabled={loading}
           style={{ display: 'block', margin: '10px auto', padding: '8px', width: '80%' }}
         />
         <input
@@ -44,9 +55,12 @@ const LoginPage: React.FC = () => {
           value={password}
           onChange={e => setPassword(e.target.value)}
           required
+          disabled={loading}
           style={{ display: 'block', margin: '10px auto', padding: '8px', width: '80%' }}
         />
-        <button type="submit" style={{ marginTop: 10, padding: '8px 24px' }}>Entrar</button>
+        <button type="submit" disabled={loading} style={{ marginTop: 10, padding: '8px 24px' }}>
+          {loading ? 'Iniciando sesión...' : 'Entrar'}
+        </button>
         {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
       </form>
       <div style={{ marginTop: '24px', textAlign: 'center', color: '#555', fontSize: '0.95rem' }}>
