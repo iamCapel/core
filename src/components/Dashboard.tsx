@@ -654,11 +654,21 @@ const Dashboard: React.FC = () => {
       if (user) {
         // Verificar si el usuario requiere verificación de perfil desde Firebase
         const firebaseUser = await firebaseUserStorage.getUserByUsername(user.username);
-        const requiresVerification = firebaseUser ? !firebaseUser.isVerified : true;
         
         console.log('🔍 Verificando usuario:', user.username);
         console.log('📦 Usuario Firebase:', firebaseUser);
         console.log('✅ isVerified:', firebaseUser?.isVerified);
+        
+        // Si el usuario no existe en Firebase, no pedir verificación (compatibilidad con localStorage)
+        if (!firebaseUser) {
+          console.log('ℹ️ Usuario solo en localStorage, sin verificación requerida');
+          setShowProfileIncompleteNotification(false);
+          setIsProfileComplete(true);
+          return;
+        }
+        
+        // Si el usuario existe en Firebase pero no está verificado
+        const requiresVerification = !firebaseUser.isVerified;
         
         if (requiresVerification) {
           // Solo mostrar solicitud de verificación si isVerified es false
