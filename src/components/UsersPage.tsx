@@ -460,7 +460,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
               </div>
               <div className="profile-info">
                 <h2 className="profile-name">{selectedUser.name}</h2>
-                <p className="profile-location">📍 {selectedUser.currentLocation.province}, {selectedUser.currentLocation.municipality}</p>
+                <p className="profile-location">📍 {selectedUser.currentLocation?.province || 'Sin asignar'}, {selectedUser.currentLocation?.municipality || 'Sin asignar'}</p>
                 <p className="profile-department">{selectedUser.department}</p>
                 <div className="profile-status">
                   <span className={`status-badge ${selectedUser.isActive ? 'active' : 'inactive'}`}>
@@ -490,11 +490,11 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
               </div>
               <div className="detail-item">
                 <span className="detail-label">📍 Ubicación actual:</span>
-                <span className="detail-value">{selectedUser.currentLocation.province}, {selectedUser.currentLocation.municipality}</span>
+                <span className="detail-value">{selectedUser.currentLocation?.province || 'Sin asignar'}, {selectedUser.currentLocation?.municipality || 'Sin asignar'}</span>
               </div>
               <div className="detail-item">
                 <span className="detail-label">🌐 Coordenadas GPS:</span>
-                <span className="detail-value">{selectedUser.currentLocation.coordinates.lat.toFixed(4)}, {selectedUser.currentLocation.coordinates.lng.toFixed(4)}</span>
+                <span className="detail-value">{selectedUser.currentLocation?.coordinates?.lat.toFixed(4) || 'N/A'}, {selectedUser.currentLocation?.coordinates?.lng.toFixed(4) || 'N/A'}</span>
               </div>
               <div className="detail-item">
                 <span className="detail-label">🕒 GPS actualizado:</span>
@@ -699,7 +699,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                           <span className="performance-role-badge">{userProfile.role}</span>
                         </div>
                         <p className="performance-location">
-                          📍 {userProfile.currentLocation.province} • {userProfile.department}
+                          📍 {userProfile.currentLocation?.province || 'Sin asignar'} • {userProfile.department}
                         </p>
                         
                         <div className="performance-bar-container">
@@ -1005,7 +1005,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                 <div className="user-details">
                   <h3 className="user-name">{userProfile.name}</h3>
                   <span className="user-role-badge">{userProfile.role}</span>
-                  <p className="user-location">📍 {userProfile.currentLocation.province}, {userProfile.currentLocation.municipality}</p>
+                  <p className="user-location">📍 {userProfile.currentLocation?.province || 'Sin asignar'}, {userProfile.currentLocation?.municipality || 'Sin asignar'}</p>
                   <p className="user-department">{userProfile.department}</p>
                   <div className="user-stats">
                     <span className="reports-count">📋 {userProfile.reportsCount} reportes</span>
@@ -1046,7 +1046,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                 <div className="user-details">
                   <h3 className="user-name">{userProfile.name}</h3>
                   <span className="user-role-badge">{userProfile.role}</span>
-                  <p className="user-location">📍 {userProfile.currentLocation.province}, {userProfile.currentLocation.municipality}</p>
+                  <p className="user-location">📍 {userProfile.currentLocation?.province || 'Sin asignar'}, {userProfile.currentLocation?.municipality || 'Sin asignar'}</p>
                   <p className="user-department">{userProfile.department}</p>
                   <div className="user-stats">
                     <span className="reports-count">📋 {userProfile.reportsCount} reportes</span>
@@ -1087,7 +1087,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                 <div className="user-details">
                   <h3 className="user-name">{userProfile.name}</h3>
                   <span className="user-role-badge">{userProfile.role}</span>
-                  <p className="user-location">📍 {userProfile.currentLocation.province}, {userProfile.currentLocation.municipality}</p>
+                  <p className="user-location">📍 {userProfile.currentLocation?.province || 'Sin asignar'}, {userProfile.currentLocation?.municipality || 'Sin asignar'}</p>
                   <p className="user-department">{userProfile.department}</p>
                   <div className="user-stats">
                     <span className="reports-count">📋 {userProfile.reportsCount} reportes</span>
