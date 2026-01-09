@@ -650,35 +650,44 @@ const Dashboard: React.FC = () => {
 
   // Verificar si el perfil del usuario está completo
   useEffect(() => {
-    if (user) {
-      // Verificar si el usuario requiere verificación de perfil
-      const storedUser = userStorage.getUserByUsername(user.username);
-      const requiresVerification = storedUser ? !storedUser.isVerified : true;
-      
-      if (requiresVerification) {
-        // Solo mostrar solicitud de verificación si isVerified es false
-        const profileData = localStorage.getItem(`profile_${user.username}`);
-        if (profileData) {
-          const profile = JSON.parse(profileData);
-          setProfilePhoto(profile.profilePhoto || '');
-          setFullName(profile.fullName || '');
-          setBirthDate(profile.birthDate || '');
-          setIdCardPhoto(profile.idCardPhoto || '');
-          
-          // Verificar si todos los campos están completos
-          const isComplete = profile.profilePhoto && profile.fullName && profile.birthDate && profile.idCardPhoto;
-          setShowProfileIncompleteNotification(!isComplete);
-          setIsProfileComplete(isComplete);
+    const checkVerification = async () => {
+      if (user) {
+        // Verificar si el usuario requiere verificación de perfil desde Firebase
+        const firebaseUser = await firebaseUserStorage.getUserByUsername(user.username);
+        const requiresVerification = firebaseUser ? !firebaseUser.isVerified : true;
+        
+        console.log('🔍 Verificando usuario:', user.username);
+        console.log('📦 Usuario Firebase:', firebaseUser);
+        console.log('✅ isVerified:', firebaseUser?.isVerified);
+        
+        if (requiresVerification) {
+          // Solo mostrar solicitud de verificación si isVerified es false
+          const profileData = localStorage.getItem(`profile_${user.username}`);
+          if (profileData) {
+            const profile = JSON.parse(profileData);
+            setProfilePhoto(profile.profilePhoto || '');
+            setFullName(profile.fullName || '');
+            setBirthDate(profile.birthDate || '');
+            setIdCardPhoto(profile.idCardPhoto || '');
+            
+            // Verificar si todos los campos están completos
+            const isComplete = profile.profilePhoto && profile.fullName && profile.birthDate && profile.idCardPhoto;
+            setShowProfileIncompleteNotification(!isComplete);
+            setIsProfileComplete(isComplete);
+          } else {
+            setShowProfileIncompleteNotification(true);
+            setIsProfileComplete(false);
+          }
         } else {
-          setShowProfileIncompleteNotification(true);
-          setIsProfileComplete(false);
+          // Usuario con isVerified = true no necesita verificación de perfil
+          console.log('✅ Usuario verificado, ocultando notificación');
+          setShowProfileIncompleteNotification(false);
+          setIsProfileComplete(true);
         }
-      } else {
-        // Usuario con isVerified = true no necesita verificación de perfil
-        setShowProfileIncompleteNotification(false);
-        setIsProfileComplete(true);
       }
-    }
+    };
+    
+    checkVerification();
   }, [user]);
 
   // Aplicar tema según el rol del usuario
