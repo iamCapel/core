@@ -2093,7 +2093,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                       justifyContent: 'flex-end'
                     }}>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           // Guardar cambios
                           if (editingUser) {
                             // Actualizar en el estado local
@@ -2117,10 +2117,17 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                               updateData.password = editingUser.password;
                             }
                             
-                            // Actualizar en userStorage
-                            userStorage.updateUser(editingUser.id, updateData);
+                            // Actualizar en Firebase
+                            const result = await firebaseUserStorage.updateUser(editingUser.id, updateData);
                             
-                            alert('Cambios guardados exitosamente');
+                            if (result.success) {
+                              // También actualizar en localStorage como fallback
+                              userStorage.updateUser(editingUser.id, updateData);
+                              alert('✅ Cambios guardados exitosamente en Firebase');
+                            } else {
+                              alert(`❌ Error guardando cambios: ${result.error}`);
+                            }
+                            
                             setSelectedAdminUser(null);
                             setEditingUser(null);
                           }
