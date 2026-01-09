@@ -91,17 +91,29 @@ export async function loginUser(email: string, password: string) {
 // Login con username (busca el email y luego hace login)
 export async function loginWithUsername(username: string, password: string) {
   try {
+    console.log("🔍 Buscando usuario:", username);
+    
     // Buscar el usuario por username para obtener su email
     const user = await getUserByUsername(username);
     
+    console.log("📦 Usuario encontrado:", user);
+    
     if (!user) {
+      console.error("❌ Usuario no encontrado en Firestore");
       return { success: false, error: "Usuario no encontrado" };
     }
+    
+    if (!user.email) {
+      console.error("❌ Usuario sin email:", user);
+      return { success: false, error: "Usuario sin email configurado" };
+    }
+    
+    console.log("🔐 Intentando login con email:", user.email);
     
     // Hacer login con el email encontrado
     return await loginUser(user.email, password);
   } catch (error: any) {
-    console.error("Error en login con username:", error);
+    console.error("❌ Error en login con username:", error);
     return { success: false, error: error.message };
   }
 }
