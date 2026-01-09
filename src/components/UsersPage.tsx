@@ -2170,20 +2170,23 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                         Guardar Cambios
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           if (window.confirm('¿Está seguro de que desea eliminar este usuario?\n\nNOTA: Los reportes creados por este usuario se conservarán.')) {
                             if (editingUser) {
-                              // Eliminar de userStorage (los reportes se mantienen intactos)
-                              const deleted = userStorage.deleteUser(editingUser.id);
+                              // Eliminar de Firebase
+                              const result = await firebaseUserStorage.deleteUser(editingUser.id);
                               
-                              if (deleted) {
+                              if (result.success) {
+                                // También eliminar de localStorage como fallback
+                                userStorage.deleteUser(editingUser.id);
+                                
                                 // Actualizar lista local
                                 setUsers(prevUsers => prevUsers.filter(u => u.id !== editingUser.id));
-                                alert('✅ Usuario eliminado exitosamente.\n\nLos reportes creados por este usuario se han conservado.');
+                                alert('✅ Usuario eliminado exitosamente de Firebase.\n\nLos reportes creados por este usuario se han conservado.');
                                 setSelectedAdminUser(null);
                                 setEditingUser(null);
                               } else {
-                                alert('❌ Error al eliminar el usuario. Intente nuevamente.');
+                                alert(`❌ Error al eliminar el usuario: ${result.error}`);
                               }
                             }
                           }
