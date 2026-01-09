@@ -1,10 +1,9 @@
 import emailjs from '@emailjs/browser';
 
 // Configuración de EmailJS
-// IMPORTANTE: Debes crear una cuenta en https://www.emailjs.com/ y obtener tus credenciales
-const EMAILJS_SERVICE_ID = 'service_mopc'; // Reemplazar con tu Service ID
-const EMAILJS_TEMPLATE_ID = 'template_nuevo_usuario'; // Reemplazar con tu Template ID
-const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY'; // Reemplazar con tu Public Key
+const EMAILJS_SERVICE_ID = 'service_avxslp4';
+const EMAILJS_TEMPLATE_ID = 'template_mvcj4ny';
+const EMAILJS_PUBLIC_KEY = 'Hhnyq6zClAb_KJKN2';
 
 /**
  * Enviar email de bienvenida a nuevo usuario
