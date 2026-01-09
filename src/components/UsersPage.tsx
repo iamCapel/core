@@ -354,7 +354,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
 
   // Agrupar usuarios por provincia
   const usersByProvince = users.reduce((acc, user) => {
-    const province = user.currentLocation.province;
+    const province = user.currentLocation?.province || 'Sin asignar';
     if (!acc[province]) {
       acc[province] = [];
     }
