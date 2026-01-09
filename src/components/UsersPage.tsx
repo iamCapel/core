@@ -3,6 +3,7 @@ import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import { userStorage } from '../services/userStorage';
 import * as firebaseUserStorage from '../services/firebaseUserStorage';
+import { sendWelcomeEmail } from '../services/emailService';
 import './UsersPage.css';
 import PendingReportsModal from './PendingReportsModal';
 
@@ -229,6 +230,22 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
       if (!result.success) {
         alert(`Error creando usuario: ${result.error}`);
         return;
+      }
+
+      // Enviar email de bienvenida al nuevo usuario
+      console.log('📧 Enviando email de bienvenida...');
+      const emailResult = await sendWelcomeEmail({
+        name: newUserForm.name,
+        username: newUserForm.username,
+        email: newUserForm.email,
+        password: newUserForm.password,
+        role: newUserForm.role
+      });
+
+      if (emailResult.success) {
+        console.log('✅ Email enviado correctamente');
+      } else {
+        console.warn('⚠️ No se pudo enviar el email:', emailResult.error);
       }
 
       // Mostrar animación de éxito
