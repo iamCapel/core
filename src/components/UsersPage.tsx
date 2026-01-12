@@ -1936,6 +1936,78 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                               boxSizing: 'border-box'
                             }}
                           />
+                          
+                          {/* Botón para reenviar credenciales */}
+                          <button
+                            onClick={async () => {
+                              if (!editingUser?.email || !editingUser?.username) {
+                                alert('⚠️ Necesita email y usuario válidos');
+                                return;
+                              }
+
+                              const confirmResend = window.confirm(
+                                `¿Enviar credenciales y modificaciones a ${editingUser.email}?\n\n` +
+                                `Se enviará un email con:\n` +
+                                `• Usuario: ${editingUser.username}\n` +
+                                `• ${editingUser.password ? 'Nueva contraseña actualizada' : 'Contraseña actual (sin cambios)'}\n` +
+                                `• Rol: ${editingUser.role}`
+                              );
+
+                              if (!confirmResend) return;
+
+                              try {
+                                // Si hay una nueva contraseña, usarla; si no, indicar que se mantiene
+                                const passwordToSend = editingUser.password || 'Sin cambios (mantiene la anterior)';
+                                
+                                const emailResult = await sendWelcomeEmail({
+                                  name: editingUser.name,
+                                  username: editingUser.username,
+                                  email: editingUser.email,
+                                  password: passwordToSend,
+                                  role: editingUser.role
+                                });
+
+                                if (emailResult.success) {
+                                  alert('✅ Credenciales enviadas exitosamente a ' + editingUser.email);
+                                } else {
+                                  alert('❌ Error enviando email: ' + emailResult.error);
+                                }
+                              } catch (error: any) {
+                                console.error('Error enviando credenciales:', error);
+                                alert('❌ Error enviando credenciales: ' + error.message);
+                              }
+                            }}
+                            style={{
+                              marginTop: '8px',
+                              width: '100%',
+                              padding: '8px 15px',
+                              backgroundColor: '#007bff',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#0056b3';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 123, 255, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#007bff';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
+                          >
+                            <span>📧</span>
+                            <span>Reenviar Credenciales por Correo</span>
+                          </button>
                         </div>
 
                         {/* Nivel de Usuario */}
