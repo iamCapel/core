@@ -63,6 +63,13 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [subTipoCanal, setSubTipoCanal] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
+  // Estados para vehículos y operarios
+  const [modeloVehiculo, setModeloVehiculo] = useState('');
+  const [tipoVehiculo, setTipoVehiculo] = useState('');
+  const [fichaVehiculo, setFichaVehiculo] = useState('');
+  const [nombreOperario, setNombreOperario] = useState('');
+  const [cedulaOperario, setCedulaOperario] = useState('');
+
   const [plantillaFields, setPlantillaFields] = useState<Field[]>(plantillaDefault);
   const [plantillaValues, setPlantillaValues] = useState<Record<string, string>>({});
 
@@ -396,6 +403,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setSubTipoCanal(data.subTipoCanal || '');
       setPlantillaValues(data.metricData || {});
       setObservaciones(data.observaciones || '');
+      
+      // Restaurar información de vehículo y operario
+      setModeloVehiculo(data.modeloVehiculo || '');
+      setTipoVehiculo(data.tipoVehiculo || '');
+      setFichaVehiculo(data.fichaVehiculo || '');
+      setNombreOperario(data.nombreOperario || '');
+      setCedulaOperario(data.cedulaOperario || '');
+      
       setCurrentPendingReportId(reportId);
       setShowPendingModal(false);
       
@@ -450,7 +465,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
             tipoIntervencion,
             subTipoCanal,
             metricData: plantillaValues,
-            observaciones
+            observaciones,
+            modeloVehiculo,
+            tipoVehiculo,
+            fichaVehiculo,
+            nombreOperario,
+            cedulaOperario
           },
           progress: 0,
           fieldsCompleted: []
@@ -487,6 +507,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
     subTipoCanal,
     plantillaValues,
     observaciones,
+    modeloVehiculo,
+    tipoVehiculo,
+    fichaVehiculo,
+    nombreOperario,
+    cedulaOperario,
     user.username,
     user.name
   ]);
@@ -558,6 +583,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setTipoIntervencion('');
     setSubTipoCanal('');
     setObservaciones('');
+    setModeloVehiculo('');
+    setTipoVehiculo('');
+    setFichaVehiculo('');
+    setNombreOperario('');
+    setCedulaOperario('');
     setPlantillaValues({});
   };
 
@@ -610,6 +640,17 @@ const ReportForm: React.FC<ReportFormProps> = ({
         observaciones: observaciones || undefined,
         metricData: plantillaValues,
         gpsData: autoGpsFields,
+        // Información de vehículo
+        vehiculoInfo: {
+          tipo: tipoVehiculo,
+          modelo: modeloVehiculo,
+          ficha: fichaVehiculo
+        },
+        // Información de operario
+        operarioInfo: {
+          nombre: nombreOperario,
+          cedula: cedulaOperario
+        },
         estado: 'completado' as const,
         modificadoPor: interventionToEdit ? user?.name : undefined
       };
@@ -1106,6 +1147,103 @@ const ReportForm: React.FC<ReportFormProps> = ({
               </div>
             )}
           </div>
+
+          {/* Sección de información de vehículos y operarios */}
+          {tipoIntervencion && (
+            <>
+              <div className="dashboard-row">
+                <h4 style={{ width: '100%', color: 'var(--primary-orange)', marginBottom: '8px', fontSize: '16px' }}>
+                  🚜 Información de Vehículo Pesado
+                </h4>
+              </div>
+              
+              <div className="dashboard-row">
+                <div className="form-group">
+                  <label htmlFor="tipoVehiculo">Tipo de Vehículo</label>
+                  <select 
+                    id="tipoVehiculo"
+                    value={tipoVehiculo}
+                    onChange={(e) => setTipoVehiculo(e.target.value)}
+                    className="form-input"
+                    required
+                  >
+                    <option value="">Seleccionar tipo</option>
+                    <option value="Excavadora">Excavadora</option>
+                    <option value="Retroexcavadora">Retroexcavadora</option>
+                    <option value="Motoniveladora">Motoniveladora</option>
+                    <option value="Rodillo Compactador">Rodillo Compactador</option>
+                    <option value="Cargador Frontal">Cargador Frontal</option>
+                    <option value="Bulldozer">Bulldozer</option>
+                    <option value="Camión Volquete">Camión Volquete</option>
+                    <option value="Compactadora">Compactadora</option>
+                    <option value="Pavimentadora">Pavimentadora</option>
+                    <option value="Otros">Otros</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="modeloVehiculo">Modelo del Vehículo</label>
+                  <input
+                    type="text"
+                    id="modeloVehiculo"
+                    value={modeloVehiculo}
+                    onChange={(e) => setModeloVehiculo(e.target.value)}
+                    placeholder="Ej: CAT 320D, Komatsu PC200"
+                    className="form-input"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="fichaVehiculo">Ficha del Vehículo (MOPC)</label>
+                  <input
+                    type="text"
+                    id="fichaVehiculo"
+                    value={fichaVehiculo}
+                    onChange={(e) => setFichaVehiculo(e.target.value)}
+                    placeholder="Ej: MOPC-VH-2024-001"
+                    className="form-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="dashboard-row">
+                <h4 style={{ width: '100%', color: 'var(--primary-orange)', marginBottom: '8px', fontSize: '16px' }}>
+                  👷 Información del Operario
+                </h4>
+              </div>
+
+              <div className="dashboard-row">
+                <div className="form-group">
+                  <label htmlFor="nombreOperario">Nombre del Operario</label>
+                  <input
+                    type="text"
+                    id="nombreOperario"
+                    value={nombreOperario}
+                    onChange={(e) => setNombreOperario(e.target.value)}
+                    placeholder="Nombre completo del operario"
+                    className="form-input"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="cedulaOperario">Cédula del Operario</label>
+                  <input
+                    type="text"
+                    id="cedulaOperario"
+                    value={cedulaOperario}
+                    onChange={(e) => setCedulaOperario(e.target.value)}
+                    placeholder="000-0000000-0"
+                    className="form-input"
+                    required
+                    maxLength={13}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Sección de plantilla de datos */}
           {plantillaFields.length > 0 && areAllRegistrosCompleted() && (
