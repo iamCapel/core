@@ -18,7 +18,7 @@ interface ReportsPageProps {
   onEditReport?: (reportId: string) => void;
 }
 
-type PageView = 'estadisticas' | 'detallado' | 'exportar';
+type PageView = 'estadisticas' | 'detallado' | 'exportar' | 'vehiculos';
 type StatsMode = 'intervenciones' | 'kilometraje';
 
 interface RegionData {
@@ -81,6 +81,233 @@ function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: num
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
+
+// Componente Vista de Vehículos
+const VehiculosView: React.FC = () => {
+  const [vehiculos, setVehiculos] = useState<any[]>([]);
+  const [vehiculosFiltrados, setVehiculosFiltrados] = useState<any[]>([]);
+  const [searchFicha, setSearchFicha] = useState('');
+  const [viewMode, setViewMode] = useState<'actualidad' | 'buscar'>('actualidad');
+  const [selectedVehiculo, setSelectedVehiculo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    cargarVehiculos();
+    const interval = setInterval(cargarVehiculos, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (searchFicha.trim()) {
+      const filtrados = vehiculos.filter(v => 
+        v.ficha.toLowerCase().includes(searchFicha.toLowerCase()) ||
+        v.modelo.toLowerCase().includes(searchFicha.toLowerCase()) ||
+        v.tipo.toLowerCase().includes(searchFicha.toLowerCase())
+      );
+      setVehiculosFiltrados(filtrados);
+    } else {
+      setVehiculosFiltrados(vehiculos);
+    }
+  }, [searchFicha, vehiculos]);
+
+  const cargarVehiculos = async () => {
+    setLoading(true);
+    try {
+      const reportes = await firebaseReportStorage.getAllReports();
+      
+      // Agrupar vehículos por ficha
+      const vehiculosPorFicha: Record<string, any> = {};
+      
+      reportes.forEach(reporte => {
+        if (reporte.vehiculos && Array.isArray(reporte.vehiculos)) {
+          reporte.vehiculos.forEach((vehiculo: any) => {
+            const ficha = vehiculo.ficha;
+            
+            if (!vehiculosPorFicha[ficha]) {
+              vehiculosPorFicha[ficha] = {
+                ficha: vehiculo.ficha,
+                tipo: vehiculo.tipo,
+                modelo: vehiculo.modelo,
+                ultimaObra: {
+                  fecha: reporte.fechaCreacion,
+                  numeroReporte: reporte.numeroReporte,
+                  region: reporte.region,
+                  provincia: reporte.provincia,
+                  municipio: reporte.municipio,
+                  sector: reporte.sector,
+                  tipoIntervencion: reporte.tipoIntervencion
+                },
+                totalObras: 1,
+                obras: [reporte]
+              };
+            } else {
+              vehiculosPorFicha[ficha].totalObras++;
+              vehiculosPorFicha[ficha].obras.push(reporte);
+              
+              // Actualizar última obra si es más reciente
+              if (new Date(reporte.fechaCreacion) > new Date(vehiculosPorFicha[ficha].ultimaObra.fecha)) {
+                vehiculosPorFicha[ficha].ultimaObra = {
+                  fecha: reporte.fechaCreacion,
+                  numeroReporte: reporte.numeroReporte,
+                  region: reporte.region,
+                  provincia: reporte.provincia,
+                  municipio: reporte.municipio,
+                  sector: reporte.sector,
+                  tipoIntervencion: reporte.tipoIntervencion
+                };
+              }
+            }
+          });
+        }
+      });
+      
+      const listaVehiculos = Object.values(vehiculosPorFicha).sort((a, b) => 
+        new Date(b.ultimaObra.fecha).getTime() - new Date(a.ultimaObra.fecha).getTime()
+      );
+      
+      setVehiculos(listaVehiculos);
+      setVehiculosFiltrados(listaVehiculos);
+    } catch (error) {
+      console.error('Error cargando vehículos:', error);
+    }
+    setLoading(false);
+  };
+
+  const formatearFecha = (fecha: string) => {
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="vehiculos-container">
+      <div className="vehiculos-header">
+        <h2 className="vehiculos-title">🚜 Gestión de Vehículos Pesados</h2>
+        <p className="vehiculos-subtitle">
+          {vehiculos.length} vehículos registrados en el sistema
+        </p>
+      </div>
+
+      <div className="vehiculos-controls">
+        <div className="vehiculos-mode-selector">
+          <button
+            className={`mode-btn ${viewMode === 'actualidad' ? 'active' : ''}`}
+            onClick={() => setViewMode('actualidad')}
+          >
+            📍 Actualidad
+          </button>
+          <button
+            className={`mode-btn ${viewMode === 'buscar' ? 'active' : ''}`}
+            onClick={() => setViewMode('buscar')}
+          >
+            🔍 Buscar
+          </button>
+        </div>
+
+        {viewMode === 'buscar' && (
+          <div className="vehiculos-search">
+            <input
+              type="text"
+              placeholder="Buscar por ficha, modelo o tipo..."
+              value={searchFicha}
+              onChange={(e) => setSearchFicha(e.target.value)}
+              className="search-input"
+            />
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="vehiculos-loading">
+          <div className="loading-spinner"></div>
+          <p>Cargando vehículos...</p>
+        </div>
+      ) : (
+        <div className="vehiculos-grid">
+          {vehiculosFiltrados.map((vehiculo) => (
+            <div 
+              key={vehiculo.ficha} 
+              className={`vehiculo-card ${selectedVehiculo === vehiculo.ficha ? 'expanded' : ''}`}
+            >
+              <div 
+                className="vehiculo-header"
+                onClick={() => setSelectedVehiculo(
+                  selectedVehiculo === vehiculo.ficha ? null : vehiculo.ficha
+                )}
+              >
+                <div className="vehiculo-icon">🚜</div>
+                <div className="vehiculo-info">
+                  <h3 className="vehiculo-tipo">{vehiculo.tipo}</h3>
+                  <p className="vehiculo-modelo">{vehiculo.modelo}</p>
+                  <p className="vehiculo-ficha">Ficha: <strong>{vehiculo.ficha}</strong></p>
+                </div>
+                <div className="vehiculo-stats">
+                  <div className="stat-badge">
+                    <span className="stat-value">{vehiculo.totalObras}</span>
+                    <span className="stat-label">Obras</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="vehiculo-ultima-obra">
+                <div className="ultima-obra-header">
+                  <span className="obra-badge">📍 Última Posición</span>
+                  <span className="obra-fecha">{formatearFecha(vehiculo.ultimaObra.fecha)}</span>
+                </div>
+                <div className="ultima-obra-details">
+                  <p><strong>Reporte:</strong> {vehiculo.ultimaObra.numeroReporte}</p>
+                  <p><strong>Región:</strong> {vehiculo.ultimaObra.region}</p>
+                  <p><strong>Provincia:</strong> {vehiculo.ultimaObra.provincia}</p>
+                  <p><strong>Municipio:</strong> {vehiculo.ultimaObra.municipio}</p>
+                  <p><strong>Sector:</strong> {vehiculo.ultimaObra.sector}</p>
+                  <p><strong>Intervención:</strong> {vehiculo.ultimaObra.tipoIntervencion}</p>
+                </div>
+              </div>
+
+              {selectedVehiculo === vehiculo.ficha && (
+                <div className="vehiculo-obras-historial">
+                  <h4 className="historial-title">📋 Historial de Obras ({vehiculo.obras.length})</h4>
+                  <div className="obras-lista">
+                    {vehiculo.obras
+                      .sort((a: any, b: any) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+                      .map((obra: any, index: number) => (
+                        <div key={`${obra.id}-${index}`} className="obra-item">
+                          <div className="obra-item-header">
+                            <span className="obra-numero">{obra.numeroReporte}</span>
+                            <span className="obra-fecha-small">{formatearFecha(obra.fechaCreacion)}</span>
+                          </div>
+                          <div className="obra-item-body">
+                            <p>📍 {obra.provincia} › {obra.municipio} › {obra.sector}</p>
+                            <p>🔧 {obra.tipoIntervencion}</p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && vehiculosFiltrados.length === 0 && (
+        <div className="vehiculos-empty">
+          <div className="empty-icon">🚜</div>
+          <h3>No se encontraron vehículos</h3>
+          <p>
+            {searchFicha ? 
+              'No hay vehículos que coincidan con tu búsqueda' : 
+              'No hay vehículos registrados en el sistema'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport }) => {
   const [currentView, setCurrentView] = useState<PageView>('estadisticas');
@@ -685,6 +912,13 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                 <span className="view-label">Informe Detallado</span>
               </button>
               <button 
+                className={`view-btn-topbar ${currentView === 'vehiculos' ? 'active' : ''}`}
+                onClick={() => setCurrentView('vehiculos')}
+              >
+                <span className="view-icon">🚜</span>
+                <span className="view-label">Vehículos Pesados</span>
+              </button>
+              <button 
                 className={`view-btn-topbar ${currentView === 'exportar' ? 'active' : ''}`}
                 onClick={() => setCurrentView('exportar')}
               >
@@ -931,6 +1165,10 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                 }
               }}
             />
+          )}
+
+          {currentView === 'vehiculos' && (
+            <VehiculosView />
           )}
 
           {currentView === 'exportar' && (

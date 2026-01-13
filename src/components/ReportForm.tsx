@@ -63,12 +63,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [subTipoCanal, setSubTipoCanal] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
-  // Estados para vehículos y operarios
-  const [modeloVehiculo, setModeloVehiculo] = useState('');
-  const [tipoVehiculo, setTipoVehiculo] = useState('');
-  const [fichaVehiculo, setFichaVehiculo] = useState('');
-  const [nombreOperario, setNombreOperario] = useState('');
-  const [cedulaOperario, setCedulaOperario] = useState('');
+  // Estados para vehículos (ahora es un array)
+  const [vehiculos, setVehiculos] = useState<Array<{tipo: string, modelo: string, ficha: string}>>([]);
+  const [tipoVehiculoActual, setTipoVehiculoActual] = useState('');
+  const [modeloVehiculoActual, setModeloVehiculoActual] = useState('');
+  const [fichaVehiculoActual, setFichaVehiculoActual] = useState('');
 
   const [plantillaFields, setPlantillaFields] = useState<Field[]>(plantillaDefault);
   const [plantillaValues, setPlantillaValues] = useState<Record<string, string>>({});
@@ -404,12 +403,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setPlantillaValues(data.metricData || {});
       setObservaciones(data.observaciones || '');
       
-      // Restaurar información de vehículo y operario
-      setModeloVehiculo(data.modeloVehiculo || '');
-      setTipoVehiculo(data.tipoVehiculo || '');
-      setFichaVehiculo(data.fichaVehiculo || '');
-      setNombreOperario(data.nombreOperario || '');
-      setCedulaOperario(data.cedulaOperario || '');
+      // Restaurar información de vehículos (array)
+      setVehiculos(data.vehiculos || []);
+      setTipoVehiculoActual('');
+      setModeloVehiculoActual('');
+      setFichaVehiculoActual('');
       
       setCurrentPendingReportId(reportId);
       setShowPendingModal(false);
@@ -466,11 +464,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
             subTipoCanal,
             metricData: plantillaValues,
             observaciones,
-            modeloVehiculo,
-            tipoVehiculo,
-            fichaVehiculo,
-            nombreOperario,
-            cedulaOperario
+            vehiculos
           },
           progress: 0,
           fieldsCompleted: []
@@ -507,11 +501,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     subTipoCanal,
     plantillaValues,
     observaciones,
-    modeloVehiculo,
-    tipoVehiculo,
-    fichaVehiculo,
-    nombreOperario,
-    cedulaOperario,
+    vehiculos,
     user.username,
     user.name
   ]);
@@ -583,11 +573,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setTipoIntervencion('');
     setSubTipoCanal('');
     setObservaciones('');
-    setModeloVehiculo('');
-    setTipoVehiculo('');
-    setFichaVehiculo('');
-    setNombreOperario('');
-    setCedulaOperario('');
+    setVehiculos([]);
+    setTipoVehiculoActual('');
+    setModeloVehiculoActual('');
+    setFichaVehiculoActual('');
     setPlantillaValues({});
   };
 
@@ -640,17 +629,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
         observaciones: observaciones || undefined,
         metricData: plantillaValues,
         gpsData: autoGpsFields,
-        // Información de vehículo
-        vehiculoInfo: {
-          tipo: tipoVehiculo,
-          modelo: modeloVehiculo,
-          ficha: fichaVehiculo
-        },
-        // Información de operario
-        operarioInfo: {
-          nombre: nombreOperario,
-          cedula: cedulaOperario
-        },
+        // Información de vehículos (array)
+        vehiculos: vehiculos,
         estado: 'completado' as const,
         modificadoPor: interventionToEdit ? user?.name : undefined
       };
@@ -1153,19 +1133,59 @@ const ReportForm: React.FC<ReportFormProps> = ({
             <>
               <div className="dashboard-row">
                 <h4 style={{ width: '100%', color: 'var(--primary-orange)', marginBottom: '8px', fontSize: '16px' }}>
-                  🚜 Información de Vehículo Pesado
+                  🚜 Información de Vehículos Pesados
                 </h4>
               </div>
               
+              {/* Lista de vehículos agregados */}
+              {vehiculos.length > 0 && (
+                <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                  <h5 style={{ marginBottom: '12px', fontSize: '14px', color: '#666' }}>Vehículos agregados:</h5>
+                  {vehiculos.map((vehiculo, index) => (
+                    <div key={index} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      marginBottom: '8px',
+                      backgroundColor: 'white',
+                      borderRadius: '6px',
+                      border: '1px solid #dee2e6'
+                    }}>
+                      <span style={{ fontSize: '14px' }}>
+                        <strong>{vehiculo.tipo}</strong> - {vehiculo.modelo} - Ficha: {vehiculo.ficha}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVehiculos(vehiculos.filter((_, i) => i !== index));
+                        }}
+                        style={{
+                          padding: '4px 12px',
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Formulario para agregar nuevo vehículo */}
               <div className="dashboard-row">
                 <div className="form-group">
                   <label htmlFor="tipoVehiculo">Tipo de Vehículo</label>
                   <select 
                     id="tipoVehiculo"
-                    value={tipoVehiculo}
-                    onChange={(e) => setTipoVehiculo(e.target.value)}
+                    value={tipoVehiculoActual}
+                    onChange={(e) => setTipoVehiculoActual(e.target.value)}
                     className="form-input"
-                    required
                   >
                     <option value="">Seleccionar tipo</option>
                     <option value="Excavadora">Excavadora</option>
@@ -1186,11 +1206,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
                   <input
                     type="text"
                     id="modeloVehiculo"
-                    value={modeloVehiculo}
-                    onChange={(e) => setModeloVehiculo(e.target.value)}
+                    value={modeloVehiculoActual}
+                    onChange={(e) => setModeloVehiculoActual(e.target.value)}
                     placeholder="Ej: CAT 320D, Komatsu PC200"
                     className="form-input"
-                    required
                   />
                 </div>
 
@@ -1199,48 +1218,60 @@ const ReportForm: React.FC<ReportFormProps> = ({
                   <input
                     type="text"
                     id="fichaVehiculo"
-                    value={fichaVehiculo}
-                    onChange={(e) => setFichaVehiculo(e.target.value)}
+                    value={fichaVehiculoActual}
+                    onChange={(e) => setFichaVehiculoActual(e.target.value)}
                     placeholder="Ej: MOPC-VH-2024-001"
                     className="form-input"
-                    required
                   />
                 </div>
               </div>
 
+              {/* Botón para agregar vehículo */}
               <div className="dashboard-row">
-                <h4 style={{ width: '100%', color: 'var(--primary-orange)', marginBottom: '8px', fontSize: '16px' }}>
-                  👷 Información del Operario
-                </h4>
-              </div>
-
-              <div className="dashboard-row">
-                <div className="form-group">
-                  <label htmlFor="nombreOperario">Nombre del Operario</label>
-                  <input
-                    type="text"
-                    id="nombreOperario"
-                    value={nombreOperario}
-                    onChange={(e) => setNombreOperario(e.target.value)}
-                    placeholder="Nombre completo del operario"
-                    className="form-input"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="cedulaOperario">Cédula del Operario</label>
-                  <input
-                    type="text"
-                    id="cedulaOperario"
-                    value={cedulaOperario}
-                    onChange={(e) => setCedulaOperario(e.target.value)}
-                    placeholder="000-0000000-0"
-                    className="form-input"
-                    required
-                    maxLength={13}
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!tipoVehiculoActual || !modeloVehiculoActual || !fichaVehiculoActual) {
+                      alert('Por favor complete todos los campos del vehículo antes de agregarlo');
+                      return;
+                    }
+                    
+                    setVehiculos([...vehiculos, {
+                      tipo: tipoVehiculoActual,
+                      modelo: modeloVehiculoActual,
+                      ficha: fichaVehiculoActual
+                    }]);
+                    
+                    // Limpiar campos
+                    setTipoVehiculoActual('');
+                    setModeloVehiculoActual('');
+                    setFichaVehiculoActual('');
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: 'var(--primary-orange)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--primary-orange-dark)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--primary-orange)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  ➕ Agregar Vehículo
+                </button>
               </div>
             </>
           )}
@@ -1494,7 +1525,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
                     tipoIntervencion,
                     subTipoCanal,
                     metricData: plantillaValues,
-                    observaciones
+                    observaciones,
+                    vehiculos
                   },
                   progress: 0,
                   fieldsCompleted: []

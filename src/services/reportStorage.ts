@@ -29,6 +29,13 @@ export interface ReportData {
   subTipoCanal?: string;
   observaciones?: string;
   
+  // Datos de vehículos
+  vehiculos?: Array<{
+    tipo: string;
+    modelo: string;
+    ficha: string;
+  }>;
+  
   // Datos métricos (dinámicos según tipo de intervención)
   metricData: Record<string, string>;
   

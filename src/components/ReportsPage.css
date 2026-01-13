@@ -4231,4 +4231,367 @@
   }
 }
 
+/* ========================================
+   VISTA DE VEHÍCULOS PESADOS
+   ======================================== */
+
+.vehiculos-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.vehiculos-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.vehiculos-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.vehiculos-subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.vehiculos-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.vehiculos-mode-selector {
+  display: flex;
+  gap: 12px;
+  background: white;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.mode-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.mode-btn.active {
+  background: var(--primary-orange);
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
+}
+
+.mode-btn:hover:not(.active) {
+  background: var(--pale-orange);
+  color: var(--primary-orange);
+}
+
+.vehiculos-search {
+  flex: 1;
+  max-width: 500px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 20px;
+  border: 2px solid var(--gray);
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-orange);
+  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.1);
+}
+
+.vehiculos-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--pale-orange);
+  border-top-color: var(--primary-orange);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.vehiculos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.vehiculo-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.vehiculo-card:hover {
+  box-shadow: 0 8px 24px rgba(255, 122, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+.vehiculo-card.expanded {
+  box-shadow: 0 8px 24px rgba(255, 122, 0, 0.2);
+}
+
+.vehiculo-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  cursor: pointer;
+  border-bottom: 2px solid var(--pale-orange);
+}
+
+.vehiculo-icon {
+  font-size: 48px;
+  flex-shrink: 0;
+}
+
+.vehiculo-info {
+  flex: 1;
+}
+
+.vehiculo-tipo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.vehiculo-modelo {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 4px 0;
+}
+
+.vehiculo-ficha {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.vehiculo-ficha strong {
+  color: var(--primary-orange);
+  font-weight: 700;
+}
+
+.vehiculo-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.stat-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--pale-orange);
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-orange);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.vehiculo-ultima-obra {
+  padding: 20px;
+  background: var(--cream);
+}
+
+.ultima-obra-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.obra-badge {
+  background: var(--primary-orange);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.obra-fecha {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ultima-obra-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ultima-obra-details p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.ultima-obra-details strong {
+  color: var(--primary-orange);
+  font-weight: 600;
+}
+
+.vehiculo-obras-historial {
+  border-top: 2px solid var(--pale-orange);
+  padding: 20px;
+  background: #fafafa;
+}
+
+.historial-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+}
+
+.obras-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.obra-item {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  border-left: 4px solid var(--primary-orange);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.obra-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.obra-numero {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-orange);
+}
+
+.obra-fecha-small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.obra-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.obra-item-body p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.vehiculos-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.empty-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.vehiculos-empty h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.vehiculos-empty p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Responsive para vehículos */
+@media (max-width: 768px) {
+  .vehiculos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vehiculos-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vehiculos-mode-selector {
+    width: 100%;
+  }
+
+  .mode-btn {
+    flex: 1;
+  }
+
+  .vehiculos-search {
+    max-width: none;
+  }
+
+  .vehiculo-header {
+    flex-wrap: wrap;
+  }
+
+  .vehiculo-stats {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 
