@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PendingReportsModal from './PendingReportsModal';
 import { reportStorage, ReportData as FullReportData } from '../services/reportStorage';
-import { firebaseReportStorage } from '../services/firebaseReportStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import './ExportPage.css';
 import { UserRole } from '../types/userRoles';
