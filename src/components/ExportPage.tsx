@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PendingReportsModal from './PendingReportsModal';
 import { reportStorage, ReportData as FullReportData } from '../services/reportStorage';
+import { firebaseReportStorage } from '../services/firebaseReportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import './ExportPage.css';
 import { UserRole } from '../types/userRoles';
@@ -80,88 +81,66 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!searchNumber.trim()) return;
 
     setLoading(true);
     setNotFound(false);
     setSearchResult(null);
 
-    // Buscar usando reportStorage con sistema de encriptación optimizado
-    setTimeout(() => {
-      try {
-        // Búsqueda optimizada: primero intenta por ID encriptado (O(1))
-        const directMatch = reportStorage.getReportByNumber(searchNumber.trim());
-        
-        if (directMatch) {
-          // Verificar permisos según rol
-          if (user.role === UserRole.TECNICO && directMatch.usuarioId !== user.username) {
-            setSearchResult(null);
-            setNotFound(true);
-            setLoading(false);
-            return;
-          }
-          
-          // Vista previa cargada exitosamente
-          setSearchResult({
-            reportNumber: directMatch.numeroReporte,
-            title: directMatch.tipoIntervencion || 'Sin título',
-            date: new Date(directMatch.fechaCreacion).toLocaleDateString(),
-            province: directMatch.provincia || 'N/A',
-            status: directMatch.estado || 'Completado',
-            description: `${directMatch.tipoIntervencion || 'Intervención'} - ${directMatch.municipio || ''}, ${directMatch.provincia || ''}`,
-            createdBy: directMatch.creadoPor || 'Sistema'
-          });
-          setNotFound(false);
-          console.log('✅ Reporte encontrado por búsqueda optimizada (ID encriptado):', directMatch.numeroReporte);
-        } else {
-          // Búsqueda parcial en todos los reportes (fallback)
-          const searchFilters = user.role === UserRole.TECNICO 
-            ? { creadoPor: user.username } 
-            : {};
-          
-          const allReports = reportStorage.searchReports(searchFilters);
-          const found = allReports.find(report => 
-            report.numeroReporte.toLowerCase().includes(searchNumber.toLowerCase())
-          );
-          
-          if (found) {
-            setSearchResult({
-              reportNumber: found.numeroReporte,
-              title: found.tipoIntervencion || 'Sin título',
-              date: new Date(found.fechaCreacion).toLocaleDateString(),
-              province: found.provincia || 'N/A',
-              status: found.estado || 'Completado',
-              description: `${found.tipoIntervencion || 'Intervención'} - ${found.municipio || ''}, ${found.provincia || ''}`,
-              createdBy: found.creadoPor || 'Sistema'
-            });
-            setNotFound(false);
-            console.log('✅ Reporte encontrado por búsqueda parcial:', found.numeroReporte);
-          } else {
-            setSearchResult(null);
-            setNotFound(true);
-            console.log('❌ Reporte no encontrado:', searchNumber);
-          }
-        }
-      } catch (error) {
-        console.error('Error en búsqueda:', error);
+    try {
+      // Buscar en Firebase
+      const allReports = user.role === UserRole.TECNICO 
+        ? await firebaseReportStorage.getUserReports(user.username)
+        : await firebaseReportStorage.getAllReports();
+      
+      // Buscar por número de reporte
+      const found = allReports.find(report => 
+        report.numeroReporte.toLowerCase().includes(searchNumber.trim().toLowerCase())
+      );
+      
+      if (found) {
+        setSearchResult({
+          reportNumber: found.numeroReporte,
+          title: found.tipoIntervencion || 'Sin título',
+          date: new Date(found.fechaCreacion).toLocaleDateString(),
+          province: found.provincia || 'N/A',
+          status: found.estado || 'Completado',
+          description: `${found.tipoIntervencion || 'Intervención'} - ${found.municipio || ''}, ${found.provincia || ''}`,
+          createdBy: found.creadoPor || 'Sistema'
+        });
+        setNotFound(false);
+        console.log('✅ Reporte encontrado en Firebase:', found.numeroReporte);
+      } else {
         setSearchResult(null);
         setNotFound(true);
+        console.log('❌ Reporte no encontrado en Firebase:', searchNumber);
       }
-      setLoading(false);
-    }, 800);
+    } catch (error) {
+      console.error('Error en búsqueda de Firebase:', error);
+      setSearchResult(null);
+      setNotFound(true);
+    }
+    
+    setLoading(false);
   };
 
   const handleDownloadPDF = async (report: ReportData) => {
-    // Obtener datos completos del reporte desde reportStorage
-    const fullReport = reportStorage.getReportByNumber(report.reportNumber);
-    
-    if (!fullReport) {
-      alert('No se pudo cargar el reporte completo');
-      return;
-    }
+    try {
+      // Buscar el reporte completo en Firebase por número de reporte
+      const allReports = await firebaseReportStorage.getAllReports();
+      const fullReport = allReports.find(r => r.numeroReporte === report.reportNumber);
+      
+      if (!fullReport) {
+        alert('No se pudo cargar el reporte completo desde Firebase');
+        return;
+      }
 
-    await generateProfessionalPDF(fullReport, report);
+      await generateProfessionalPDF(fullReport, report);
+    } catch (error) {
+      console.error('Error descargando PDF:', error);
+      alert('Error al generar el PDF');
+    }
   };
 
   const generateProfessionalPDF = async (fullReport: FullReportData, displayData: ReportData) => {
@@ -493,25 +472,39 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
   };
 
   const handleDownloadExcel = async (report: ReportData) => {
-    // Obtener el reporte completo con todos los datos
-    const fullReport = reportStorage.getReportByNumber(report.reportNumber);
-    if (!fullReport) {
-      alert('No se pudo obtener la información completa del reporte');
-      return;
+    try {
+      // Buscar el reporte completo en Firebase por número de reporte
+      const allReports = await firebaseReportStorage.getAllReports();
+      const fullReport = allReports.find(r => r.numeroReporte === report.reportNumber);
+      
+      if (!fullReport) {
+        alert('No se pudo obtener la información completa del reporte desde Firebase');
+        return;
+      }
+      
+      await generateExcelContent(fullReport, report);
+    } catch (error) {
+      console.error('Error descargando Excel:', error);
+      alert('Error al generar el archivo Excel');
     }
-    
-    await generateExcelContent(fullReport, report);
   };
 
   const handleDownloadWord = async (report: ReportData) => {
-    // Obtener el reporte completo con todos los datos
-    const fullReport = reportStorage.getReportByNumber(report.reportNumber);
-    if (!fullReport) {
-      alert('No se pudo obtener la información completa del reporte');
-      return;
+    try {
+      // Buscar el reporte completo en Firebase por número de reporte
+      const allReports = await firebaseReportStorage.getAllReports();
+      const fullReport = allReports.find(r => r.numeroReporte === report.reportNumber);
+      
+      if (!fullReport) {
+        alert('No se pudo obtener la información completa del reporte desde Firebase');
+        return;
+      }
+      
+      await generateWordContent(fullReport, report);
+    } catch (error) {
+      console.error('Error descargando Word:', error);
+      alert('Error al generar el archivo Word');
     }
-    
-    await generateWordContent(fullReport, report);
   };
 
   const generateExcelContent = async (fullReport: FullReportData, displayData: ReportData) => {

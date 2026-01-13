@@ -58,6 +58,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [mostrarSectorPersonalizado, setMostrarSectorPersonalizado] = useState(false);
   const [distritoPersonalizado, setDistritoPersonalizado] = useState('');
   const [mostrarDistritoPersonalizado, setMostrarDistritoPersonalizado] = useState(false);
+  const [fechaReporte, setFechaReporte] = useState('');
   const [tipoIntervencion, setTipoIntervencion] = useState('');
   const [subTipoCanal, setSubTipoCanal] = useState('');
   const [observaciones, setObservaciones] = useState('');
@@ -388,6 +389,9 @@ const ReportForm: React.FC<ReportFormProps> = ({
         setDistritoPersonalizado('');
       }
       
+      // Restaurar fecha si existe
+      setFechaReporte(data.fechaReporte || '');
+      
       setTipoIntervencion(data.tipoIntervencion || '');
       setSubTipoCanal(data.subTipoCanal || '');
       setPlantillaValues(data.metricData || {});
@@ -428,7 +432,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
       const timer = setTimeout(async () => {
         const pendingReport = {
           id: currentPendingReportId,
-          timestamp: new Date().toISOString(),
+          timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
           lastModified: new Date().toISOString(),
           userId: user.username,
           userName: user.name || user.username,
@@ -442,6 +446,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
             mostrarSectorPersonalizado,
             distritoPersonalizado,
             mostrarDistritoPersonalizado,
+            fechaReporte,
             tipoIntervencion,
             subTipoCanal,
             metricData: plantillaValues,
@@ -477,6 +482,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     mostrarSectorPersonalizado,
     distritoPersonalizado,
     mostrarDistritoPersonalizado,
+    fechaReporte,
     tipoIntervencion,
     subTipoCanal,
     plantillaValues,
@@ -548,6 +554,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setSector('');
     setSectorPersonalizado('');
     setMostrarSectorPersonalizado(false);
+    setFechaReporte('');
     setTipoIntervencion('');
     setSubTipoCanal('');
     setObservaciones('');
@@ -558,8 +565,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
     const sectorFinal = sector === 'otros' ? sectorPersonalizado : sector;
     const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
     
-    if (!region || !provincia || !distritoFinal || !sectorFinal || !tipoIntervencion) {
-      alert('Por favor complete todos los campos requeridos');
+    if (!region || !provincia || !distritoFinal || !sectorFinal || !fechaReporte || !tipoIntervencion) {
+      alert('Por favor complete todos los campos requeridos, incluyendo la fecha del reporte');
       return;
     }
 
@@ -589,6 +596,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
       // Guardar usando reportStorage
       const reportData = {
         id: interventionToEdit?.id,
+        timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
+        fechaCreacion: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
         creadoPor: user?.name || 'Desconocido',
         usuarioId: user?.username || 'desconocido',
         region,
@@ -1019,6 +1028,21 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 ))}
                 <option value="otros">➕ Otros (Agregar nuevo sector o localidad)</option>
               </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="fechaReporte">📅 Fecha del Reporte</label>
+              <input 
+                type="date"
+                id="fechaReporte"
+                value={fechaReporte}
+                onChange={(e) => setFechaReporte(e.target.value)}
+                className="form-input"
+                required
+                style={{
+                  cursor: 'pointer'
+                }}
+              />
             </div>
           </div>
 
