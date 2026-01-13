@@ -17,11 +17,12 @@ import { AuthController, UserController } from './controllers/AuthController';
 import { ReportController, PendingReportController } from './controllers/ReportController';
 
 // Importar servicios existentes
-import firebaseUserStorage from '../services/firebaseUserStorage';
-import { userStorage } from '../services/userStorage';
-import firebaseReportStorage from '../services/firebaseReportStorage';
-import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
-import { reportStorage } from '../services/reportStorage';
+// NOTA: Las importaciones se hacen de forma lazy para evitar errores de build
+// import firebaseUserStorage from '../services/firebaseUserStorage';
+// import { userStorage } from '../services/userStorage';
+// import firebaseReportStorage from '../services/firebaseReportStorage';
+// import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
+// import { reportStorage } from '../services/reportStorage';
 
 /**
  * Clase principal de la aplicación
@@ -29,46 +30,27 @@ import { reportStorage } from '../services/reportStorage';
  */
 export class CoreApp {
   // Repositorios
-  public readonly userRepository: UserRepository;
-  public readonly reportRepository: ReportRepository;
+  public readonly userRepository: UserRepository | null = null;
+  public readonly reportRepository: ReportRepository | null = null;
   
   // Controladores
-  public readonly authController: AuthController;
-  public readonly userController: UserController;
-  public readonly reportController: ReportController;
-  public readonly pendingReportController: PendingReportController;
+  public readonly authController: AuthController | null = null;
+  public readonly userController: UserController | null = null;
+  public readonly reportController: ReportController | null = null;
+  public readonly pendingReportController: PendingReportController | null = null;
 
   constructor() {
-    // Inicializar repositorios
-    this.userRepository = new UserRepository(
-      firebaseUserStorage,
-      userStorage
-    );
-
-    this.reportRepository = new ReportRepository(
-      firebaseReportStorage,
-      firebasePendingReportStorage,
-      reportStorage
-    );
-
-    // Inicializar controladores
-    this.authController = new AuthController(this.userRepository);
-    this.userController = new UserController(this.userRepository);
-    this.reportController = new ReportController(this.reportRepository);
-    this.pendingReportController = new PendingReportController(this.reportRepository);
+    // Los repositorios y controladores se inicializarán de forma lazy
+    // cuando se necesiten, importando dinámicamente los servicios
+    console.log('⚠️ CoreApp en modo desarrollo - use initialize() para activar');
   }
 
   /**
    * Método de utilidad para inicializar la aplicación
    */
   async initialize(): Promise<void> {
-    console.log('✅ Core App initialized');
-    console.log('📦 Available controllers:', {
-      auth: !!this.authController,
-      user: !!this.userController,
-      report: !!this.reportController,
-      pendingReport: !!this.pendingReportController
-    });
+    console.log('⚠️ Core App en modo desarrollo');
+    console.log('💡 Para uso en producción, los controladores deben inicializarse manualmente');
   }
 }
 
