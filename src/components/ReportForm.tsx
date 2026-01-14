@@ -260,6 +260,25 @@ const ReportForm: React.FC<ReportFormProps> = ({
       console.log('📊 Cargando valores de plantilla (metricData):', valoresPlantilla);
       setPlantillaValues(valoresPlantilla);
       
+      // Cargar vehículos si existen
+      if (interventionToEdit.vehiculos && Array.isArray(interventionToEdit.vehiculos)) {
+        console.log('🚜 Cargando vehículos:', interventionToEdit.vehiculos);
+        setVehiculos(interventionToEdit.vehiculos);
+      }
+      
+      // Cargar datos GPS si existen
+      if (interventionToEdit.gpsData) {
+        console.log('📍 Cargando datos GPS:', interventionToEdit.gpsData);
+        setAutoGpsFields(interventionToEdit.gpsData);
+      }
+      
+      // Cargar fecha si existe (para reportes pendientes)
+      if (interventionToEdit.fechaProyecto) {
+        console.log('📅 Cargando fecha del proyecto:', interventionToEdit.fechaProyecto);
+        setFechaInicio(interventionToEdit.fechaProyecto);
+        setFechaFinal(interventionToEdit.fechaProyecto);
+      }
+      
       console.log('✅ ReportForm: Datos cargados completamente');
     }
   }, [interventionToEdit, plantillaDefault, sectoresPorProvincia]);
@@ -513,7 +532,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
             subTipoCanal,
             metricData: plantillaValues,
             observaciones,
-            vehiculos
+            vehiculos,
+            gpsData: autoGpsFields // ¡IMPORTANTE! Guardar datos GPS
           },
           progress: 0,
           fieldsCompleted: []
@@ -551,6 +571,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     plantillaValues,
     observaciones,
     vehiculos,
+    autoGpsFields, // ¡IMPORTANTE! Detectar cambios en datos GPS
     user.username,
     user.name
   ]);
