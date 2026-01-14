@@ -98,7 +98,7 @@ const VehiculosView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (searchFicha.trim()) {
+    if (viewMode === 'buscar' && searchFicha.trim()) {
       const filtrados = vehiculos.filter(v => 
         v.ficha.toLowerCase().includes(searchFicha.toLowerCase()) ||
         v.modelo.toLowerCase().includes(searchFicha.toLowerCase()) ||
@@ -106,22 +106,31 @@ const VehiculosView: React.FC = () => {
       );
       setVehiculosFiltrados(filtrados);
     } else {
+      // En modo "actualidad" o sin búsqueda, mostrar todos los vehículos
       setVehiculosFiltrados(vehiculos);
     }
-  }, [searchFicha, vehiculos]);
+  }, [searchFicha, vehiculos, viewMode]);
 
   const cargarVehiculos = async () => {
     setLoading(true);
     try {
       const reportes = await firebaseReportStorage.getAllReports();
+      console.log('📊 Total de reportes cargados:', reportes.length);
       
       // Agrupar vehículos por ficha
       const vehiculosPorFicha: Record<string, any> = {};
       
       reportes.forEach(reporte => {
-        if (reporte.vehiculos && Array.isArray(reporte.vehiculos)) {
+        if (reporte.vehiculos && Array.isArray(reporte.vehiculos) && reporte.vehiculos.length > 0) {
+          console.log(`📋 Reporte ${reporte.numeroReporte} tiene ${reporte.vehiculos.length} vehículos:`, reporte.vehiculos);
           reporte.vehiculos.forEach((vehiculo: any) => {
-            const ficha = vehiculo.ficha;
+            // Verificar que el vehículo tenga todos los campos necesarios
+            if (!vehiculo.ficha || !vehiculo.tipo || !vehiculo.modelo) {
+              console.warn(`⚠️ Vehículo incompleto en reporte ${reporte.numeroReporte}:`, vehiculo);
+              return; // Saltar este vehículo
+            }
+            
+            const ficha = vehiculo.ficha.trim();
             
             if (!vehiculosPorFicha[ficha]) {
               vehiculosPorFicha[ficha] = {
@@ -165,6 +174,9 @@ const VehiculosView: React.FC = () => {
         new Date(b.ultimaObra.fecha).getTime() - new Date(a.ultimaObra.fecha).getTime()
       );
       
+      console.log('🚜 Total de vehículos únicos procesados:', listaVehiculos.length);
+      console.log('🚜 Lista de vehículos:', listaVehiculos);
+      
       setVehiculos(listaVehiculos);
       setVehiculosFiltrados(listaVehiculos);
     } catch (error) {
@@ -196,7 +208,10 @@ const VehiculosView: React.FC = () => {
         <div className="vehiculos-mode-selector">
           <button
             className={`mode-btn ${viewMode === 'actualidad' ? 'active' : ''}`}
-            onClick={() => setViewMode('actualidad')}
+            onClick={() => {
+              setViewMode('actualidad');
+              setSearchFicha(''); // Limpiar búsqueda al cambiar a actualidad
+            }}
           >
             📍 Actualidad
           </button>
