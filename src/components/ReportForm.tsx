@@ -1926,17 +1926,27 @@ const ReportForm: React.FC<ReportFormProps> = ({
                     mostrarSectorPersonalizado,
                     distritoPersonalizado,
                     mostrarDistritoPersonalizado,
+                    fechaReporte, // ✅ AGREGADO
                     tipoIntervencion,
                     subTipoCanal,
                     metricData: plantillaValues,
                     observaciones,
-                    vehiculos
+                    vehiculos, // ✅ YA ESTABA
+                    gpsData: autoGpsFields, // ✅ AGREGADO - datos GPS
+                    // Multi-día
+                    fechaInicio, // ✅ AGREGADO
+                    fechaFinal, // ✅ AGREGADO
+                    esProyectoMultiDia: diasTrabajo.length > 0, // ✅ AGREGADO
+                    diasTrabajo, // ✅ AGREGADO
+                    diaActual, // ✅ AGREGADO
+                    reportesPorDia // ✅ AGREGADO
                   },
                   progress: 0,
                   fieldsCompleted: []
                 };
                 
                 console.log('💾 Guardando reporte pendiente manualmente en Firebase:', reportId);
+                console.log('📦 Datos completos a guardar:', JSON.stringify(pendingReport.formData, null, 2));
                 
                 try {
                   // Guardar SOLO en Firebase
