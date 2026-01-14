@@ -276,7 +276,7 @@ const PendingReportsModal: React.FC<PendingReportsModalProps> = ({
                     gap: '10px',
                     justifyContent: 'flex-end'
                   }}>
-                    {/* Botón Cancelar (Rojo) */}
+                    {/* Botón Borrar (Rojo) */}
                     {onCancelReport && (
                       <button
                         onClick={() => handleCancelWithAnimation(report.id)}
@@ -314,7 +314,7 @@ const PendingReportsModal: React.FC<PendingReportsModalProps> = ({
                           justifyContent: 'center',
                           fontSize: '14px'
                         }}>✕</span>
-                        Cancelar
+                        Borrar
                       </button>
                     )}
 
