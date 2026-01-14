@@ -1453,7 +1453,9 @@ const ReportForm: React.FC<ReportFormProps> = ({
                       }}
                     >
                       <span style={{ fontSize: '16px' }}>{completado ? '✅' : '📄'}</span>
-                      <span>{new Date(dia).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                      <span>
+                        {new Date(dia + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                      </span>
                     </button>
                   );
                 })}
@@ -1469,7 +1471,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
               }}>
                 <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
                   <strong style={{ color: 'var(--primary-orange)' }}>Fecha actual:</strong>{' '}
-                  {new Date(diasTrabajo[diaActual]).toLocaleDateString('es-ES', { 
+                  {new Date(diasTrabajo[diaActual] + 'T12:00:00').toLocaleDateString('es-ES', { 
                     weekday: 'long', 
                     year: 'numeric', 
                     month: 'long', 
