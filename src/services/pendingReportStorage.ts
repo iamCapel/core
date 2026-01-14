@@ -35,6 +35,13 @@ export interface PendingReport {
     // Datos métricos (dinámicos)
     metricData?: Record<string, string>;
     
+    // Vehículos pesados
+    vehiculos?: Array<{
+      tipo: string;
+      modelo: string;
+      ficha: string;
+    }>;
+    
     // Datos GPS
     gpsData?: {
       punto_inicial?: { lat: number; lon: number };
@@ -46,6 +53,10 @@ export interface PendingReport {
     images?: string[];
     videos?: string[];
     documentos?: string[];
+    
+    // Campos para proyectos multi-día
+    fechaProyecto?: string;
+    esProyectoMultiDia?: boolean;
   };
   
   // Paso actual del formulario

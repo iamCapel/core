@@ -706,32 +706,32 @@ const ReportForm: React.FC<ReportFormProps> = ({
             const reporteDia = reportesPorDia[dia];
             
             if (reporteDia && reporteDia.tipoIntervencion) {
-              const reportData = {
+              const pendingReport: any = {
+                id: `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 timestamp: new Date(dia).toISOString(),
-                fechaCreacion: new Date(dia).toISOString(),
-                creadoPor: user?.name || 'Desconocido',
-                usuarioId: user?.username || 'desconocido',
-                region,
-                provincia,
-                distrito: distritoFinal,
-                municipio,
-                sector: sectorFinal,
-                tipoIntervencion: reporteDia.tipoIntervencion === 'Canalización' ? 
-                  `${reporteDia.tipoIntervencion}:${reporteDia.subTipoCanal}` : reporteDia.tipoIntervencion,
-                subTipoCanal: reporteDia.tipoIntervencion === 'Canalización' ? reporteDia.subTipoCanal : undefined,
-                observaciones: reporteDia.observaciones || undefined,
-                metricData: reporteDia.plantillaValues,
-                gpsData: reporteDia.autoGpsFields,
-                vehiculos: reporteDia.vehiculos,
-                estado: 'pendiente' as const
+                lastModified: new Date().toISOString(),
+                userId: user?.username || 'desconocido',
+                userName: user?.name || 'Desconocido',
+                formData: {
+                  region,
+                  provincia,
+                  distrito: distritoFinal,
+                  municipio,
+                  sector: sectorFinal,
+                  tipoIntervencion: reporteDia.tipoIntervencion,
+                  subTipoCanal: reporteDia.subTipoCanal,
+                  observaciones: reporteDia.observaciones,
+                  metricData: reporteDia.plantillaValues,
+                  gpsData: reporteDia.autoGpsFields,
+                  vehiculos: reporteDia.vehiculos,
+                  // Campos adicionales para identificar que es de proyecto multi-día
+                  fechaProyecto: dia,
+                  esProyectoMultiDia: true
+                }
               };
               
-              const savedId = await pendingReportStorage.savePendingReport({
-                formData: reportData,
-                saveType: 'manual'
-              });
-              
-              console.log(`✅ Reporte guardado para ${dia}: ${savedId}`);
+              pendingReportStorage.savePendingReport(pendingReport);
+              console.log(`✅ Reporte guardado para ${dia}`);
               reportesGuardados++;
             }
           }
