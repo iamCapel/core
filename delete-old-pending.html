@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Borrar Reportes Pendientes Viejos</title>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getFirestore, collection, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIwzALxUUNxYBdgGY7MoCNW_1DGdFhF-4",
+            authDomain: "coredatabase-d6800.firebaseapp.com",
+            projectId: "coredatabase-d6800",
+            storageBucket: "coredatabase-d6800.firebasestorage.app",
+            messagingSenderId: "692458314316",
+            appId: "1:692458314316:web:6db509c83eaa1b52dfc652"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.deleteOldPending = async function() {
+            try {
+                console.log('🔍 Buscando reportes pendientes...');
+                const snapshot = await getDocs(collection(db, 'pendingReports'));
+                
+                console.log(`📦 Encontrados ${snapshot.size} reportes pendientes`);
+                
+                const reportes = [];
+                snapshot.docs.forEach(docSnap => {
+                    const data = docSnap.data();
+                    reportes.push({
+                        id: docSnap.id,
+                        timestamp: data.timestamp,
+                        region: data.formData?.region || '',
+                        provincia: data.formData?.provincia || '',
+                        vehiculos: data.formData?.vehiculos?.length || 0,
+                        data: data
+                    });
+                });
+                
+                // Ordenar por timestamp
+                reportes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                console.log('📋 LISTA DE REPORTES:');
+                reportes.forEach((r, i) => {
+                    console.log(`${i + 1}. ${r.id}`);
+                    console.log(`   Fecha: ${r.timestamp}`);
+                    console.log(`   Región: ${r.region || 'VACÍO'}`);
+                    console.log(`   Provincia: ${r.provincia || 'VACÍO'}`);
+                    console.log(`   Vehículos: ${r.vehiculos}`);
+                    console.log('');
+                });
+                
+                // Borrar los viejos (todos menos el más reciente)
+                let deleted = 0;
+                for (let i = 1; i < reportes.length; i++) {
+                    console.log(`🗑️ Borrando VIEJO: ${reportes[i].id}`);
+                    await deleteDoc(doc(db, 'pendingReports', reportes[i].id));
+                    deleted++;
+                }
+                
+                console.log(`✅ ${deleted} reportes VIEJOS eliminados`);
+                console.log(`✅ Reporte más reciente conservado: ${reportes[0].id}`);
+                alert(`✅ ${deleted} reportes viejos eliminados.\n✅ Conservado: ${reportes[0].id}\n\nAhora recarga y abre el único pendiente que queda.`);
+                
+            } catch (error) {
+                console.error('❌ Error eliminando reportes:', error);
+                alert('Error: ' + error.message);
+            }
+        };
+
+        console.log('✅ Script cargado. Abre la consola y ejecuta: deleteOldPending()');
+    </script>
+</head>
+<body style="font-family: Arial; padding: 40px; background: #f5f5f5;">
+    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h1 style="color: #e74c3c;">🗑️ Borrar Reportes Viejos</h1>
+        
+        <div style="background: #d1ecf1; border-left: 4px solid #0dcaf0; padding: 15px; margin: 20px 0;">
+            <strong>ℹ️ SITUACIÓN:</strong>
+            <p>Tienes 2 reportes pendientes:</p>
+            <ul>
+                <li><strong>pending_1768402555229</strong> - NUEVO con datos ✅</li>
+                <li><strong>pending_1768402262038</strong> - VIEJO vacío ❌</li>
+            </ul>
+            <p>Estás haciendo clic en el VIEJO, por eso carga vacío.</p>
+        </div>
+
+        <h2>Instrucciones:</h2>
+        <ol style="line-height: 2;">
+            <li>Haz clic en el botón rojo abajo</li>
+            <li>Esto borrará SOLO los reportes VIEJOS (vacíos)</li>
+            <li>Dejará el más reciente (con datos)</li>
+            <li>Recarga la aplicación</li>
+            <li>Abre el único pendiente que quedó</li>
+            <li>Ahora SÍ debería tener todos los datos</li>
+        </ol>
+
+        <button 
+            onclick="deleteOldPending()" 
+            style="background: #e74c3c; color: white; border: none; padding: 15px 30px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 20px;">
+            🗑️ BORRAR REPORTES VIEJOS
+        </button>
+
+        <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin-top: 30px;">
+            <strong>✅ Después de borrar:</strong>
+            <p>1. Ve a la aplicación</p>
+            <p>2. Llena un formulario COMPLETO</p>
+            <p>3. Haz clic en el botón NARANJA "Pendiente"</p>
+            <p>4. Cierra el formulario</p>
+            <p>5. Abre el pendiente de nuevo</p>
+            <p>6. Ahora SÍ debería cargar con todos los datos</p>
+        </div>
+    </div>
+</body>
+</html>

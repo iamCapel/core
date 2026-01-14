@@ -1109,6 +1109,7 @@ const Dashboard: React.FC = () => {
   if (showReportForm && user) {
     return (
       <ReportForm
+        key={interventionToEdit?._pendingReportId || interventionToEdit?.id || 'new-report'} // ✅ Forzar remontaje
         user={user}
         onBack={handleBackToDashboard}
         plantillaDefault={plantillaDefault}
