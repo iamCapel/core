@@ -1078,7 +1078,7 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                               const isExpanded = expandedProvincias.has(provinciaKey);
                               
                               return (
-                                <div key={index} className="provincia-card-expandable">
+                                <div key={provinciaKey} className="provincia-card-expandable">
                                   <div 
                                     className="provincia-card clickable"
                                     onClick={() => toggleProvinciaExpansion(selectedRegion, provincia.nombre)}
@@ -1130,7 +1130,7 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                                         </span>
                                       </div>
                                       {provincia.municipios.map((municipio, munIndex) => (
-                                        <div key={munIndex} className="municipio-item">
+                                        <div key={`${provincia.nombre}-${municipio.nombre}`} className="municipio-item">
                                           <div className="municipio-header">
                                             <span className="municipio-icon">📍</span>
                                             <span className="municipio-nombre">{municipio.nombre}</span>

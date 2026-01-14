@@ -1146,7 +1146,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
                   <h5 style={{ marginBottom: '12px', fontSize: '14px', color: '#666' }}>Vehículos agregados:</h5>
                   {vehiculos.map((vehiculo, index) => (
-                    <div key={index} style={{ 
+                    <div key={`${vehiculo.ficha}-${index}`} style={{ 
                       display: 'flex', 
                       justifyContent: 'space-between', 
                       alignItems: 'center',
