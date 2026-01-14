@@ -1557,142 +1557,148 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 </h4>
               </div>
               
-              {/* Lista de vehículos agregados */}
+              {/* Campo para número de vehículos */}
+              <div className="dashboard-row">
+                <div className="form-group">
+                  <label htmlFor="numVehiculos">¿Cuántos vehículos están trabajando?</label>
+                  <input
+                    type="number"
+                    id="numVehiculos"
+                    min="0"
+                    max="50"
+                    value={vehiculos.length}
+                    onChange={(e) => {
+                      const cantidad = parseInt(e.target.value) || 0;
+                      if (cantidad >= 0 && cantidad <= 50) {
+                        const nuevosVehiculos = [];
+                        for (let i = 0; i < cantidad; i++) {
+                          if (i < vehiculos.length) {
+                            // Mantener vehículo existente
+                            nuevosVehiculos.push(vehiculos[i]);
+                          } else {
+                            // Agregar nuevo vehículo vacío
+                            nuevosVehiculos.push({ tipo: '', modelo: '', ficha: '' });
+                          }
+                        }
+                        setVehiculos(nuevosVehiculos);
+                      }
+                    }}
+                    placeholder="Ej: 5"
+                    className="form-input"
+                    style={{ maxWidth: '200px' }}
+                  />
+                  <small style={{ display: 'block', marginTop: '4px', color: '#666', fontSize: '12px' }}>
+                    Ingrese el número y aparecerán las filas para llenar
+                  </small>
+                </div>
+              </div>
+              
+              {/* Formulario para cada vehículo */}
               {vehiculos.length > 0 && (
-                <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-                  <h5 style={{ marginBottom: '12px', fontSize: '14px', color: '#666' }}>Vehículos agregados:</h5>
+                <div style={{ marginBottom: '16px' }}>
+                  <h5 style={{ marginBottom: '16px', fontSize: '14px', color: '#666', fontWeight: '600' }}>
+                    Complete la información de cada vehículo:
+                  </h5>
                   {vehiculos.map((vehiculo, index) => (
-                    <div key={`${vehiculo.ficha}-${index}`} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      padding: '8px 12px',
-                      marginBottom: '8px',
-                      backgroundColor: 'white',
-                      borderRadius: '6px',
-                      border: '1px solid #dee2e6'
+                    <div key={`vehiculo-${index}`} style={{ 
+                      marginBottom: '20px',
+                      padding: '16px',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '8px',
+                      border: '2px solid #e0e0e0'
                     }}>
-                      <span style={{ fontSize: '14px' }}>
-                        <strong>{vehiculo.tipo}</strong> - {vehiculo.modelo} - Ficha: {vehiculo.ficha}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setVehiculos(vehiculos.filter((_, i) => i !== index));
-                        }}
-                        style={{
-                          padding: '4px 12px',
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        Eliminar
-                      </button>
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '12px'
+                      }}>
+                        <h6 style={{ margin: 0, color: 'var(--primary-orange)', fontSize: '14px', fontWeight: '600' }}>
+                          🚜 Vehículo #{index + 1}
+                        </h6>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVehiculos(vehiculos.filter((_, i) => i !== index));
+                          }}
+                          style={{
+                            padding: '4px 12px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          ✕ Eliminar
+                        </button>
+                      </div>
+                      
+                      <div className="dashboard-row">
+                        <div className="form-group">
+                          <label htmlFor={`tipoVehiculo-${index}`}>Tipo de Vehículo</label>
+                          <select 
+                            id={`tipoVehiculo-${index}`}
+                            value={vehiculo.tipo}
+                            onChange={(e) => {
+                              const nuevosVehiculos = [...vehiculos];
+                              nuevosVehiculos[index].tipo = e.target.value;
+                              setVehiculos(nuevosVehiculos);
+                            }}
+                            className="form-input"
+                          >
+                            <option value="">Seleccionar tipo</option>
+                            <option value="Excavadora">Excavadora</option>
+                            <option value="Retroexcavadora">Retroexcavadora</option>
+                            <option value="Motoniveladora">Motoniveladora</option>
+                            <option value="Rodillo Compactador">Rodillo Compactador</option>
+                            <option value="Cargador Frontal">Cargador Frontal</option>
+                            <option value="Bulldozer">Bulldozer</option>
+                            <option value="Camión Volquete">Camión Volquete</option>
+                            <option value="Compactadora">Compactadora</option>
+                            <option value="Pavimentadora">Pavimentadora</option>
+                            <option value="Otros">Otros</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor={`modeloVehiculo-${index}`}>Modelo del Vehículo</label>
+                          <input
+                            type="text"
+                            id={`modeloVehiculo-${index}`}
+                            value={vehiculo.modelo}
+                            onChange={(e) => {
+                              const nuevosVehiculos = [...vehiculos];
+                              nuevosVehiculos[index].modelo = e.target.value;
+                              setVehiculos(nuevosVehiculos);
+                            }}
+                            placeholder="Ej: CAT 320D, Komatsu PC200"
+                            className="form-input"
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor={`fichaVehiculo-${index}`}>Ficha del Vehículo (MOPC)</label>
+                          <input
+                            type="text"
+                            id={`fichaVehiculo-${index}`}
+                            value={vehiculo.ficha}
+                            onChange={(e) => {
+                              const nuevosVehiculos = [...vehiculos];
+                              nuevosVehiculos[index].ficha = e.target.value;
+                              setVehiculos(nuevosVehiculos);
+                            }}
+                            placeholder="Ej: MOPC-VH-2024-001"
+                            className="form-input"
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
-              
-              {/* Formulario para agregar nuevo vehículo */}
-              <div className="dashboard-row">
-                <div className="form-group">
-                  <label htmlFor="tipoVehiculo">Tipo de Vehículo</label>
-                  <select 
-                    id="tipoVehiculo"
-                    value={tipoVehiculoActual}
-                    onChange={(e) => setTipoVehiculoActual(e.target.value)}
-                    className="form-input"
-                  >
-                    <option value="">Seleccionar tipo</option>
-                    <option value="Excavadora">Excavadora</option>
-                    <option value="Retroexcavadora">Retroexcavadora</option>
-                    <option value="Motoniveladora">Motoniveladora</option>
-                    <option value="Rodillo Compactador">Rodillo Compactador</option>
-                    <option value="Cargador Frontal">Cargador Frontal</option>
-                    <option value="Bulldozer">Bulldozer</option>
-                    <option value="Camión Volquete">Camión Volquete</option>
-                    <option value="Compactadora">Compactadora</option>
-                    <option value="Pavimentadora">Pavimentadora</option>
-                    <option value="Otros">Otros</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="modeloVehiculo">Modelo del Vehículo</label>
-                  <input
-                    type="text"
-                    id="modeloVehiculo"
-                    value={modeloVehiculoActual}
-                    onChange={(e) => setModeloVehiculoActual(e.target.value)}
-                    placeholder="Ej: CAT 320D, Komatsu PC200"
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="fichaVehiculo">Ficha del Vehículo (MOPC)</label>
-                  <input
-                    type="text"
-                    id="fichaVehiculo"
-                    value={fichaVehiculoActual}
-                    onChange={(e) => setFichaVehiculoActual(e.target.value)}
-                    placeholder="Ej: MOPC-VH-2024-001"
-                    className="form-input"
-                  />
-                </div>
-              </div>
-
-              {/* Botón para agregar vehículo */}
-              <div className="dashboard-row">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!tipoVehiculoActual || !modeloVehiculoActual || !fichaVehiculoActual) {
-                      alert('Por favor complete todos los campos del vehículo antes de agregarlo');
-                      return;
-                    }
-                    
-                    setVehiculos([...vehiculos, {
-                      tipo: tipoVehiculoActual,
-                      modelo: modeloVehiculoActual,
-                      ficha: fichaVehiculoActual
-                    }]);
-                    
-                    // Limpiar campos
-                    setTipoVehiculoActual('');
-                    setModeloVehiculoActual('');
-                    setFichaVehiculoActual('');
-                  }}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: 'var(--primary-orange)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--primary-orange-dark)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--primary-orange)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  ➕ Agregar Vehículo
-                </button>
-              </div>
             </>
           )}
 
