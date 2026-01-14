@@ -180,6 +180,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
   useEffect(() => {
     if (interventionToEdit) {
       console.log('🔄 ReportForm: Cargando interventionToEdit:', interventionToEdit);
+      console.log('🔍 Claves del objeto:', Object.keys(interventionToEdit));
+      console.log('🔍 Valores completos:', JSON.stringify(interventionToEdit, null, 2));
       
       // Si viene de un reporte pendiente, guardar el ID
       if (interventionToEdit._pendingReportId) {
@@ -199,6 +201,29 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setProvincia(interventionToEdit.provincia || '');
       setDistrito(interventionToEdit.distrito || '');
       setMunicipio(interventionToEdit.municipio || '');
+      
+      console.log('🔧 Cargando campos personalizados:', {
+        sectorPersonalizado: interventionToEdit.sectorPersonalizado,
+        mostrarSectorPersonalizado: interventionToEdit.mostrarSectorPersonalizado,
+        distritoPersonalizado: interventionToEdit.distritoPersonalizado,
+        mostrarDistritoPersonalizado: interventionToEdit.mostrarDistritoPersonalizado
+      });
+      
+      // Cargar sector personalizado si existe
+      if (interventionToEdit.sectorPersonalizado) {
+        setSectorPersonalizado(interventionToEdit.sectorPersonalizado);
+      }
+      if (interventionToEdit.mostrarSectorPersonalizado) {
+        setMostrarSectorPersonalizado(true);
+      }
+      
+      // Cargar distrito personalizado si existe
+      if (interventionToEdit.distritoPersonalizado) {
+        setDistritoPersonalizado(interventionToEdit.distritoPersonalizado);
+      }
+      if (interventionToEdit.mostrarDistritoPersonalizado) {
+        setMostrarDistritoPersonalizado(true);
+      }
       
       // Manejar sector
       const sectoresDisponiblesParaProvincia = sectoresPorProvincia[interventionToEdit.provincia] || [];
@@ -240,6 +265,17 @@ const ReportForm: React.FC<ReportFormProps> = ({
       // Cargar observaciones
       console.log('📝 Cargando observaciones:', interventionToEdit.observaciones);
       setObservaciones(interventionToEdit.observaciones || '');
+      
+      // Cargar fecha del reporte si existe
+      if (interventionToEdit.fechaReporte) {
+        console.log('📅 Cargando fechaReporte:', interventionToEdit.fechaReporte);
+        setFechaReporte(interventionToEdit.fechaReporte);
+      } else if (interventionToEdit.timestamp) {
+        // Si no hay fechaReporte, usar timestamp
+        const fecha = new Date(interventionToEdit.timestamp).toISOString().split('T')[0];
+        console.log('📅 Cargando fecha desde timestamp:', fecha);
+        setFechaReporte(fecha);
+      }
       
       // Cargar valores de plantilla (metricData si viene de pendiente)
       const valoresPlantilla: Record<string, string> = interventionToEdit.metricData || {};
