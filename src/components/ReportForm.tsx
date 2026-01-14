@@ -87,6 +87,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
+  const [isLoadingPendingData, setIsLoadingPendingData] = useState(false); // ✅ Flag para evitar auto-save durante carga
 
   // GPS state
   const [gpsEnabled, setGpsEnabled] = useState(parentGpsEnabled);
@@ -179,6 +180,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
   // Cargar intervención para editar si se proporciona
   useEffect(() => {
     if (interventionToEdit) {
+      setIsLoadingPendingData(true); // ✅ Bloquear auto-save durante carga
+      
       console.log('🔄 ReportForm: Cargando interventionToEdit:', interventionToEdit);
       console.log('🔍 Claves del objeto:', Object.keys(interventionToEdit));
       console.log('🔍 Valores completos:', JSON.stringify(interventionToEdit, null, 2));
@@ -316,6 +319,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
       }
       
       console.log('✅ ReportForm: Datos cargados completamente');
+      
+      // ✅ Desbloquear auto-save después de un pequeño delay
+      setTimeout(() => {
+        setIsLoadingPendingData(false);
+      }, 500);
     }
   }, [interventionToEdit, plantillaDefault, sectoresPorProvincia]);
 
@@ -544,6 +552,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
   // Efecto para guardar automáticamente los cambios en reportes pendientes
   useEffect(() => {
+    // ✅ NO guardar si está cargando datos
+    if (isLoadingPendingData) {
+      console.log('⏸️ Auto-save bloqueado: cargando datos...');
+      return;
+    }
+    
     // Si hay un reporte pendiente activo, guardar automáticamente los cambios
     if (currentPendingReportId) {
       const timer = setTimeout(async () => {
@@ -608,6 +622,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     observaciones,
     vehiculos,
     autoGpsFields, // ¡IMPORTANTE! Detectar cambios en datos GPS
+    isLoadingPendingData, // ✅ Reagendar cuando termine de cargar
     user.username,
     user.name
   ]);

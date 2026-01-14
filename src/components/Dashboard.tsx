@@ -610,17 +610,19 @@ const Dashboard: React.FC = () => {
       // Cargar desde Firebase para obtener los datos más recientes
       const pendingReport = await firebasePendingReportStorage.getPendingReport(reportId);
       
-      console.log('� Datos del reporte desde Firebase:', pendingReport);
+      console.log('📦 Datos del reporte desde Firebase:', pendingReport);
       
-      if (pendingReport && pendingReport.formData) {
-        // Cargar el formData completo del reporte pendiente
-        // Agregamos el reportId para que el ReportForm pueda identificarlo
+      if (pendingReport) {
+        // ✅ IGUAL QUE REPORTES COMPLETOS: Pasar TODO el objeto pendingReport
+        // El formData ya contiene todos los campos necesarios
         const dataToLoad = {
           ...pendingReport.formData,
           _pendingReportId: reportId // Campo especial para identificar el reporte pendiente
         };
         
         console.log('✅ Datos a cargar en el formulario:', dataToLoad);
+        console.log('🔑 Claves disponibles:', Object.keys(dataToLoad));
+        console.log('📦 Objeto completo:', JSON.stringify(dataToLoad, null, 2));
         
         setInterventionToEdit(dataToLoad);
         setShowPendingModal(false);
