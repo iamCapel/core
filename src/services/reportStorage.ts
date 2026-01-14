@@ -279,6 +279,7 @@ class ReportStorage {
           tipoIntervencion: report.tipoIntervencion || '',
           subTipoCanal: report.subTipoCanal,
           observaciones: report.observaciones,
+          vehiculos: report.vehiculos || [], // ¡IMPORTANTE! Agregar vehículos
           metricData: report.metricData || {},
           gpsData: report.gpsData,
           images: report.images,

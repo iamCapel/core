@@ -23,6 +23,8 @@ class FirebaseReportStorage {
     try {
       const reportRef = doc(db, REPORTS_COLLECTION, report.id);
       
+      console.log('🚜 Vehículos recibidos en saveReport:', report.vehiculos);
+      
       // Preparar el reporte con valores por defecto
       const reportToSave = {
         ...report,
@@ -30,16 +32,23 @@ class FirebaseReportStorage {
         fechaModificacion: new Date().toISOString()
       };
       
+      console.log('🚜 Vehículos en reportToSave:', reportToSave.vehiculos);
+      
       // Eliminar todos los campos undefined (Firebase no los acepta)
       const cleanReport: any = {};
       Object.keys(reportToSave).forEach(key => {
         const value = (reportToSave as any)[key];
         if (value !== undefined && value !== null) {
+          // Mantener arrays vacíos también
           cleanReport[key] = value;
         }
       });
       
+      console.log('🚜 Vehículos en cleanReport antes de guardar:', cleanReport.vehiculos);
+      console.log('📦 Reporte completo a guardar:', JSON.stringify(cleanReport, null, 2));
+      
       await setDoc(reportRef, cleanReport);
+      console.log('✅ Reporte guardado en Firebase con vehículos');
     } catch (error) {
       console.error('Error guardando en Firestore:', error);
       throw error;

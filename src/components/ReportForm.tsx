@@ -635,6 +635,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
         modificadoPor: interventionToEdit ? user?.name : undefined
       };
 
+      console.log('🚜 Vehículos en el estado antes de guardar:', vehiculos);
+      console.log('🚜 Vehículos en reportData:', reportData.vehiculos);
+      console.log('📦 ReportData completo:', reportData);
+
       try {
         console.log('💾 Guardando reporte en Firebase...');
         
