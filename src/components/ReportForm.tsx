@@ -59,6 +59,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [distritoPersonalizado, setDistritoPersonalizado] = useState('');
   const [mostrarDistritoPersonalizado, setMostrarDistritoPersonalizado] = useState(false);
   const [fechaReporte, setFechaReporte] = useState('');
+  
+  // Estados para sistema multi-día
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFinal, setFechaFinal] = useState('');
+  const [diasTrabajo, setDiasTrabajo] = useState<string[]>([]);
+  const [diaActual, setDiaActual] = useState(0);
+  const [reportesPorDia, setReportesPorDia] = useState<Record<string, any>>({});
+  
   const [tipoIntervencion, setTipoIntervencion] = useState('');
   const [subTipoCanal, setSubTipoCanal] = useState('');
   const [observaciones, setObservaciones] = useState('');
@@ -108,6 +116,47 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setGpsStatus('GPS habilitado desde el sistema');
     }
   }, [parentGpsEnabled, parentGpsPosition]);
+
+  // Efecto para calcular días entre fechas
+  useEffect(() => {
+    if (fechaInicio && fechaFinal) {
+      const inicio = new Date(fechaInicio);
+      const final = new Date(fechaFinal);
+      
+      if (final >= inicio) {
+        const dias: string[] = [];
+        const current = new Date(inicio);
+        
+        while (current <= final) {
+          dias.push(current.toISOString().split('T')[0]);
+          current.setDate(current.getDate() + 1);
+        }
+        
+        setDiasTrabajo(dias);
+        setDiaActual(0);
+        
+        // Inicializar reportes por día si no existen
+        const nuevosReportes: Record<string, any> = {};
+        dias.forEach(dia => {
+          if (!reportesPorDia[dia]) {
+            nuevosReportes[dia] = {
+              fecha: dia,
+              tipoIntervencion: '',
+              subTipoCanal: '',
+              observaciones: '',
+              vehiculos: [],
+              plantillaValues: {},
+              autoGpsFields: {},
+              completado: false
+            };
+          } else {
+            nuevosReportes[dia] = reportesPorDia[dia];
+          }
+        });
+        setReportesPorDia(nuevosReportes);
+      }
+    }
+  }, [fechaInicio, fechaFinal]);
 
   // Cargar reportes pendientes cuando se abre el modal
   useEffect(() => {
@@ -559,6 +608,53 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setPlantillaValues(prev => ({...prev, [key]: value}));
   };
 
+  // Funciones para sistema multi-día
+  const guardarDiaActual = () => {
+    if (diasTrabajo.length === 0) return;
+    
+    const diaKey = diasTrabajo[diaActual];
+    setReportesPorDia(prev => ({
+      ...prev,
+      [diaKey]: {
+        fecha: diaKey,
+        tipoIntervencion,
+        subTipoCanal,
+        observaciones,
+        vehiculos: [...vehiculos],
+        plantillaValues: {...plantillaValues},
+        autoGpsFields: {...autoGpsFields},
+        completado: true
+      }
+    }));
+  };
+
+  const cargarDia = (indiceDia: number) => {
+    // Guardar día actual antes de cambiar
+    guardarDiaActual();
+    
+    const diaKey = diasTrabajo[indiceDia];
+    const reporte = reportesPorDia[diaKey];
+    
+    if (reporte) {
+      setTipoIntervencion(reporte.tipoIntervencion || '');
+      setSubTipoCanal(reporte.subTipoCanal || '');
+      setObservaciones(reporte.observaciones || '');
+      setVehiculos(reporte.vehiculos || []);
+      setPlantillaValues(reporte.plantillaValues || {});
+      setAutoGpsFields(reporte.autoGpsFields || {});
+    }
+    
+    setDiaActual(indiceDia);
+  };
+
+  const cambiarDia = (direccion: 'anterior' | 'siguiente') => {
+    if (direccion === 'anterior' && diaActual > 0) {
+      cargarDia(diaActual - 1);
+    } else if (direccion === 'siguiente' && diaActual < diasTrabajo.length - 1) {
+      cargarDia(diaActual + 1);
+    }
+  };
+
   const limpiarFormulario = () => {
     setRegion('');
     setProvincia('');
@@ -570,6 +666,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setSectorPersonalizado('');
     setMostrarSectorPersonalizado(false);
     setFechaReporte('');
+    setFechaInicio('');
+    setFechaFinal('');
+    setDiasTrabajo([]);
+    setDiaActual(0);
+    setReportesPorDia({});
     setTipoIntervencion('');
     setSubTipoCanal('');
     setObservaciones('');
@@ -584,8 +685,76 @@ const ReportForm: React.FC<ReportFormProps> = ({
     const sectorFinal = sector === 'otros' ? sectorPersonalizado : sector;
     const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
     
-    if (!region || !provincia || !distritoFinal || !sectorFinal || !fechaReporte || !tipoIntervencion) {
-      alert('Por favor complete todos los campos requeridos, incluyendo la fecha del reporte');
+    // Validación para sistema multi-día
+    if (diasTrabajo.length > 0) {
+      if (!region || !provincia || !distritoFinal || !sectorFinal) {
+        alert('Por favor complete todos los campos geográficos requeridos');
+        return;
+      }
+      
+      // Guardar día actual antes de proceder
+      guardarDiaActual();
+      
+      // Guardar todos los reportes del proyecto multi-día como pendientes
+      setShowPendingAnimation(true);
+      
+      setTimeout(async () => {
+        try {
+          let reportesGuardados = 0;
+          
+          for (const dia of diasTrabajo) {
+            const reporteDia = reportesPorDia[dia];
+            
+            if (reporteDia && reporteDia.tipoIntervencion) {
+              const reportData = {
+                timestamp: new Date(dia).toISOString(),
+                fechaCreacion: new Date(dia).toISOString(),
+                creadoPor: user?.name || 'Desconocido',
+                usuarioId: user?.username || 'desconocido',
+                region,
+                provincia,
+                distrito: distritoFinal,
+                municipio,
+                sector: sectorFinal,
+                tipoIntervencion: reporteDia.tipoIntervencion === 'Canalización' ? 
+                  `${reporteDia.tipoIntervencion}:${reporteDia.subTipoCanal}` : reporteDia.tipoIntervencion,
+                subTipoCanal: reporteDia.tipoIntervencion === 'Canalización' ? reporteDia.subTipoCanal : undefined,
+                observaciones: reporteDia.observaciones || undefined,
+                metricData: reporteDia.plantillaValues,
+                gpsData: reporteDia.autoGpsFields,
+                vehiculos: reporteDia.vehiculos,
+                estado: 'pendiente' as const
+              };
+              
+              const savedId = await pendingReportStorage.savePendingReport({
+                formData: reportData,
+                saveType: 'manual'
+              });
+              
+              console.log(`✅ Reporte guardado para ${dia}: ${savedId}`);
+              reportesGuardados++;
+            }
+          }
+          
+          setTimeout(() => {
+            setShowPendingAnimation(false);
+            alert(`✅ ${reportesGuardados} reportes guardados como pendientes exitosamente`);
+            limpiarFormulario();
+          }, 1500);
+          
+        } catch (error) {
+          console.error('❌ Error al guardar reportes:', error);
+          setShowPendingAnimation(false);
+          alert('Error al guardar los reportes. Intente nuevamente.');
+        }
+      }, 500);
+      
+      return;
+    }
+    
+    // Validación tradicional (reporte de un solo día)
+    if (!region || !provincia || !distritoFinal || !sectorFinal || !fechaInicio || !tipoIntervencion) {
+      alert('Por favor complete todos los campos requeridos, incluyendo las fechas del proyecto');
       return;
     }
 
@@ -1055,21 +1224,173 @@ const ReportForm: React.FC<ReportFormProps> = ({
               </select>
             </div>
 
+            {/* Sistema de rango de fechas para proyectos multi-día */}
             <div className="form-group">
-              <label htmlFor="fechaReporte">📅 Fecha del Reporte</label>
+              <label htmlFor="fechaInicio">📅 Fecha de Inicio del Proyecto</label>
               <input 
                 type="date"
-                id="fechaReporte"
-                value={fechaReporte}
-                onChange={(e) => setFechaReporte(e.target.value)}
+                id="fechaInicio"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
                 className="form-input"
                 required
-                style={{
-                  cursor: 'pointer'
-                }}
+                style={{ cursor: 'pointer' }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="fechaFinal">📅 Fecha Final del Proyecto</label>
+              <input 
+                type="date"
+                id="fechaFinal"
+                value={fechaFinal}
+                onChange={(e) => setFechaFinal(e.target.value)}
+                min={fechaInicio}
+                className="form-input"
+                required
+                disabled={!fechaInicio}
+                style={{ cursor: fechaInicio ? 'pointer' : 'not-allowed', opacity: fechaInicio ? 1 : 0.6 }}
               />
             </div>
           </div>
+
+          {/* Navegación entre días de trabajo */}
+          {diasTrabajo.length > 0 && (
+            <div style={{ 
+              marginTop: '24px', 
+              marginBottom: '24px', 
+              padding: '20px', 
+              background: 'linear-gradient(135deg, var(--tertiary-orange) 0%, var(--pale-orange) 100%)',
+              borderRadius: '12px',
+              border: '2px solid var(--secondary-orange)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ color: 'var(--primary-orange)', fontSize: '18px', fontWeight: '700', margin: 0 }}>
+                  📋 Reportes por Día ({diasTrabajo.length} días de trabajo)
+                </h3>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => cambiarDia('anterior')}
+                    disabled={diaActual === 0}
+                    style={{
+                      padding: '8px 16px',
+                      background: diaActual === 0 ? '#ccc' : 'var(--primary-orange)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: diaActual === 0 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    ← Anterior
+                  </button>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    Día {diaActual + 1} de {diasTrabajo.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => cambiarDia('siguiente')}
+                    disabled={diaActual === diasTrabajo.length - 1}
+                    style={{
+                      padding: '8px 16px',
+                      background: diaActual === diasTrabajo.length - 1 ? '#ccc' : 'var(--primary-orange)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: diaActual === diasTrabajo.length - 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              </div>
+
+              {/* Pestañas de navegación tipo Excel */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '4px', 
+                overflowX: 'auto', 
+                padding: '8px 0',
+                borderTop: '1px solid var(--secondary-orange)',
+                paddingTop: '12px'
+              }}>
+                {diasTrabajo.map((dia, index) => {
+                  const reporteDia = reportesPorDia[dia];
+                  const completado = reporteDia?.completado;
+                  const esActual = index === diaActual;
+                  
+                  return (
+                    <button
+                      key={dia}
+                      type="button"
+                      onClick={() => cargarDia(index)}
+                      style={{
+                        minWidth: '120px',
+                        padding: '10px 16px',
+                        background: esActual ? 'var(--primary-orange)' : (completado ? '#00C49F' : 'white'),
+                        color: esActual || completado ? 'white' : 'var(--text-primary)',
+                        border: `2px solid ${esActual ? 'var(--primary-orange-dark)' : (completado ? '#00A884' : 'var(--gray)')}`,
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: esActual ? '700' : '500',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.2s ease',
+                        boxShadow: esActual ? '0 4px 8px rgba(255, 122, 0, 0.3)' : 'none',
+                        transform: esActual ? 'translateY(-2px)' : 'none'
+                      }}
+                      onMouseOver={(e) => {
+                        if (!esActual) {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!esActual) {
+                          e.currentTarget.style.transform = 'none';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: '16px' }}>{completado ? '✅' : '📄'}</span>
+                      <span>{new Date(dia).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Información del día actual */}
+              <div style={{ 
+                marginTop: '12px', 
+                padding: '12px', 
+                background: 'white', 
+                borderRadius: '8px',
+                border: '1px solid var(--gray)'
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  <strong style={{ color: 'var(--primary-orange)' }}>Fecha actual:</strong>{' '}
+                  {new Date(diasTrabajo[diaActual]).toLocaleDateString('es-ES', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                  {reportesPorDia[diasTrabajo[diaActual]]?.completado 
+                    ? '✅ Reporte completado para este día' 
+                    : '⏳ Complete los datos para guardar este reporte'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Campo de sector personalizado */}
           {mostrarSectorPersonalizado && (
@@ -1501,7 +1822,14 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 alt="Guardar" 
                 style={{ width: '32px', height: '32px', marginBottom: '8px' }}
               />
-              <span style={{ fontSize: '14px', fontWeight: '600' }}>Guardar</span>
+              <span style={{ fontSize: '14px', fontWeight: '600' }}>
+                {diasTrabajo.length > 0 
+                  ? `Guardar ${diasTrabajo.length} días` 
+                  : 'Guardar'}
+              </span>
+              {diasTrabajo.length > 0 && (
+                <span style={{ fontSize: '11px', opacity: 0.9 }}>Como pendientes</span>
+              )}
             </button>
 
             {/* Botón Naranja - Pendiente */}
