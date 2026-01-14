@@ -88,6 +88,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
   const [isLoadingPendingData, setIsLoadingPendingData] = useState(false); // ✅ Flag para evitar auto-save durante carga
+  const [isUnmounting, setIsUnmounting] = useState(false); // ✅ Flag para evitar auto-save al desmontar
 
   // GPS state
   const [gpsEnabled, setGpsEnabled] = useState(parentGpsEnabled);
@@ -549,12 +550,32 @@ const ReportForm: React.FC<ReportFormProps> = ({
     const interval = setInterval(updatePendingCount, 2000);
     return () => clearInterval(interval);
   }, []);
+  
+  // ✅ Detectar cuando el componente se va a desmontar
+  useEffect(() => {
+    return () => {
+      console.log('🔴 ReportForm desmontando - bloqueando auto-save');
+      setIsUnmounting(true);
+    };
+  }, []);
 
   // Efecto para guardar automáticamente los cambios en reportes pendientes
   useEffect(() => {
     // ✅ NO guardar si está cargando datos
     if (isLoadingPendingData) {
       console.log('⏸️ Auto-save bloqueado: cargando datos...');
+      return;
+    }
+    
+    // ✅ NO guardar si está desmontando
+    if (isUnmounting) {
+      console.log('⏸️ Auto-save bloqueado: desmontando componente...');
+      return;
+    }
+    
+    // ✅ NO guardar si NO hay datos válidos (todos los campos geográficos vacíos)
+    if (!region && !provincia && !municipio && !distrito && !tipoIntervencion) {
+      console.log('⏸️ Auto-save bloqueado: sin datos válidos para guardar');
       return;
     }
     
