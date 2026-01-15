@@ -72,9 +72,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [observaciones, setObservaciones] = useState('');
 
   // Estados para vehículos (ahora es un array)
-  const [vehiculos, setVehiculos] = useState<Array<{tipo: string, modelo: string, ficha: string}>>([]);
+  const [vehiculos, setVehiculos] = useState<Array<{tipo: string, ficha: string}>>([]);
   const [tipoVehiculoActual, setTipoVehiculoActual] = useState('');
-  const [modeloVehiculoActual, setModeloVehiculoActual] = useState('');
   const [fichaVehiculoActual, setFichaVehiculoActual] = useState('');
 
   const [plantillaFields, setPlantillaFields] = useState<Field[]>(plantillaDefault);
@@ -519,7 +518,6 @@ const ReportForm: React.FC<ReportFormProps> = ({
       // Restaurar información de vehículos (array)
       setVehiculos(data.vehiculos || []);
       setTipoVehiculoActual('');
-      setModeloVehiculoActual('');
       setFichaVehiculoActual('');
       
       setCurrentPendingReportId(reportId);
@@ -788,8 +786,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
       // Guardar día actual antes de proceder
       guardarDiaActual();
       
-      // Guardar todos los reportes del proyecto multi-día como pendientes
-      setShowPendingAnimation(true);
+      // Guardar todos los reportes del proyecto multi-día como COMPLETADOS
+      setShowSaveAnimation(true);
       
       setTimeout(async () => {
         try {
@@ -799,45 +797,47 @@ const ReportForm: React.FC<ReportFormProps> = ({
             const reporteDia = reportesPorDia[dia];
             
             if (reporteDia && reporteDia.tipoIntervencion) {
-              const pendingReport: any = {
-                id: `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              const reportData = {
                 timestamp: new Date(dia).toISOString(),
-                lastModified: new Date().toISOString(),
-                userId: user?.username || 'desconocido',
-                userName: user?.name || 'Desconocido',
-                formData: {
-                  region,
-                  provincia,
-                  distrito: distritoFinal,
-                  municipio,
-                  sector: sectorFinal,
-                  tipoIntervencion: reporteDia.tipoIntervencion,
-                  subTipoCanal: reporteDia.subTipoCanal,
-                  observaciones: reporteDia.observaciones,
-                  metricData: reporteDia.plantillaValues,
-                  gpsData: reporteDia.autoGpsFields,
-                  vehiculos: reporteDia.vehiculos,
-                  // Campos adicionales para identificar que es de proyecto multi-día
-                  fechaProyecto: dia,
-                  esProyectoMultiDia: true
-                }
+                fechaCreacion: new Date(dia).toISOString(),
+                creadoPor: user?.name || 'Desconocido',
+                usuarioId: user?.username || 'desconocido',
+                region,
+                provincia,
+                distrito: distritoFinal,
+                municipio,
+                sector: sectorFinal,
+                tipoIntervencion: reporteDia.tipoIntervencion === 'Canalización' 
+                  ? `${reporteDia.tipoIntervencion}:${reporteDia.subTipoCanal}` 
+                  : reporteDia.tipoIntervencion,
+                subTipoCanal: reporteDia.tipoIntervencion === 'Canalización' ? reporteDia.subTipoCanal : undefined,
+                observaciones: reporteDia.observaciones || undefined,
+                metricData: reporteDia.plantillaValues,
+                gpsData: reporteDia.autoGpsFields,
+                vehiculos: reporteDia.vehiculos || [],
+                estado: 'completado' as const,
+                fechaProyecto: dia,
+                esProyectoMultiDia: true
               };
               
-              pendingReportStorage.savePendingReport(pendingReport);
-              console.log(`✅ Reporte guardado para ${dia}`);
+              // Guardar como COMPLETADO en Firebase
+              const savedReport = await reportStorage.saveReport(reportData);
+              await firebaseReportStorage.saveReport(savedReport);
+              
+              console.log(`✅ Reporte guardado como COMPLETADO para ${dia}`);
               reportesGuardados++;
             }
           }
           
           setTimeout(() => {
-            setShowPendingAnimation(false);
-            alert(`✅ ${reportesGuardados} reportes guardados como pendientes exitosamente`);
+            setShowSaveAnimation(false);
+            alert(`✅ ${reportesGuardados} reportes guardados exitosamente`);
             limpiarFormulario();
-          }, 1500);
+          }, 2000);
           
         } catch (error) {
           console.error('❌ Error al guardar reportes:', error);
-          setShowPendingAnimation(false);
+          setShowSaveAnimation(false);
           alert('Error al guardar los reportes. Intente nuevamente.');
         }
       }, 500);
@@ -1577,7 +1577,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                             nuevosVehiculos.push(vehiculos[i]);
                           } else {
                             // Agregar nuevo vehículo vacío
-                            nuevosVehiculos.push({ tipo: '', modelo: '', ficha: '' });
+                            nuevosVehiculos.push({ tipo: '', ficha: '' });
                           }
                         }
                         setVehiculos(nuevosVehiculos);
@@ -1637,7 +1637,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                       </div>
                       
                       <div className="dashboard-row">
-                        <div className="form-group">
+                        <div className="form-group" style={{ flex: '1' }}>
                           <label htmlFor={`tipoVehiculo-${index}`}>Tipo de Vehículo</label>
                           <select 
                             id={`tipoVehiculo-${index}`}
@@ -1654,32 +1654,40 @@ const ReportForm: React.FC<ReportFormProps> = ({
                             <option value="Retroexcavadora">Retroexcavadora</option>
                             <option value="Motoniveladora">Motoniveladora</option>
                             <option value="Rodillo Compactador">Rodillo Compactador</option>
+                            <option value="Rodillo Liso">Rodillo Liso</option>
+                            <option value="Rodillo Pata de Cabra">Rodillo Pata de Cabra</option>
+                            <option value="Rodillo Neumático">Rodillo Neumático</option>
                             <option value="Cargador Frontal">Cargador Frontal</option>
                             <option value="Bulldozer">Bulldozer</option>
                             <option value="Camión Volquete">Camión Volquete</option>
+                            <option value="Camión Cisterna">Camión Cisterna</option>
+                            <option value="Camión de Carga">Camión de Carga</option>
                             <option value="Compactadora">Compactadora</option>
+                            <option value="Compactadora Vibratoria">Compactadora Vibratoria</option>
                             <option value="Pavimentadora">Pavimentadora</option>
+                            <option value="Finisher">Finisher</option>
+                            <option value="Recicladora de Asfalto">Recicladora de Asfalto</option>
+                            <option value="Fresadora">Fresadora</option>
+                            <option value="Barredora">Barredora</option>
+                            <option value="Distribuidor de Asfalto">Distribuidor de Asfalto</option>
+                            <option value="Planta de Asfalto">Planta de Asfalto</option>
+                            <option value="Planta de Concreto">Planta de Concreto</option>
+                            <option value="Mezcladora de Concreto">Mezcladora de Concreto</option>
+                            <option value="Bomba de Concreto">Bomba de Concreto</option>
+                            <option value="Vibradora de Concreto">Vibradora de Concreto</option>
+                            <option value="Zanjadora">Zanjadora</option>
+                            <option value="Perforadora">Perforadora</option>
+                            <option value="Martillo Hidráulico">Martillo Hidráulico</option>
+                            <option value="Grúa">Grúa</option>
+                            <option value="Minicargador">Minicargador</option>
+                            <option value="Tractor">Tractor</option>
+                            <option value="Generador Eléctrico">Generador Eléctrico</option>
+                            <option value="Compresor de Aire">Compresor de Aire</option>
                             <option value="Otros">Otros</option>
                           </select>
                         </div>
 
-                        <div className="form-group">
-                          <label htmlFor={`modeloVehiculo-${index}`}>Modelo del Vehículo</label>
-                          <input
-                            type="text"
-                            id={`modeloVehiculo-${index}`}
-                            value={vehiculo.modelo}
-                            onChange={(e) => {
-                              const nuevosVehiculos = [...vehiculos];
-                              nuevosVehiculos[index].modelo = e.target.value;
-                              setVehiculos(nuevosVehiculos);
-                            }}
-                            placeholder="Ej: CAT 320D, Komatsu PC200"
-                            className="form-input"
-                          />
-                        </div>
-
-                        <div className="form-group">
+                        <div className="form-group" style={{ flex: '1' }}>
                           <label htmlFor={`fichaVehiculo-${index}`}>Ficha del Vehículo (MOPC)</label>
                           <input
                             type="text"
@@ -1928,9 +1936,6 @@ const ReportForm: React.FC<ReportFormProps> = ({
                   ? `Guardar ${diasTrabajo.length} días` 
                   : 'Guardar'}
               </span>
-              {diasTrabajo.length > 0 && (
-                <span style={{ fontSize: '11px', opacity: 0.9 }}>Como pendientes</span>
-              )}
             </button>
 
             {/* Botón Naranja - Pendiente */}
