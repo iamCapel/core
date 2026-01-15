@@ -1938,64 +1938,60 @@ const ReportForm: React.FC<ReportFormProps> = ({
               </span>
             </button>
 
-            {/* Botón Naranja - Pendiente */}
+            {/* Botón Naranja - Guardar sin estadísticas */}
             <button 
               type="button" 
               onClick={async () => {
-                // Guardar como pendiente usando Firebase
-                const reportId = currentPendingReportId || 'pending_' + Date.now();
-                const pendingReport = {
-                  id: reportId,
-                  timestamp: new Date().toISOString(),
-                  lastModified: new Date().toISOString(),
-                  userId: user.username,
-                  userName: user.name || user.username,
-                  formData: {
-                    region,
-                    provincia,
-                    distrito,
-                    municipio,
-                    sector,
-                    sectorPersonalizado,
-                    mostrarSectorPersonalizado,
-                    distritoPersonalizado,
-                    mostrarDistritoPersonalizado,
-                    fechaReporte, // ✅ AGREGADO
-                    tipoIntervencion,
-                    subTipoCanal,
-                    metricData: plantillaValues,
-                    observaciones,
-                    vehiculos, // ✅ YA ESTABA
-                    gpsData: autoGpsFields, // ✅ AGREGADO - datos GPS
-                    // Multi-día
-                    fechaInicio, // ✅ AGREGADO
-                    fechaFinal, // ✅ AGREGADO
-                    esProyectoMultiDia: diasTrabajo.length > 0, // ✅ AGREGADO
-                    diasTrabajo, // ✅ AGREGADO
-                    diaActual, // ✅ AGREGADO
-                    reportesPorDia // ✅ AGREGADO
-                  },
-                  progress: 0,
-                  fieldsCompleted: []
-                };
+                const sectorFinal = sector === 'otros' ? sectorPersonalizado : sector;
+                const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
                 
-                console.log('💾 Guardando reporte pendiente manualmente en Firebase:', reportId);
-                console.log('📦 Datos completos a guardar:', JSON.stringify(pendingReport.formData, null, 2));
-                
-                try {
-                  // Guardar SOLO en Firebase
-                  await firebasePendingReportStorage.savePendingReport(pendingReport);
-                  console.log('✅ Reporte guardado exitosamente en Firebase');
-                  
-                  // Guardar el ID en el estado
-                  setCurrentPendingReportId(reportId);
-                  
-                  // Mostrar animación
-                  setShowPendingAnimation(true);
-                } catch (error) {
-                  console.error('❌ Error al guardar en Firebase:', error);
-                  alert('Error al guardar el reporte pendiente. Verifique su conexión a internet.');
+                // Validación
+                if (!region || !provincia || !distritoFinal || !sectorFinal || !fechaInicio || !tipoIntervencion) {
+                  alert('Por favor complete todos los campos requeridos');
+                  return;
                 }
+                
+                setShowPendingAnimation(true);
+                
+                setTimeout(async () => {
+                  try {
+                    // Guardar como COMPLETADO pero con marca especial
+                    const reportData = {
+                      timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
+                      fechaCreacion: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
+                      creadoPor: user?.name || 'Desconocido',
+                      usuarioId: user?.username || 'desconocido',
+                      region,
+                      provincia,
+                      distrito: distritoFinal,
+                      municipio,
+                      sector: sectorFinal,
+                      tipoIntervencion: tipoIntervencion === 'Canalización' ? `${tipoIntervencion}:${subTipoCanal}` : tipoIntervencion,
+                      subTipoCanal: tipoIntervencion === 'Canalización' ? subTipoCanal : undefined,
+                      observaciones: observaciones || undefined,
+                      metricData: plantillaValues,
+                      gpsData: autoGpsFields,
+                      vehiculos: vehiculos,
+                      estado: 'completado' as const,
+                      guardadoDesdePendiente: true, // ⚠️ MARCA ESPECIAL - no mostrar en estadísticas
+                    };
+                    
+                    const savedReport = await reportStorage.saveReport(reportData);
+                    await firebaseReportStorage.saveReport(savedReport);
+                    
+                    console.log('✅ Reporte guardado como completado (sin estadísticas)');
+                    
+                    setTimeout(() => {
+                      setShowPendingAnimation(false);
+                      alert('✅ Reporte guardado exitosamente');
+                      limpiarFormulario();
+                    }, 2000);
+                  } catch (error) {
+                    console.error('❌ Error:', error);
+                    setShowPendingAnimation(false);
+                    alert('Error al guardar el reporte.');
+                  }
+                }, 500);
               }}
             
               style={{
@@ -2023,10 +2019,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
             >
               <img 
                 src="/images/pending-orange-icon.svg" 
-                alt="Pendiente" 
+                alt="Guardar" 
                 style={{ width: '32px', height: '32px', marginBottom: '8px' }}
               />
-              <span style={{ fontSize: '14px', fontWeight: '600' }}>Pendiente</span>
+              <span style={{ fontSize: '14px', fontWeight: '600' }}>Guardar</span>
+              <span style={{ fontSize: '11px', opacity: 0.85 }}>(Sin estadísticas)</span>
             </button>
 
             {/* Botón Rojo - Cancelar */}

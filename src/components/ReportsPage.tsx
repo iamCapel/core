@@ -474,18 +474,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
           kilometraje: 0
         };
 
-        // Actualizar contadores de provincia
-        currentProv.total++;
-        
-        if (report.estado === 'completado' || report.estado === 'aprobado') {
-          currentProv.completados++;
-          currentMun.completados++;
-        } else if (report.estado === 'pendiente') {
-          currentProv.pendientes++;
-          currentMun.pendientes++;
-        } else {
-          currentProv.enProgreso++;
-          currentMun.enProgreso++;
+        // Actualizar contadores de provincia (excluyendo reportes guardados desde pendientes)
+        if (!report.guardadoDesdePendiente) {
+          currentProv.total++;
+          
+          if (report.estado === 'completado' || report.estado === 'aprobado') {
+            currentProv.completados++;
+            currentMun.completados++;
+          } else if (report.estado === 'pendiente') {
+            currentProv.pendientes++;
+            currentMun.pendientes++;
+          } else {
+            currentProv.enProgreso++;
+            currentMun.enProgreso++;
+          }
         }
 
         // Actualizar contadores de municipio
