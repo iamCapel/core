@@ -580,38 +580,38 @@ const ReportForm: React.FC<ReportFormProps> = ({
     // Si hay un reporte pendiente activo, guardar automáticamente los cambios
     if (currentPendingReportId) {
       const timer = setTimeout(async () => {
-        const pendingReport = {
-          id: currentPendingReportId,
-          timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
-          lastModified: new Date().toISOString(),
-          userId: user.username,
-          userName: user.name || user.username,
-          formData: {
-            region,
-            provincia,
-            distrito,
-            municipio,
-            sector,
-            sectorPersonalizado,
-            mostrarSectorPersonalizado,
-            distritoPersonalizado,
-            mostrarDistritoPersonalizado,
-            fechaReporte,
-            tipoIntervencion,
-            subTipoCanal,
-            metricData: plantillaValues,
-            observaciones,
-            vehiculos,
-            gpsData: autoGpsFields // ¡IMPORTANTE! Guardar datos GPS
-          },
-          progress: 0,
-          fieldsCompleted: []
-        };
-        
-        console.log('💾 Guardando automáticamente reporte pendiente en Firebase:', currentPendingReportId);
-        console.log('📦 Datos a guardar:', pendingReport.formData);
-        
         try {
+          const pendingReport = {
+            id: currentPendingReportId,
+            timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+            userId: user.username,
+            userName: user.name || user.username,
+            formData: {
+              region,
+              provincia,
+              distrito,
+              municipio,
+              sector,
+              sectorPersonalizado,
+              mostrarSectorPersonalizado,
+              distritoPersonalizado,
+              mostrarDistritoPersonalizado,
+              fechaReporte,
+              tipoIntervencion,
+              subTipoCanal,
+              metricData: plantillaValues,
+              observaciones,
+              vehiculos,
+              gpsData: autoGpsFields // ¡IMPORTANTE! Guardar datos GPS
+            },
+            progress: 0,
+            fieldsCompleted: []
+          };
+          
+          console.log('💾 Guardando automáticamente reporte pendiente en Firebase:', currentPendingReportId);
+          console.log('📦 Datos a guardar:', pendingReport.formData);
+          
           // Guardar SOLO en Firebase
           await firebasePendingReportStorage.savePendingReport(pendingReport);
           console.log('✅ Cambios guardados automáticamente en Firebase');
