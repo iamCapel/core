@@ -72,8 +72,9 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [observaciones, setObservaciones] = useState('');
 
   // Estados para vehículos (ahora es un array)
-  const [vehiculos, setVehiculos] = useState<Array<{tipo: string, ficha: string}>>([]);
+  const [vehiculos, setVehiculos] = useState<Array<{tipo: string, modelo: string, ficha: string}>>([]);
   const [tipoVehiculoActual, setTipoVehiculoActual] = useState('');
+  const [modeloVehiculoActual, setModeloVehiculoActual] = useState('');
   const [fichaVehiculoActual, setFichaVehiculoActual] = useState('');
 
   const [plantillaFields, setPlantillaFields] = useState<Field[]>(plantillaDefault);
@@ -1577,7 +1578,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                             nuevosVehiculos.push(vehiculos[i]);
                           } else {
                             // Agregar nuevo vehículo vacío
-                            nuevosVehiculos.push({ tipo: '', ficha: '' });
+                            nuevosVehiculos.push({ tipo: '', modelo: '', ficha: '' });
                           }
                         }
                         setVehiculos(nuevosVehiculos);
@@ -1685,6 +1686,22 @@ const ReportForm: React.FC<ReportFormProps> = ({
                             <option value="Compresor de Aire">Compresor de Aire</option>
                             <option value="Otros">Otros</option>
                           </select>
+                        </div>
+
+                        <div className="form-group" style={{ flex: '1' }}>
+                          <label htmlFor={`modeloVehiculo-${index}`}>Modelo del Vehículo</label>
+                          <input
+                            type="text"
+                            id={`modeloVehiculo-${index}`}
+                            value={vehiculo.modelo}
+                            onChange={(e) => {
+                              const nuevosVehiculos = [...vehiculos];
+                              nuevosVehiculos[index].modelo = e.target.value;
+                              setVehiculos(nuevosVehiculos);
+                            }}
+                            placeholder="Ej: CAT 320D"
+                            className="form-input"
+                          />
                         </div>
 
                         <div className="form-group" style={{ flex: '1' }}>
@@ -1955,7 +1972,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 
                 setTimeout(async () => {
                   try {
-                    // Guardar como COMPLETADO pero con marca especial
+                    // Guardar como PENDIENTE (no aparecerá en estadísticas)
                     const reportData = {
                       timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
                       fechaCreacion: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
@@ -1972,18 +1989,17 @@ const ReportForm: React.FC<ReportFormProps> = ({
                       metricData: plantillaValues,
                       gpsData: autoGpsFields,
                       vehiculos: vehiculos,
-                      estado: 'completado' as const,
-                      guardadoDesdePendiente: true, // ⚠️ MARCA ESPECIAL - no mostrar en estadísticas
+                      estado: 'pendiente' as const,  // ✅ Solo aparece en búsquedas de pendientes
                     };
                     
                     const savedReport = await reportStorage.saveReport(reportData);
                     await firebaseReportStorage.saveReport(savedReport);
                     
-                    console.log('✅ Reporte guardado como completado (sin estadísticas)');
+                    console.log('✅ Reporte guardado como pendiente (sin estadísticas)');
                     
                     setTimeout(() => {
                       setShowPendingAnimation(false);
-                      alert('✅ Reporte guardado exitosamente');
+                      alert('✅ Reporte guardado como pendiente');
                       limpiarFormulario();
                     }, 2000);
                   } catch (error) {
@@ -2019,10 +2035,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
             >
               <img 
                 src="/images/pending-orange-icon.svg" 
-                alt="Guardar" 
+                alt="Pendiente" 
                 style={{ width: '32px', height: '32px', marginBottom: '8px' }}
               />
-              <span style={{ fontSize: '14px', fontWeight: '600' }}>Guardar</span>
+              <span style={{ fontSize: '14px', fontWeight: '600' }}>Pendiente</span>
               <span style={{ fontSize: '11px', opacity: 0.85 }}>(Sin estadísticas)</span>
             </button>
 
