@@ -100,7 +100,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   const [allReportsFlat, setAllReportsFlat] = useState<Report[]>([]);
 
   // Función para eliminar reporte (solo administradores)
-  const deleteReport = (reportId: string, reportNumber: string, e?: React.MouseEvent) => {
+  const deleteReport = async (reportId: string, reportNumber: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
     }
@@ -111,11 +111,15 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
 
     if (isConfirmed) {
       try {
+        // Eliminar de Firebase primero (fuente de verdad)
+        await firebaseReportStorage.deleteReport(reportId);
+        // También eliminar de localStorage para sincronización
         reportStorage.deleteReport(reportId);
-        // Forzar recarga del componente
+        console.log(`✅ Reporte ${reportNumber} eliminado exitosamente de Firebase y localStorage`);
+        // Forzar recarga del componente para reflejar cambios
         window.location.reload();
       } catch (error) {
-        console.error('Error al eliminar reporte:', error);
+        console.error('❌ Error al eliminar reporte:', error);
         alert('Error al eliminar el reporte. Por favor intente nuevamente.');
       }
     }
