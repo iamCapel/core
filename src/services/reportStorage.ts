@@ -536,7 +536,6 @@ class ReportStorage {
    */
   getReportPreviewByNumber(numeroReporte: string): Partial<ReportData> | null {
     try {
-      const encryptedId = this.encryptReportNumber(numeroReporte);
       const index = this.getIndex();
       
       // Buscar en el índice primero (más rápido)

@@ -351,44 +351,9 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
   const inactiveUsers = users.filter(u => !u.isActive);
   const usersWithPendingReports = users.filter(u => u.pendingReportsCount && u.pendingReportsCount > 0);
 
-  // Agrupar usuarios por rol
-  const usersByRole = users.reduce((acc, user) => {
-    if (!acc[user.role]) {
-      acc[user.role] = [];
-    }
-    acc[user.role].push(user);
-    return acc;
-  }, {} as Record<string, UserProfile[]>);
-
-  // Agrupar usuarios por departamento
-  const usersByDepartment = users.reduce((acc, user) => {
-    if (!acc[user.department]) {
-      acc[user.department] = [];
-    }
-    acc[user.department].push(user);
-    return acc;
-  }, {} as Record<string, UserProfile[]>);
-
-  // Agrupar usuarios por provincia
-  const usersByProvince = users.reduce((acc, user) => {
-    const province = user.currentLocation?.province || 'Sin asignar';
-    if (!acc[province]) {
-      acc[province] = [];
-    }
-    acc[province].push(user);
-    return acc;
-  }, {} as Record<string, UserProfile[]>);
-
   // Ranking de usuarios por rendimiento (reportes registrados)
   const usersByPerformance = [...users].sort((a, b) => b.reportsCount - a.reportsCount);
   const maxReports = Math.max(...users.map(u => u.reportsCount), 1);
-
-  // Filtrar usuarios en búsqueda del modal de administración
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   if (showUserDetail && selectedUser) {
     return (

@@ -74,10 +74,7 @@ class FirebasePendingReportStorage {
     const pendingReports = await this.getAllPendingReports();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const filtered = pendingReports.filter(report => {
-      const reportDate = new Date(report.lastModified);
-      return reportDate > thirtyDaysAgo;
-    });
+    
     for (const report of pendingReports) {
       const reportDate = new Date(report.lastModified);
       if (reportDate <= thirtyDaysAgo) {
