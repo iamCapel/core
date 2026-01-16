@@ -1034,9 +1034,6 @@ const Dashboard: React.FC = () => {
   };
 
   const handleShowLeafletMap = () => {
-  };
-
-  const handleShowLeafletMap = () => {
     if (!isProfileComplete) {
       setShowCompleteProfileModal(true);
       return;
