@@ -778,6 +778,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
     
     // Validación para sistema multi-día
     if (diasTrabajo.length > 0) {
+      console.log('🔄 Modo multi-día detectado:', { diasTrabajo, reportesPorDia });
+      
       if (!region || !provincia || !distritoFinal || !sectorFinal) {
         alert('Por favor complete todos los campos geográficos requeridos');
         return;
@@ -792,9 +794,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setTimeout(async () => {
         try {
           let reportesGuardados = 0;
+          console.log('📊 Días a procesar:', diasTrabajo);
+          console.log('📦 Reportes por día:', reportesPorDia);
           
           for (const dia of diasTrabajo) {
             const reporteDia = reportesPorDia[dia];
+            console.log(`🔍 Procesando día ${dia}:`, reporteDia);
             
             if (reporteDia && reporteDia.tipoIntervencion) {
               const reportData = {
@@ -846,6 +851,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     }
     
     // Validación tradicional (reporte de un solo día)
+    console.log('📝 Modo un solo día - Validando campos...');
     if (!region || !provincia || !distritoFinal || !sectorFinal || !fechaInicio || !tipoIntervencion) {
       alert('Por favor complete todos los campos requeridos, incluyendo las fechas del proyecto');
       return;
@@ -912,9 +918,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
         await firebaseReportStorage.saveReport(savedReport);
         console.log('✅ Reporte guardado exitosamente en Firebase');
 
-        // Ocultar animación después de 2 segundos
+        // Ocultar animación y mostrar mensaje después de 2 segundos
         setTimeout(() => {
           setShowSaveAnimation(false);
+          alert('✅ 1 reporte guardado exitosamente');
           limpiarFormulario();
         }, 2000);
       } catch (error) {
