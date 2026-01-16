@@ -777,7 +777,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
     const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
     
     // Validación para sistema multi-día
-    if (diasTrabajo.length > 0) {
+    // Solo usar flujo multi-día si hay días Y al menos uno tiene datos guardados
+    const hayReportesGuardados = Object.values(reportesPorDia).some((r: any) => r.tipoIntervencion);
+    
+    if (diasTrabajo.length > 0 && hayReportesGuardados) {
       console.log('🔄 Modo multi-día detectado:', { diasTrabajo, reportesPorDia });
       
       if (!region || !provincia || !distritoFinal || !sectorFinal) {
