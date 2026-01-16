@@ -134,6 +134,10 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       try {
         let allReports = await firebaseReportStorage.getAllReports();
         
+        // IMPORTANTE: Excluir reportes con estado 'pendiente'
+        // Los reportes pendientes solo aparecen en consultas específicas de pendientes
+        allReports = allReports.filter(report => report.estado !== 'pendiente');
+        
         // Filtrar por rol si es técnico
         if (user?.role === 'Técnico' || user?.role === 'tecnico') {
           allReports = allReports.filter(report => report.creadoPor === user.username);
@@ -144,6 +148,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         console.error('Error cargando reportes de Firebase:', error);
         // Fallback a localStorage
         let allReports = reportStorage.getAllReports();
+        
+        // IMPORTANTE: Excluir reportes con estado 'pendiente'
+        allReports = allReports.filter(report => report.estado !== 'pendiente');
         
         // Filtrar por rol si es técnico
         if (user?.role === 'Técnico' || user?.role === 'tecnico') {
