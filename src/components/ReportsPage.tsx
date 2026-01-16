@@ -345,6 +345,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
     cargarDatosRegiones();
     const interval = setInterval(cargarDatosRegiones, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Actualizar contador de pendientes

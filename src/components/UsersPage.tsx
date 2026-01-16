@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import { userStorage } from '../services/userStorage';
 import * as firebaseUserStorage from '../services/firebaseUserStorage';
@@ -71,8 +70,6 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAdminUser, setSelectedAdminUser] = useState<UserProfile | null>(null);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [selectedPendingReport, setSelectedPendingReport] = useState<UserReport | null>(null);
-  const [showPendingReportPreview, setShowPendingReportPreview] = useState(false);
   
   // Estados para el formulario de crear usuario
   const [newUserForm, setNewUserForm] = useState({

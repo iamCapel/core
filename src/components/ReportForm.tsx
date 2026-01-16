@@ -1071,23 +1071,6 @@ const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
-  const handleGpsApprove = () => {
-    if (pendingCoords && targetField) {
-      const coordsString = `${pendingCoords.lat.toFixed(6)}, ${pendingCoords.lon.toFixed(6)}`;
-      setPlantillaValues(prev => ({ ...prev, [targetField.key]: coordsString }));
-      setGpsStatus(`Coordenadas aplicadas a "${targetField.label}": ${coordsString}`);
-      setApprovedGpsFields(prev => new Set(prev).add(targetField.key));
-    }
-    setPendingCoords(null);
-    setTargetField(null);
-  };
-
-  const handleGpsCancel = () => {
-    setPendingCoords(null);
-    setTargetField(null);
-    setGpsStatus('Coordenadas descartadas');
-  };
-
   // Funciones para manejar coordenadas automáticas
   const acceptAutoGps = (fieldKey: string) => {
     const coords = autoGpsFields[fieldKey];
