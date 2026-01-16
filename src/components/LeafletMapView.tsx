@@ -234,7 +234,6 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     const typeSet = new Set();
     interventionsData.forEach((i: Intervention) => typeSet.add(i.tipoIntervencion));
     const types = Array.from(typeSet) as string[];
-    setAllTypes(types);
     setSelectedTypes(types); // Mostrar todos por defecto
   }, [user]);
 
