@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { reportStorage } from '../services/reportStorage';
-import { pendingReportStorage } from '../services/pendingReportStorage';
 import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import './MyReportsCalendar.css';
 
@@ -89,6 +88,7 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
   useEffect(() => {
     loadUserReports();
     loadPendingReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadUserReports]);
 
   const loadPendingReports = async () => {

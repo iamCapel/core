@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { reportStorage } from '../services/reportStorage';
-import { pendingReportStorage } from '../services/pendingReportStorage';
 import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import PendingClockAnimation from './PendingClockAnimation';
