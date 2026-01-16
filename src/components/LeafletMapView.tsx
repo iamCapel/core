@@ -201,7 +201,6 @@ const INTERVENTION_COLORS = {
 const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [allTypes, setAllTypes] = useState<string[]>([]);
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
 
@@ -243,13 +242,6 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     selectedTypes.includes(intervention.tipoIntervencion)
   );
 
-  const toggleType = (type: string) => {
-    setSelectedTypes(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
-  };
 
   const getTypeColor = (tipo: string) => {
     for (const [key, color] of Object.entries(INTERVENTION_COLORS)) {
