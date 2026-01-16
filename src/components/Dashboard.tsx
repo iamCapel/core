@@ -7,8 +7,7 @@ import GoogleMapView from './GoogleMapView';
 import LeafletMapView from './LeafletMapView';
 import PendingReportsModal from './PendingReportsModal';
 import MyReportsCalendar from './MyReportsCalendar';
-import { UserRole, applyUserTheme, getRoleConfig, getRoleBadge, UserWithRole } from '../types/userRoles';
-import { pendingReportStorage } from '../services/pendingReportStorage';
+import { UserRole, applyUserTheme, getRoleBadge } from '../types/userRoles';
 import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import { userStorage } from '../services/userStorage';
 import * as firebaseUserStorage from '../services/firebaseUserStorage';
@@ -806,12 +805,6 @@ const Dashboard: React.FC = () => {
   }, []);
 
   // Navigation functions
-  const cargarIntervencion = (intervention: any) => {
-    setInterventionToEdit(intervention);
-    setShowReportForm(true);
-    setShowReportsPage(false);
-  };
-
   const submitLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginUser.trim() || !loginPass.trim()) {
@@ -1040,15 +1033,7 @@ const Dashboard: React.FC = () => {
     setShowLeafletMapView(false);
   };
 
-  const handleShowGoogleMap = () => {
-    if (!isProfileComplete) {
-      setShowCompleteProfileModal(true);
-      return;
-    }
-    setShowGoogleMapView(true);
-    setShowReportsPage(false);
-    setShowReportForm(false);
-    setShowLeafletMapView(false);
+  const handleShowLeafletMap = () => {
   };
 
   const handleShowLeafletMap = () => {
