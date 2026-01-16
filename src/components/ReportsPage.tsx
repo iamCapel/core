@@ -475,33 +475,44 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
           kilometraje: 0
         };
 
-        // Actualizar contadores de provincia (solo reportes completados/aprobados)
+        // Actualizar contadores de provincia y municipio
         // Los reportes con estado 'pendiente' NO se incluyen en estadísticas
         if (report.estado === 'completado' || report.estado === 'aprobado') {
           currentProv.total++;
           currentProv.completados++;
+          currentMun.total++;
           currentMun.completados++;
+          
+          // Calcular kilometraje solo para reportes completados/aprobados
+          if (report.gpsData?.start && report.gpsData?.end) {
+            const km = calcularDistanciaKm(
+              report.gpsData.start.latitude,
+              report.gpsData.start.longitude,
+              report.gpsData.end.latitude,
+              report.gpsData.end.longitude
+            );
+            currentProv.kilometraje += km;
+            currentMun.kilometraje += km;
+          }
         } else if (report.estado === 'en progreso') {
           currentProv.total++;
           currentProv.enProgreso++;
+          currentMun.total++;
           currentMun.enProgreso++;
+          
+          // Calcular kilometraje también para reportes en progreso
+          if (report.gpsData?.start && report.gpsData?.end) {
+            const km = calcularDistanciaKm(
+              report.gpsData.start.latitude,
+              report.gpsData.start.longitude,
+              report.gpsData.end.latitude,
+              report.gpsData.end.longitude
+            );
+            currentProv.kilometraje += km;
+            currentMun.kilometraje += km;
+          }
         }
-        // Los reportes 'pendiente' se ignoran en estadísticas
-
-        // Actualizar contadores de municipio
-        currentMun.total++;
-
-        // Calcular kilometraje de este reporte
-        if (report.gpsData?.start && report.gpsData?.end) {
-          const km = calcularDistanciaKm(
-            report.gpsData.start.latitude,
-            report.gpsData.start.longitude,
-            report.gpsData.end.latitude,
-            report.gpsData.end.longitude
-          );
-          currentProv.kilometraje += km;
-          currentMun.kilometraje += km;
-        }
+        // Los reportes 'pendiente' se ignoran completamente en estadísticas
 
         currentProv.municipios.set(municipio, currentMun);
         provinciaMap.set(provincia, currentProv);
