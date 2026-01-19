@@ -120,6 +120,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
   // Efecto para calcular días entre fechas
   useEffect(() => {
+    // ⚠️ No ejecutar si estamos cargando datos pendientes
+    if (isLoadingPendingData) {
+      console.log('⏸️ Saltando auto-generación de días - cargando datos pendientes');
+      return;
+    }
+    
     if (fechaInicio && fechaFinal) {
       const inicio = new Date(fechaInicio);
       const final = new Date(fechaFinal);
@@ -157,7 +163,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
         setReportesPorDia(nuevosReportes);
       }
     }
-  }, [fechaInicio, fechaFinal]);
+  }, [fechaInicio, fechaFinal, isLoadingPendingData]);
 
   // Cargar reportes pendientes cuando se abre el modal
   useEffect(() => {
@@ -311,28 +317,26 @@ const ReportForm: React.FC<ReportFormProps> = ({
         setAutoGpsFields(interventionToEdit.gpsData);
       }
       
-      // Cargar fecha si existe (para reportes pendientes)
-      if (interventionToEdit.fechaProyecto) {
-        console.log('📅 Cargando fecha del proyecto:', interventionToEdit.fechaProyecto);
-        setFechaInicio(interventionToEdit.fechaProyecto);
-        setFechaFinal(interventionToEdit.fechaProyecto);
-      }
-      
-      // ⭐ NUEVO: Cargar datos multi-día si existen
+      // ⭐ PRIMERO: Cargar datos multi-día si existen (ANTES de cargar fechas simples)
       if (interventionToEdit.diasTrabajo && Array.isArray(interventionToEdit.diasTrabajo) && interventionToEdit.diasTrabajo.length > 0) {
-        console.log('📅 Cargando días de trabajo:', interventionToEdit.diasTrabajo);
-        setDiasTrabajo(interventionToEdit.diasTrabajo);
+        console.log('📅 🔄 MODO MULTI-DÍA - Cargando días de trabajo:', interventionToEdit.diasTrabajo);
         
+        // Cargar primero los reportes por día
         if (interventionToEdit.reportesPorDia) {
           console.log('📦 Cargando reportes por día:', interventionToEdit.reportesPorDia);
           setReportesPorDia(interventionToEdit.reportesPorDia);
         }
         
+        // Luego los días
+        setDiasTrabajo(interventionToEdit.diasTrabajo);
+        
+        // Luego el día actual
         if (interventionToEdit.diaActual !== undefined) {
           console.log('📌 Cargando día actual:', interventionToEdit.diaActual);
           setDiaActual(interventionToEdit.diaActual);
         }
         
+        // Finalmente las fechas (esto puede disparar el useEffect pero está bloqueado)
         if (interventionToEdit.fechaInicio) {
           console.log('📅 Cargando fechaInicio:', interventionToEdit.fechaInicio);
           setFechaInicio(interventionToEdit.fechaInicio);
@@ -342,14 +346,21 @@ const ReportForm: React.FC<ReportFormProps> = ({
           console.log('📅 Cargando fechaFinal:', interventionToEdit.fechaFinal);
           setFechaFinal(interventionToEdit.fechaFinal);
         }
+      } 
+      // Si NO es multi-día, cargar fecha simple
+      else if (interventionToEdit.fechaProyecto) {
+        console.log('📅 Cargando fecha simple del proyecto:', interventionToEdit.fechaProyecto);
+        setFechaInicio(interventionToEdit.fechaProyecto);
+        setFechaFinal(interventionToEdit.fechaProyecto);
       }
       
       console.log('✅ ReportForm: Datos cargados completamente');
       
-      // ✅ Desbloquear auto-save después de un pequeño delay
+      // ✅ Desbloquear auto-save después de un delay más largo para asegurar que React termine
       setTimeout(() => {
+        console.log('🔓 Desbloqueando auto-save');
         setIsLoadingPendingData(false);
-      }, 500);
+      }, 1000); // Aumentado a 1 segundo
     }
   }, [interventionToEdit, plantillaDefault, sectoresPorProvincia]);
 
