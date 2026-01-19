@@ -551,33 +551,47 @@ const Dashboard: React.FC = () => {
   const [showProfileIncompleteNotification, setShowProfileIncompleteNotification] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
 
-  // Función para actualizar el contador de pendientes
+  // Función para actualizar el contador de pendientes del usuario actual
   const updatePendingCount = async () => {
     try {
-      const pendientes = await firebasePendingReportStorage.getAllPendingReports();
-      setPendingCount(pendientes.length);
+      // Obtener reportes con estado 'pendiente' de la colección principal
+      const allPending = await firebaseReportStorage.getReportsByEstado('pendiente');
+      
+      // Filtrar solo los del usuario actual
+      const userPending = allPending.filter(report => 
+        report.usuarioId === user?.username || report.creadoPor === user?.username
+      );
+      
+      setPendingCount(userPending.length);
+      console.log(`📊 Reportes pendientes del usuario ${user?.username}:`, userPending.length);
     } catch (error) {
       console.error('❌ Error actualizando contador de pendientes desde Firebase:', error);
       setPendingCount(0);
     }
   };
 
-  // Función para obtener lista detallada de reportes pendientes
+  // Función para obtener lista detallada de reportes pendientes del usuario
   const getPendingReports = async () => {
     try {
-      const pendingReports = await firebasePendingReportStorage.getAllPendingReports();
+      // Obtener reportes con estado 'pendiente' de la colección principal
+      const allPending = await firebaseReportStorage.getReportsByEstado('pendiente');
+      
+      // Filtrar solo los del usuario actual
+      const userPending = allPending.filter(report => 
+        report.usuarioId === user?.username || report.creadoPor === user?.username
+      );
 
-      const formatted = pendingReports.map(report => {
+      const formatted = userPending.map(report => {
         try {
           return {
             id: report.id,
-            reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
-            timestamp: report.timestamp,
-            estado: 'pendiente',
-            region: report.formData.region || 'N/A',
-            provincia: report.formData.provincia || 'N/A',
-            municipio: report.formData.municipio || 'N/A',
-            tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
+            reportNumber: report.numeroReporte || `DCR-${report.id.slice(-6)}`,
+            timestamp: report.timestamp || report.fechaCreacion,
+            estado: report.estado,
+            region: report.region || 'N/A',
+            provincia: report.provincia || 'N/A',
+            municipio: report.municipio || 'N/A',
+            tipoIntervencion: report.tipoIntervencion || 'No especificado'
           };
         } catch {
           return {
