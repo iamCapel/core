@@ -620,17 +620,30 @@ const Dashboard: React.FC = () => {
     try {
       console.log('📋 Cargando reporte pendiente desde Firebase:', reportId);
       
-      // Cargar desde Firebase para obtener los datos más recientes
-      const pendingReport = await firebasePendingReportStorage.getPendingReport(reportId);
+      // Cargar desde la colección principal de reportes (no desde pendingReports)
+      const pendingReport = await firebaseReportStorage.getReport(reportId);
       
       console.log('📦 Datos del reporte desde Firebase:', pendingReport);
       
-      if (pendingReport) {
-        // ✅ IGUAL QUE REPORTES COMPLETOS: Pasar TODO el objeto pendingReport
-        // El formData ya contiene todos los campos necesarios
+      if (pendingReport && pendingReport.estado === 'pendiente') {
+        // Convertir el reporte completo a formato de edición
         const dataToLoad = {
-          ...pendingReport.formData,
-          _pendingReportId: reportId // Campo especial para identificar el reporte pendiente
+          id: pendingReport.id,
+          region: pendingReport.region,
+          provincia: pendingReport.provincia,
+          distrito: pendingReport.distrito,
+          municipio: pendingReport.municipio,
+          sector: pendingReport.sector,
+          tipoIntervencion: pendingReport.tipoIntervencion,
+          subTipoCanal: pendingReport.subTipoCanal,
+          observaciones: pendingReport.observaciones,
+          metricData: pendingReport.metricData || {},
+          gpsData: pendingReport.gpsData || {},
+          vehiculos: pendingReport.vehiculos || [],
+          fechaInicio: pendingReport.fechaCreacion ? pendingReport.fechaCreacion.split('T')[0] : '',
+          fechaReporte: pendingReport.fechaCreacion ? pendingReport.fechaCreacion.split('T')[0] : '',
+          estado: pendingReport.estado,
+          _isEditingPending: true // Marca para identificar que se está editando un pendiente
         };
         
         console.log('✅ Datos a cargar en el formulario:', dataToLoad);
@@ -654,8 +667,8 @@ const Dashboard: React.FC = () => {
   // Función para cancelar/eliminar un reporte pendiente
   const handleCancelPendingReport = async (reportId: string) => {
     try {
-      // Eliminar SOLO de Firebase
-      await firebasePendingReportStorage.deletePendingReport(reportId);
+      // Eliminar de la colección principal de Firebase
+      await firebaseReportStorage.deleteReport(reportId);
       console.log('✅ Reporte pendiente eliminado de Firebase');
       await updatePendingCount();
       // Actualizar la vista del modal
