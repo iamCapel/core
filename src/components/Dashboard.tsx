@@ -640,9 +640,14 @@ const Dashboard: React.FC = () => {
           metricData: pendingReport.metricData || {},
           gpsData: pendingReport.gpsData || {},
           vehiculos: pendingReport.vehiculos || [],
-          fechaInicio: pendingReport.fechaCreacion ? pendingReport.fechaCreacion.split('T')[0] : '',
+          fechaInicio: pendingReport.fechaInicio || (pendingReport.fechaCreacion ? pendingReport.fechaCreacion.split('T')[0] : ''),
+          fechaFinal: pendingReport.fechaFinal || '',
           fechaReporte: pendingReport.fechaCreacion ? pendingReport.fechaCreacion.split('T')[0] : '',
           estado: pendingReport.estado,
+          // Restaurar datos multi-día si existen
+          diasTrabajo: pendingReport.diasTrabajo || [],
+          reportesPorDia: pendingReport.reportesPorDia || {},
+          diaActual: pendingReport.diaActual || 0,
           _isEditingPending: true // Marca para identificar que se está editando un pendiente
         };
         

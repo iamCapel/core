@@ -318,6 +318,32 @@ const ReportForm: React.FC<ReportFormProps> = ({
         setFechaFinal(interventionToEdit.fechaProyecto);
       }
       
+      // ⭐ NUEVO: Cargar datos multi-día si existen
+      if (interventionToEdit.diasTrabajo && Array.isArray(interventionToEdit.diasTrabajo) && interventionToEdit.diasTrabajo.length > 0) {
+        console.log('📅 Cargando días de trabajo:', interventionToEdit.diasTrabajo);
+        setDiasTrabajo(interventionToEdit.diasTrabajo);
+        
+        if (interventionToEdit.reportesPorDia) {
+          console.log('📦 Cargando reportes por día:', interventionToEdit.reportesPorDia);
+          setReportesPorDia(interventionToEdit.reportesPorDia);
+        }
+        
+        if (interventionToEdit.diaActual !== undefined) {
+          console.log('📌 Cargando día actual:', interventionToEdit.diaActual);
+          setDiaActual(interventionToEdit.diaActual);
+        }
+        
+        if (interventionToEdit.fechaInicio) {
+          console.log('📅 Cargando fechaInicio:', interventionToEdit.fechaInicio);
+          setFechaInicio(interventionToEdit.fechaInicio);
+        }
+        
+        if (interventionToEdit.fechaFinal) {
+          console.log('📅 Cargando fechaFinal:', interventionToEdit.fechaFinal);
+          setFechaFinal(interventionToEdit.fechaFinal);
+        }
+      }
+      
       console.log('✅ ReportForm: Datos cargados completamente');
       
       // ✅ Desbloquear auto-save después de un pequeño delay
@@ -1982,6 +2008,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
                       gpsData: autoGpsFields,
                       vehiculos: vehiculos,
                       estado: 'pendiente' as const,  // ✅ Solo aparece en búsquedas de pendientes
+                      // Guardar datos multi-día si existen
+                      diasTrabajo: diasTrabajo.length > 0 ? diasTrabajo : undefined,
+                      reportesPorDia: diasTrabajo.length > 0 ? reportesPorDia : undefined,
+                      fechaInicio: fechaInicio || undefined,
+                      fechaFinal: fechaFinal || undefined,
+                      diaActual: diasTrabajo.length > 0 ? diaActual : undefined
                     };
                     
                     const savedReport = await reportStorage.saveReport(reportData);

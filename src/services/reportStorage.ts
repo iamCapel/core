@@ -73,6 +73,15 @@ export interface ReportData {
   // Estado del reporte
   estado: 'completado' | 'pendiente' | 'borrador' | 'en_revision' | 'aprobado' | 'rechazado';
   
+  // Datos multi-día (para reportes de proyectos)
+  diasTrabajo?: string[];
+  reportesPorDia?: Record<string, any>;
+  diaActual?: number;
+  fechaInicio?: string;
+  fechaFinal?: string;
+  fechaProyecto?: string;
+  esProyectoMultiDia?: boolean;
+  
   // Metadata
   version: number;
   etiquetas?: string[];
