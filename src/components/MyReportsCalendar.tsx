@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { reportStorage } from '../services/reportStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import './MyReportsCalendar.css';
 
@@ -94,13 +95,32 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
   const loadPendingReports = async () => {
     console.log('📥 Cargando reportes pendientes desde Firebase para usuario:', username);
     try {
-      const allPending = await firebasePendingReportStorage.getAllPendingReports();
+      // Obtener reportes con estado 'pendiente' desde la colección principal
+      const allPending = await firebaseReportStorage.getReportsByEstado('pendiente');
       console.log('📦 Total reportes pendientes en Firebase:', allPending.length);
       
-      const userPending = allPending.filter(report => report.userId === username);
+      // Filtrar solo los del usuario actual
+      const userPending = allPending.filter(report => 
+        report.usuarioId === username || report.creadoPor === username
+      );
       console.log('✅ Reportes pendientes del usuario:', userPending.length);
       
-      setPendingReports(userPending);
+      // Convertir al formato esperado
+      const formattedPending = userPending.map(report => ({
+        id: report.id,
+        userId: report.usuarioId,
+        formData: {
+          region: report.region,
+          provincia: report.provincia,
+          municipio: report.municipio,
+          tipoIntervencion: report.tipoIntervencion
+        },
+        timestamp: report.timestamp || report.fechaCreacion,
+        numeroReporte: report.numeroReporte,
+        estado: report.estado
+      }));
+      
+      setPendingReports(formattedPending);
     } catch (error) {
       console.error('❌ Error cargando reportes pendientes desde Firebase:', error);
       alert('Error al cargar reportes pendientes. Verifique su conexión a internet.');
