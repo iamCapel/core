@@ -32,6 +32,11 @@ interface Report {
   creadoPor?: string;
   estado?: string;
   kilometraje?: number;
+  // Campos para reportes multi-día
+  esMultiDia?: boolean;
+  diaNumero?: number;
+  totalDias?: number;
+  reporteOriginalId?: string;
 }
 
 interface District {
@@ -192,32 +197,69 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         km = R * c;
       }
       
-      // Convertir reporte al formato esperado
-      const formattedReport = {
-        id: report.id,
-        reportNumber: report.numeroReporte,
-        createdBy: report.creadoPor,
-        date: new Date(report.fechaCreacion).toLocaleDateString(),
-        district: report.distrito,
-        province: report.provincia,
-        region: report.region,
-        municipio: report.municipio,
-        sector: report.sector,
-        totalInterventions: 1,
-        tipoIntervencion: report.tipoIntervencion,
-        subTipoCanal: report.subTipoCanal,
-        metricData: report.metricData || {},
-        gpsData: report.gpsData,
-        observations: report.observaciones,
-        fechaCreacion: report.fechaCreacion,
-        numeroReporte: report.numeroReporte,
-        creadoPor: report.creadoPor,
-        estado: report.estado,
-        kilometraje: km
-      };
-      
-      hierarchyMap[region][provincia][distrito].push(formattedReport);
-      flatReports.push(formattedReport);
+      // Si es proyecto multi-día, expandir en múltiples entradas
+      if (report.esProyectoMultiDia && report.diasTrabajo && report.diasTrabajo.length > 0) {
+        report.diasTrabajo.forEach((dia: string, index: number) => {
+          const dayData = report.reportesPorDia?.[dia] || {};
+          
+          const formattedReport = {
+            id: `${report.id}_dia_${index + 1}`,
+            reportNumber: `${report.numeroReporte} (Día ${index + 1}/${report.diasTrabajo.length})`,
+            createdBy: report.creadoPor,
+            date: new Date(dia).toLocaleDateString(),
+            district: report.distrito,
+            province: report.provincia,
+            region: report.region,
+            municipio: report.municipio,
+            sector: report.sector,
+            totalInterventions: 1,
+            tipoIntervencion: report.tipoIntervencion,
+            subTipoCanal: report.subTipoCanal,
+            metricData: dayData.metricData || report.metricData || {},
+            gpsData: dayData.gpsData || report.gpsData,
+            observations: dayData.observaciones || report.observaciones,
+            fechaCreacion: dia,
+            numeroReporte: report.numeroReporte,
+            creadoPor: report.creadoPor,
+            estado: report.estado,
+            kilometraje: km / report.diasTrabajo.length, // Distribuir kilometraje entre días
+            esMultiDia: true,
+            diaNumero: index + 1,
+            totalDias: report.diasTrabajo.length,
+            reporteOriginalId: report.id
+          };
+          
+          hierarchyMap[region][provincia][distrito].push(formattedReport);
+          flatReports.push(formattedReport);
+        });
+      } else {
+        // Reporte de un solo día
+        const formattedReport = {
+          id: report.id,
+          reportNumber: report.numeroReporte,
+          createdBy: report.creadoPor,
+          date: new Date(report.fechaCreacion).toLocaleDateString(),
+          district: report.distrito,
+          province: report.provincia,
+          region: report.region,
+          municipio: report.municipio,
+          sector: report.sector,
+          totalInterventions: 1,
+          tipoIntervencion: report.tipoIntervencion,
+          subTipoCanal: report.subTipoCanal,
+          metricData: report.metricData || {},
+          gpsData: report.gpsData,
+          observations: report.observaciones,
+          fechaCreacion: report.fechaCreacion,
+          numeroReporte: report.numeroReporte,
+          creadoPor: report.creadoPor,
+          estado: report.estado,
+          kilometraje: km
+        };
+        
+        hierarchyMap[region][provincia][distrito].push(formattedReport);
+        flatReports.push(formattedReport);
+      }
     });
     
     // Construir estructura de regiones
