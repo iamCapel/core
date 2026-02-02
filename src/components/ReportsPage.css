@@ -5226,6 +5226,304 @@
 }
 
 /* ============================================
+   TABLA COMPACTA DE VEHÍCULOS EN INFORME
+   ============================================ */
+
+.informe-vehiculos-tabla-compacta {
+  width: 100%;
+  overflow-x: auto;
+  margin-bottom: 30px;
+}
+
+.tabla-vehiculos-compacta {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tabla-vehiculos-compacta thead {
+  background: linear-gradient(135deg, var(--primary-orange) 0%, var(--secondary-orange) 100%);
+  color: white;
+}
+
+.tabla-vehiculos-compacta th {
+  padding: 15px 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 3px solid var(--secondary-orange);
+}
+
+.tabla-vehiculos-compacta tbody tr {
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.2s;
+}
+
+.tabla-vehiculos-compacta tbody tr:hover {
+  background: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tabla-vehiculos-compacta tbody tr:last-child {
+  border-bottom: none;
+}
+
+.tabla-vehiculos-compacta td {
+  padding: 15px 12px;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+/* Columna Tipo de Vehículo */
+.tipo-vehiculo-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.tipo-vehiculo-cell .vehiculo-icon {
+  font-size: 28px;
+}
+
+.tipo-vehiculo-cell .vehiculo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tipo-vehiculo-cell .tipo-nombre {
+  font-weight: 700;
+  color: var(--primary-orange);
+  font-size: 14px;
+}
+
+.tipo-vehiculo-cell .modelo-nombre {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+/* Columna Ficha */
+.ficha-cell {
+  text-align: center;
+}
+
+.ficha-badge {
+  display: inline-block;
+  background: var(--pale-orange);
+  color: var(--primary-orange);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* Columna Actividades */
+.actividades-cell {
+  text-align: center;
+}
+
+.actividades-count {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary-orange);
+  line-height: 1;
+}
+
+.actividades-label {
+  display: block;
+  font-size: 11px;
+  color: #6c757d;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Columna Última Actividad */
+.ultima-actividad-cell {
+  min-width: 150px;
+}
+
+.actividad-tipo {
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.actividad-fecha {
+  font-size: 12px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Columna Ubicación */
+.ubicacion-cell {
+  min-width: 200px;
+}
+
+.ubicacion-principal {
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.ubicacion-detalle {
+  font-size: 12px;
+  color: #6c757d;
+  padding-left: 18px;
+}
+
+/* Columna Usuario */
+.usuario-cell {
+  min-width: 150px;
+}
+
+.usuario-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usuario-icon {
+  font-size: 20px;
+}
+
+.usuario-nombre {
+  font-weight: 600;
+  color: #495057;
+  font-size: 13px;
+}
+
+/* Media query para impresión de tabla */
+@media print {
+  .tabla-vehiculos-compacta {
+    box-shadow: none;
+    page-break-inside: auto;
+  }
+
+  .tabla-vehiculos-compacta thead {
+    background: #f8f9fa !important;
+    color: #000 !important;
+    border-bottom: 2px solid var(--primary-orange) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .tabla-vehiculos-compacta th {
+    background: #f8f9fa !important;
+    color: #000 !important;
+    border-bottom: 2px solid var(--primary-orange) !important;
+  }
+
+  .tabla-vehiculos-compacta tbody tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .ficha-badge {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Responsive para tabla compacta */
+@media (max-width: 1200px) {
+  .tabla-vehiculos-compacta {
+    font-size: 12px;
+  }
+
+  .tabla-vehiculos-compacta th,
+  .tabla-vehiculos-compacta td {
+    padding: 10px 8px;
+  }
+
+  .tipo-vehiculo-cell {
+    min-width: 150px;
+  }
+
+  .ubicacion-cell {
+    min-width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* En móvil, convertir tabla a cards */
+  .informe-vehiculos-tabla-compacta {
+    overflow-x: visible;
+  }
+
+  .tabla-vehiculos-compacta,
+  .tabla-vehiculos-compacta thead,
+  .tabla-vehiculos-compacta tbody,
+  .tabla-vehiculos-compacta th,
+  .tabla-vehiculos-compacta td,
+  .tabla-vehiculos-compacta tr {
+    display: block;
+  }
+
+  .tabla-vehiculos-compacta thead {
+    display: none;
+  }
+
+  .tabla-vehiculos-compacta tbody tr {
+    margin-bottom: 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    background: white;
+  }
+
+  .tabla-vehiculos-compacta td {
+    padding: 8px 0;
+    border: none;
+    position: relative;
+    padding-left: 50%;
+  }
+
+  .tabla-vehiculos-compacta td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 10px;
+    font-weight: 700;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+
+  .tipo-vehiculo-cell,
+  .actividades-cell,
+  .ficha-cell,
+  .ubicacion-cell,
+  .ultima-actividad-cell,
+  .usuario-cell {
+    min-width: 100%;
+    text-align: left;
+  }
+
+  .actividades-count {
+    display: inline;
+    font-size: 18px;
+    margin-right: 5px;
+  }
+
+  .actividades-label {
+    display: inline;
+    font-size: 12px;
+  }
+}
+
+/* ============================================
+   FIN TABLA COMPACTA
+   ============================================ */
+
+/* ============================================
    MEDIA QUERIES PARA IMPRESIÓN (PDF)
    ============================================ */
 

@@ -673,78 +673,70 @@ const VehiculosView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Grid de vehículos */}
-              <div className="informe-vehiculos-grid">
-                {Object.values(informeData).map((vehiculo: any) => (
-                  <div key={vehiculo.ficha} className="informe-vehiculo-card">
-                    <div className="informe-vehiculo-header">
-                      <div className="informe-vehiculo-title">🚜 {vehiculo.tipo}</div>
-                      <div className="informe-vehiculo-info">
-                        <div><strong>Modelo:</strong> {vehiculo.modelo}</div>
-                        <div><strong>Ficha:</strong> {vehiculo.ficha}</div>
-                      </div>
-                    </div>
-
-                    <div className="informe-vehiculo-stats">
-                      <div className="informe-stat-mini">
-                        <span className="informe-stat-mini-value">{vehiculo.actividades.length}</span>
-                        <span className="informe-stat-mini-label">Actividades</span>
-                      </div>
-                      <div className="informe-stat-mini">
-                        <span className="informe-stat-mini-value">{vehiculo.diasActivos.size}</span>
-                        <span className="informe-stat-mini-label">Días Activos</span>
-                      </div>
-                      <div className="informe-stat-mini">
-                        <span className="informe-stat-mini-value">{vehiculo.totalKm.toFixed(1)} km</span>
-                        <span className="informe-stat-mini-label">Recorrido</span>
-                      </div>
-                      <div className="informe-stat-mini">
-                        <span className="informe-stat-mini-value">{vehiculo.regiones.size}</span>
-                        <span className="informe-stat-mini-label">Regiones</span>
-                      </div>
-                    </div>
-
-                    <div className="informe-actividades-section">
-                      <div className="informe-actividades-title">📋 Actividades y Recorridos</div>
-                      {vehiculo.actividades
-                        .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-                        .map((actividad: any, idx: number) => (
-                          <div key={idx} className="informe-actividad-item">
-                            <div className="informe-actividad-header">
-                              <span className="informe-actividad-fecha">
-                                📅 {new Date(actividad.fecha).toLocaleDateString('es-ES', {
-                                  weekday: 'short',
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                              </span>
-                              <span 
-                                className="informe-actividad-reporte numero-reporte-clickeable"
-                                onClick={() => abrirDetalleReporte(actividad.numeroReporte)}
-                              >
-                                #{actividad.numeroReporte}
-                              </span>
+              {/* Grid de vehículos - Versión Compacta */}
+              <div className="informe-vehiculos-tabla-compacta">
+                <table className="tabla-vehiculos-compacta">
+                  <thead>
+                    <tr>
+                      <th>Tipo de Vehículo</th>
+                      <th>Ficha</th>
+                      <th>Total Actividades</th>
+                      <th>Última Actividad</th>
+                      <th>Última Ubicación</th>
+                      <th>Registrado Por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.values(informeData).map((vehiculo: any) => {
+                      // Obtener la última actividad (más reciente)
+                      const ultimaActividad = vehiculo.actividades
+                        .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
+                      
+                      return (
+                        <tr key={vehiculo.ficha}>
+                          <td className="tipo-vehiculo-cell">
+                            <span className="vehiculo-icon">🚜</span>
+                            <div className="vehiculo-info">
+                              <div className="tipo-nombre">{vehiculo.tipo}</div>
+                              <div className="modelo-nombre">{vehiculo.modelo}</div>
                             </div>
-                            <div className="informe-actividad-detalles">
-                              <div><strong>🔧 Tipo:</strong> {actividad.tipoIntervencion}</div>
-                              <div className="informe-ubicacion-box">
-                                <div><strong>📍 Región:</strong> {actividad.region}</div>
-                                <div><strong>📍 Provincia:</strong> {actividad.provincia}</div>
-                                <div><strong>📍 Distrito:</strong> {actividad.distrito}</div>
-                                <div><strong>📍 Municipio:</strong> {actividad.municipio}</div>
-                                <div><strong>📍 Sector:</strong> {actividad.sector}</div>
-                              </div>
-                              <div><strong>👤 Registrado por:</strong> {actividad.usuario}</div>
-                              {actividad.kilometraje > 0 && (
-                                <div><strong>📏 Kilometraje:</strong> {actividad.kilometraje.toFixed(2)} km</div>
-                              )}
+                          </td>
+                          <td className="ficha-cell">
+                            <span className="ficha-badge">{vehiculo.ficha}</span>
+                          </td>
+                          <td className="actividades-cell">
+                            <span className="actividades-count">{vehiculo.actividades.length}</span>
+                            <span className="actividades-label">actividades</span>
+                          </td>
+                          <td className="ultima-actividad-cell">
+                            <div className="actividad-tipo">{ultimaActividad.tipoIntervencion}</div>
+                            <div className="actividad-fecha">
+                              {new Date(ultimaActividad.fecha).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
                             </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                ))}
+                          </td>
+                          <td className="ubicacion-cell">
+                            <div className="ubicacion-principal">
+                              📍 {ultimaActividad.provincia}, {ultimaActividad.municipio}
+                            </div>
+                            <div className="ubicacion-detalle">
+                              {ultimaActividad.sector}
+                            </div>
+                          </td>
+                          <td className="usuario-cell">
+                            <div className="usuario-info">
+                              <span className="usuario-icon">👤</span>
+                              <span className="usuario-nombre">{ultimaActividad.usuario}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               {/* Footer del informe */}
