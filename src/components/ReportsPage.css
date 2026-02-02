@@ -5528,11 +5528,18 @@
    ============================================ */
 
 @media print {
+  /* Configuración general de página */
+  @page {
+    margin: 0.5cm;
+    size: A4 portrait;
+  }
+
   /* Ocultar elementos no necesarios para impresión */
   .informe-fullscreen-modal {
     position: static;
     background: white;
     padding: 0;
+    margin: 0;
   }
 
   .informe-container {
@@ -5540,6 +5547,8 @@
     max-height: none;
     box-shadow: none;
     border-radius: 0;
+    margin: 0;
+    padding: 0;
   }
 
   .informe-close-btn,
@@ -5547,9 +5556,12 @@
     display: none !important;
   }
 
+  /* Header compacto */
   .informe-header {
     border-radius: 0;
     page-break-after: avoid;
+    padding: 15px 20px !important;
+    margin-bottom: 10px !important;
   }
 
   /* Asegurar que el texto del header sea visible en impresión */
@@ -5558,40 +5570,174 @@
   .informe-subtitle {
     color: #000 !important;
     background: #f8f9fa !important;
-    border-bottom: 3px solid var(--primary-orange);
+    border-bottom: 2px solid #FF7700;
   }
 
-  .informe-vehiculo-card {
-    page-break-inside: avoid;
-    break-inside: avoid;
-    box-shadow: none;
-    border: 1px solid #dee2e6;
-  }
-
-  .informe-actividad-item {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  .informe-vehiculos-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Ajustar tamaño de fuentes para impresión */
   .informe-title-section h1 {
-    font-size: 24px;
+    font-size: 18px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .informe-subtitle {
+    font-size: 12px !important;
+  }
+
+  /* Período más compacto */
+  .informe-period {
+    padding: 8px 20px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .informe-period p {
+    margin: 2px 0 !important;
+    font-size: 11px !important;
+  }
+
+  /* Contenido compacto */
+  .informe-content {
+    padding: 10px 20px !important;
+  }
+
+  /* Resumen de estadísticas más compacto */
+  .informe-summary {
+    gap: 10px !important;
+    margin-bottom: 15px !important;
+  }
+
+  .informe-stat-card {
+    padding: 10px !important;
+    box-shadow: none !important;
+    border: 1px solid #dee2e6 !important;
   }
 
   .informe-stat-value {
-    font-size: 28px;
+    font-size: 20px !important;
   }
 
-  /* Asegurar que los colores se muestren */
-  .informe-header,
-  .informe-stat-card,
-  .btn-descargar-pdf {
+  .informe-stat-label {
+    font-size: 10px !important;
+  }
+
+  /* Tabla compacta para impresión */
+  .informe-vehiculos-tabla-compacta {
+    margin-bottom: 15px !important;
+  }
+
+  .tabla-vehiculos-compacta {
+    font-size: 10px !important;
+    box-shadow: none !important;
+    page-break-inside: auto;
+  }
+
+  .tabla-vehiculos-compacta thead {
+    background: #f8f9fa !important;
+    color: #000 !important;
+    border-bottom: 2px solid #FF7700 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .tabla-vehiculos-compacta th {
+    padding: 8px 6px !important;
+    font-size: 9px !important;
+    background: #f8f9fa !important;
+    color: #000 !important;
+    border-bottom: 2px solid #FF7700 !important;
+  }
+
+  .tabla-vehiculos-compacta tbody tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .tabla-vehiculos-compacta td {
+    padding: 8px 6px !important;
+    font-size: 10px !important;
+  }
+
+  /* Celdas más compactas */
+  .tipo-vehiculo-cell {
+    min-width: auto !important;
+  }
+
+  .tipo-vehiculo-cell .vehiculo-icon {
+    font-size: 18px !important;
+  }
+
+  .tipo-vehiculo-cell .tipo-nombre {
+    font-size: 11px !important;
+  }
+
+  .tipo-vehiculo-cell .modelo-nombre {
+    font-size: 9px !important;
+  }
+
+  .ficha-badge {
+    padding: 3px 8px !important;
+    font-size: 10px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .actividades-count {
+    font-size: 16px !important;
+  }
+
+  .actividades-label {
+    font-size: 9px !important;
+  }
+
+  .actividad-tipo,
+  .ubicacion-principal {
+    font-size: 10px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .actividad-fecha,
+  .ubicacion-detalle {
+    font-size: 9px !important;
+  }
+
+  .usuario-icon {
+    font-size: 14px !important;
+  }
+
+  .usuario-nombre {
+    font-size: 10px !important;
+  }
+
+  /* Footer compacto */
+  .informe-footer {
+    padding: 10px 20px !important;
+    margin-top: 10px !important;
+    font-size: 9px !important;
+    page-break-before: avoid;
+  }
+
+  .informe-footer p {
+    margin: 2px 0 !important;
+  }
+
+  /* Forzar colores en impresión */
+  .informe-header,
+  .informe-stat-card,
+  .ficha-badge,
+  .tabla-vehiculos-compacta thead {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Eliminar fondos innecesarios para ahorrar tinta */
+  .informe-stat-card {
+    background: white !important;
+  }
+
+  /* Ocultar elementos de tarjetas antiguas si existen */
+  .informe-vehiculos-grid,
+  .informe-vehiculo-card,
+  .informe-actividad-item {
+    display: none !important;
   }
 }
 
