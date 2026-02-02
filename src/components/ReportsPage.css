@@ -5609,21 +5609,32 @@
     size: A4 portrait;
   }
 
-  /* Ocultar elementos no necesarios para impresión */
+  /* OCULTAR TODA LA VISTA DE VEHÍCULOS NORMAL */
+  .vehiculos-topbar,
+  .vehiculos-grid,
+  .vehiculo-card,
+  .vehiculos-search,
+  .btn-export-vehiculos,
+  .vehiculos-loading {
+    display: none !important;
+  }
+
+  /* MOSTRAR SOLO EL MODAL DE INFORME */
   .informe-fullscreen-modal {
-    position: static;
-    background: white;
-    padding: 0;
-    margin: 0;
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
   }
 
   .informe-container {
-    max-width: 100%;
-    max-height: none;
-    box-shadow: none;
-    border-radius: 0;
-    margin: 0;
-    padding: 0;
+    max-width: 100% !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .informe-close-btn,
