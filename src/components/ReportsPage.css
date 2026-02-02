@@ -5693,56 +5693,97 @@
     font-size: 10px !important;
   }
 
-  /* Tabla compacta para impresión - OCULTAR */
+  /* Tabla compacta para impresión - MOSTRAR */
   .informe-vehiculos-tabla-compacta {
-    display: none !important;
-  }
-
-  /* Lista de vehículos - estilo modal compacto */
-  .informe-vehiculos-lista {
-    gap: 10px !important;
     margin-bottom: 15px !important;
   }
 
-  .informe-vehiculo-item {
-    padding: 10px !important;
+  .tabla-vehiculos-compacta {
+    font-size: 10px !important;
     box-shadow: none !important;
-    border: 1px solid #dee2e6 !important;
+    page-break-inside: auto;
+  }
+
+  .tabla-vehiculos-compacta thead {
+    background: #f8f9fa !important;
+    color: #000 !important;
+    border-bottom: 2px solid #FF7700 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .tabla-vehiculos-compacta th {
+    padding: 8px 6px !important;
+    font-size: 9px !important;
+    background: #f8f9fa !important;
+    color: #000 !important;
+    border-bottom: 2px solid #FF7700 !important;
+  }
+
+  .tabla-vehiculos-compacta tbody tr {
     page-break-inside: avoid;
     break-inside: avoid;
   }
 
-  .vehiculo-item-header {
-    padding-bottom: 8px !important;
-    margin-bottom: 8px !important;
+  .tabla-vehiculos-compacta td {
+    padding: 8px 6px !important;
+    font-size: 10px !important;
   }
 
-  .vehiculo-item-header .vehiculo-icon {
+  /* Celdas más compactas */
+  .tipo-vehiculo-cell {
+    min-width: auto !important;
+  }
+
+  .tipo-vehiculo-cell .vehiculo-icon {
     font-size: 18px !important;
   }
 
-  .vehiculo-item-header h3 {
-    font-size: 12px !important;
+  .tipo-vehiculo-cell .tipo-nombre {
+    font-size: 11px !important;
   }
 
-  .vehiculo-item-grid {
-    gap: 8px !important;
-  }
-
-  .vehiculo-field label {
+  .tipo-vehiculo-cell .modelo-nombre {
     font-size: 9px !important;
   }
 
-  .vehiculo-field .field-value {
+  .ficha-badge {
+    padding: 3px 8px !important;
     font-size: 10px !important;
-    padding: 5px 8px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  /* Forzar colores en impresión */
-  .vehiculo-item-header,
-  .vehiculo-field .field-value {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+  .actividades-count {
+    font-size: 16px !important;
+  }
+
+  .actividades-label {
+    font-size: 9px !important;
+  }
+
+  .actividad-tipo,
+  .ubicacion-principal {
+    font-size: 10px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .actividad-fecha,
+  .ubicacion-detalle {
+    font-size: 9px !important;
+  }
+
+  .usuario-icon {
+    font-size: 14px !important;
+  }
+
+  .usuario-nombre {
+    font-size: 10px !important;
+  }
+
+  /* Lista de vehículos - OCULTAR en impresión */
+  .informe-vehiculos-lista {
+    display: none !important;
   }
 
   /* Footer compacto */

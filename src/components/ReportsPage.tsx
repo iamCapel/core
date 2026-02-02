@@ -673,59 +673,70 @@ const VehiculosView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Lista de vehículos - Formato Modal Compacto */}
-              <div className="informe-vehiculos-lista">
-                {Object.values(informeData).map((vehiculo: any) => {
-                  // Obtener la última actividad (más reciente)
-                  const ultimaActividad = vehiculo.actividades
-                    .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
-                  
-                  return (
-                    <div key={vehiculo.ficha} className="informe-vehiculo-item">
-                      {/* Header del vehículo */}
-                      <div className="vehiculo-item-header">
-                        <span className="vehiculo-icon">🚜</span>
-                        <h3>{vehiculo.tipo} - {vehiculo.modelo}</h3>
-                      </div>
-
-                      {/* Información del vehículo en grid */}
-                      <div className="vehiculo-item-grid">
-                        <div className="vehiculo-field">
-                          <label>Ficha:</label>
-                          <div className="field-value">{vehiculo.ficha}</div>
-                        </div>
-                        <div className="vehiculo-field">
-                          <label>Total Actividades:</label>
-                          <div className="field-value">{vehiculo.actividades.length}</div>
-                        </div>
-                        <div className="vehiculo-field">
-                          <label>Última Actividad:</label>
-                          <div className="field-value">{ultimaActividad.tipoIntervencion}</div>
-                        </div>
-                        <div className="vehiculo-field">
-                          <label>Fecha:</label>
-                          <div className="field-value">
-                            {new Date(ultimaActividad.fecha).toLocaleDateString('es-ES', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </div>
-                        </div>
-                        <div className="vehiculo-field full-width">
-                          <label>Última Ubicación:</label>
-                          <div className="field-value">
-                            📍 {ultimaActividad.provincia}, {ultimaActividad.municipio} - {ultimaActividad.sector}
-                          </div>
-                        </div>
-                        <div className="vehiculo-field full-width">
-                          <label>Registrado por:</label>
-                          <div className="field-value">👤 {ultimaActividad.usuario}</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Lista de vehículos - Formato Tabla Compacta */}
+              <div className="informe-vehiculos-tabla-compacta">
+                <table className="tabla-vehiculos-compacta">
+                  <thead>
+                    <tr>
+                      <th>Tipo de Vehículo</th>
+                      <th>Ficha</th>
+                      <th>Total Actividades</th>
+                      <th>Última Actividad</th>
+                      <th>Última Ubicación</th>
+                      <th>Registrado Por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.values(informeData).map((vehiculo: any) => {
+                      // Obtener la última actividad (más reciente)
+                      const ultimaActividad = vehiculo.actividades
+                        .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
+                      
+                      return (
+                        <tr key={vehiculo.ficha}>
+                          <td className="tipo-vehiculo-cell">
+                            <span className="vehiculo-icon">🚜</span>
+                            <div className="vehiculo-info">
+                              <div className="tipo-nombre">{vehiculo.tipo}</div>
+                              <div className="modelo-nombre">{vehiculo.modelo}</div>
+                            </div>
+                          </td>
+                          <td className="ficha-cell">
+                            <span className="ficha-badge">{vehiculo.ficha}</span>
+                          </td>
+                          <td className="actividades-cell">
+                            <span className="actividades-count">{vehiculo.actividades.length}</span>
+                            <span className="actividades-label">actividades</span>
+                          </td>
+                          <td className="ultima-actividad-cell">
+                            <div className="actividad-tipo">{ultimaActividad.tipoIntervencion}</div>
+                            <div className="actividad-fecha">
+                              {new Date(ultimaActividad.fecha).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </div>
+                          </td>
+                          <td className="ubicacion-cell">
+                            <div className="ubicacion-principal">
+                              📍 {ultimaActividad.provincia}, {ultimaActividad.municipio}
+                            </div>
+                            <div className="ubicacion-detalle">
+                              {ultimaActividad.sector}
+                            </div>
+                          </td>
+                          <td className="usuario-cell">
+                            <div className="usuario-info">
+                              <span className="usuario-icon">👤</span>
+                              <span className="usuario-nombre">{ultimaActividad.usuario}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               {/* Footer del informe */}
