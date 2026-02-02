@@ -5254,6 +5254,15 @@
     page-break-after: avoid;
   }
 
+  /* Asegurar que el texto del header sea visible en impresión */
+  .informe-header,
+  .informe-title-section h1,
+  .informe-subtitle {
+    color: #000 !important;
+    background: #f8f9fa !important;
+    border-bottom: 3px solid var(--primary-orange);
+  }
+
   .informe-vehiculo-card {
     page-break-inside: avoid;
     break-inside: avoid;
