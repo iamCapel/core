@@ -155,6 +155,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           if (hasVehicle) {
             // Si es multi-día, expandir cada día
             if (report.esProyectoMultiDia && report.diasTrabajo && report.diasTrabajo.length > 0) {
+              const totalDias = report.diasTrabajo.length;
               report.diasTrabajo.forEach((dia: string, index: number) => {
                 const dayData = report.reportesPorDia?.[dia] || {};
                 const vehiculosDia = dayData.vehiculos || report.vehiculos || [];
@@ -169,7 +170,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                       month: 'long',
                       day: 'numeric'
                     }),
-                    numeroReporte: `${report.numeroReporte} (Día ${index + 1}/${report.diasTrabajo.length})`,
+                    numeroReporte: `${report.numeroReporte} (Día ${index + 1}/${totalDias})`,
                     tipoIntervencion: report.tipoIntervencion,
                     usuario: report.creadoPor,
                     region: report.region,
