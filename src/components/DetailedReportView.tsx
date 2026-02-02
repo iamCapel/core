@@ -28,10 +28,13 @@ interface Report {
   // Otros campos
   observations?: string;
   fechaCreacion?: string;
+  fechaProyecto?: string;
   numeroReporte?: string;
   creadoPor?: string;
   estado?: string;
   kilometraje?: number;
+  // Vehículos pesados
+  vehiculos?: Array<{tipo: string, modelo: string, ficha: string}>;
   // Campos para reportes multi-día
   esMultiDia?: boolean;
   diaNumero?: number;
@@ -202,6 +205,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         report.diasTrabajo.forEach((dia: string, index: number) => {
           const dayData = report.reportesPorDia?.[dia] || {};
           
+          // Los vehículos del reporte principal se muestran en todos los días
+          const vehiculosDia = dayData.vehiculos || report.vehiculos || [];
+          
           const formattedReport = {
             id: `${report.id}_dia_${index + 1}`,
             reportNumber: `${report.numeroReporte} (Día ${index + 1}/${report.diasTrabajo.length})`,
@@ -218,11 +224,13 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             metricData: dayData.metricData || report.metricData || {},
             gpsData: dayData.gpsData || report.gpsData,
             observations: dayData.observaciones || report.observaciones,
-            fechaCreacion: dia,
+            fechaCreacion: report.fechaCreacion,
+            fechaProyecto: dia,
             numeroReporte: report.numeroReporte,
             creadoPor: report.creadoPor,
             estado: report.estado,
-            kilometraje: km / report.diasTrabajo.length, // Distribuir kilometraje entre días
+            kilometraje: km / report.diasTrabajo.length,
+            vehiculos: vehiculosDia,
             esMultiDia: true,
             diaNumero: index + 1,
             totalDias: report.diasTrabajo.length,
@@ -234,11 +242,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         });
       } else {
         // Reporte de un solo día
+        const fechaMostrar = report.fechaProyecto || report.fechaCreacion;
         const formattedReport = {
           id: report.id,
           reportNumber: report.numeroReporte,
           createdBy: report.creadoPor,
-          date: new Date(report.fechaCreacion).toLocaleDateString(),
+          date: new Date(fechaMostrar).toLocaleDateString(),
           district: report.distrito,
           province: report.provincia,
           region: report.region,
@@ -251,10 +260,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           gpsData: report.gpsData,
           observations: report.observaciones,
           fechaCreacion: report.fechaCreacion,
+          fechaProyecto: fechaMostrar,
           numeroReporte: report.numeroReporte,
           creadoPor: report.creadoPor,
           estado: report.estado,
-          kilometraje: km
+          kilometraje: km,
+          vehiculos: report.vehiculos || []
         };
         
         hierarchyMap[region][provincia][distrito].push(formattedReport);
@@ -592,13 +603,19 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                   <div className="field-value">{selectedReport.createdBy}</div>
                 </div>
                 <div className="report-field">
-                  <label>Fecha de Creación:</label>
+                  <label>Fecha del Proyecto:</label>
                   <div className="field-value">{selectedReport.date}</div>
                 </div>
                 <div className="report-field">
                   <label>Tipo de Intervención:</label>
                   <div className="field-value">{selectedReport.tipoIntervencion}</div>
                 </div>
+                {selectedReport.esMultiDia && (
+                  <div className="report-field">
+                    <label>Día del Proyecto:</label>
+                    <div className="field-value">{selectedReport.diaNumero} de {selectedReport.totalDias}</div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -646,6 +663,25 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                 <div className="report-field total-interventions">
                   <label>Total de Intervenciones:</label>
                   <div className="field-value highlight">{selectedReport.totalInterventions}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Vehículos Pesados */}
+            {selectedReport.vehiculos && selectedReport.vehiculos.length > 0 && (
+              <div className="report-section">
+                <h3 className="section-title">🚜 Vehículos Pesados</h3>
+                <div className="report-grid">
+                  {selectedReport.vehiculos.map((vehiculo, idx) => (
+                    <div key={idx} className="report-field">
+                      <label>Vehículo {idx + 1}:</label>
+                      <div className="field-value">
+                        <div><strong>Tipo:</strong> {vehiculo.tipo}</div>
+                        <div><strong>Modelo:</strong> {vehiculo.modelo}</div>
+                        <div><strong>Ficha:</strong> {vehiculo.ficha}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

@@ -536,6 +536,23 @@
   align-items: center;
 }
 
+/* Estilos para vehículos pesados */
+.field-value > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.field-value > div > div {
+  font-size: 14px;
+}
+
+.field-value > div > div strong {
+  color: var(--primary-orange-dark);
+  margin-right: 6px;
+}
+
 .field-value.highlight {
   background: linear-gradient(135deg, #fff9f5 0%, #ffe5cc 100%);
   color: var(--primary-orange-dark);
