@@ -5699,86 +5699,124 @@
   }
 
   .tabla-vehiculos-compacta {
-    font-size: 10px !important;
+    font-size: 11px !important;
     box-shadow: none !important;
     page-break-inside: auto;
+    border: 1px solid #dee2e6 !important;
   }
 
   .tabla-vehiculos-compacta thead {
-    background: #f8f9fa !important;
-    color: #000 !important;
-    border-bottom: 2px solid #FF7700 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    background: linear-gradient(135deg, #FF7700 0%, #FF9933 100%) !important;
+    color: white !important;
+    border-bottom: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .tabla-vehiculos-compacta th {
-    padding: 8px 6px !important;
-    font-size: 9px !important;
-    background: #f8f9fa !important;
-    color: #000 !important;
-    border-bottom: 2px solid #FF7700 !important;
+    padding: 12px 10px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    background: transparent !important;
+    color: white !important;
+    border: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .tabla-vehiculos-compacta tbody tr {
     page-break-inside: avoid;
     break-inside: avoid;
+    border-bottom: 1px solid #e9ecef !important;
+  }
+
+  .tabla-vehiculos-compacta tbody tr:hover {
+    background: white !important;
   }
 
   .tabla-vehiculos-compacta td {
-    padding: 8px 6px !important;
-    font-size: 10px !important;
+    padding: 12px 10px !important;
+    font-size: 11px !important;
+    vertical-align: middle !important;
   }
 
-  /* Celdas más compactas */
+  /* Celdas específicas */
   .tipo-vehiculo-cell {
     min-width: auto !important;
   }
 
   .tipo-vehiculo-cell .vehiculo-icon {
-    font-size: 18px !important;
+    font-size: 24px !important;
   }
 
   .tipo-vehiculo-cell .tipo-nombre {
-    font-size: 11px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #FF7700 !important;
   }
 
   .tipo-vehiculo-cell .modelo-nombre {
-    font-size: 9px !important;
+    font-size: 11px !important;
+    color: #6c757d !important;
   }
 
   .ficha-badge {
-    padding: 3px 8px !important;
-    font-size: 10px !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    background: #FFF3E6 !important;
+    color: #FF7700 !important;
+    border-radius: 8px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .actividades-count {
-    font-size: 16px !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: #FF7700 !important;
   }
 
   .actividades-label {
-    font-size: 9px !important;
-  }
-
-  .actividad-tipo,
-  .ubicacion-principal {
     font-size: 10px !important;
-    margin-bottom: 2px !important;
+    text-transform: uppercase !important;
+    color: #6c757d !important;
   }
 
-  .actividad-fecha,
+  .actividad-tipo {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #212529 !important;
+    margin-bottom: 4px !important;
+  }
+
+  .actividad-fecha {
+    font-size: 11px !important;
+    color: #6c757d !important;
+  }
+
+  .ubicacion-principal {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #212529 !important;
+    margin-bottom: 4px !important;
+  }
+
   .ubicacion-detalle {
-    font-size: 9px !important;
+    font-size: 11px !important;
+    color: #6c757d !important;
+    padding-left: 18px !important;
   }
 
   .usuario-icon {
-    font-size: 14px !important;
+    font-size: 18px !important;
   }
 
   .usuario-nombre {
-    font-size: 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #495057 !important;
   }
 
   /* Lista de vehículos - OCULTAR en impresión */
