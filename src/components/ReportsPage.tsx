@@ -684,15 +684,16 @@ const VehiculosView: React.FC = () => {
               onChange={(e) => setSearchFicha(e.target.value)}
               className="search-input"
             />
-            <button
-              className="btn-export-vehiculos"
-              onClick={() => setShowExportModal(true)}
-              title="Exportar informe de vehículos"
-            >
-              📊 Exportar Informe
-            </button>
           </div>
         )}
+
+        <button
+          className="btn-export-vehiculos"
+          onClick={() => setShowExportModal(true)}
+          title="Exportar informe de vehículos"
+        >
+          📊 Exportar Informe
+        </button>
       </div>
 
       {loading ? (
