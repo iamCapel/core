@@ -310,6 +310,11 @@ const VehiculosView: React.FC = () => {
       setShowExportModal(false);
       setShowInforme(true);
       
+      // Esperar un momento para que el DOM se renderice y luego imprimir automáticamente
+      setTimeout(() => {
+        window.print();
+      }, 500);
+      
     } catch (error) {
       console.error('Error al exportar informe:', error);
       alert('Error al generar el informe. Por favor intente nuevamente.');
