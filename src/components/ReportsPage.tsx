@@ -97,6 +97,11 @@ const VehiculosView: React.FC = () => {
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
   const [exportando, setExportando] = useState(false);
+  
+  // Estados para visualización del informe
+  const [showInforme, setShowInforme] = useState(false);
+  const [informeData, setInformeData] = useState<any>(null);
+  const [rangoFechas, setRangoFechas] = useState<{inicio: Date, fin: Date} | null>(null);
 
   useEffect(() => {
     cargarVehiculos();
@@ -299,352 +304,23 @@ const VehiculosView: React.FC = () => {
         }
       });
       
-      // Generar HTML del informe
-      generarInformeHTML(vehiculosConActividades, inicio, fin);
+      // Guardar datos para mostrar en el informe
+      setInformeData(vehiculosConActividades);
+      setRangoFechas({ inicio, fin });
+      setShowExportModal(false);
+      setShowInforme(true);
       
     } catch (error) {
       console.error('Error al exportar informe:', error);
       alert('Error al generar el informe. Por favor intente nuevamente.');
     } finally {
       setExportando(false);
-      setShowExportModal(false);
     }
   };
 
-  // Función para generar HTML del informe
-  const generarInformeHTML = (vehiculosData: Record<string, any>, inicio: Date, fin: Date) => {
-    const listaVehiculos = Object.values(vehiculosData);
-    
-    const html = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Informe de Vehículos Pesados - MOPC</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 20px;
-      color: #333;
-    }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      overflow: hidden;
-    }
-    .header {
-      background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-      color: white;
-      padding: 40px;
-      text-align: center;
-    }
-    .header h1 {
-      font-size: 36px;
-      margin-bottom: 10px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .header .subtitle {
-      font-size: 18px;
-      opacity: 0.95;
-    }
-    .period-info {
-      background: #f8f9fa;
-      padding: 20px;
-      text-align: center;
-      border-bottom: 3px solid #FF9800;
-    }
-    .period-info strong {
-      color: #FF9800;
-    }
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      padding: 30px;
-      background: #fafafa;
-    }
-    .stat-card {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      border: 2px solid #e0e0e0;
-    }
-    .stat-value {
-      font-size: 36px;
-      font-weight: 700;
-      color: #FF9800;
-      display: block;
-      margin-bottom: 8px;
-    }
-    .stat-label {
-      font-size: 14px;
-      color: #666;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .vehiculos-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
-      gap: 20px;
-      padding: 30px;
-    }
-    .vehiculo-card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-      overflow: hidden;
-      border: 2px solid #e0e0e0;
-      transition: all 0.3s ease;
-      page-break-inside: avoid;
-    }
-    .vehiculo-card:hover {
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-      transform: translateY(-4px);
-    }
-    .vehiculo-header {
-      background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
-      color: white;
-      padding: 20px;
-    }
-    .vehiculo-title {
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .vehiculo-info-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-top: 12px;
-      font-size: 14px;
-    }
-    .vehiculo-info-grid div {
-      background: rgba(255,255,255,0.2);
-      padding: 6px 10px;
-      border-radius: 6px;
-    }
-    .vehiculo-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-bottom: 2px solid #FF9800;
-    }
-    .stat-mini {
-      text-align: center;
-    }
-    .stat-mini-value {
-      font-size: 20px;
-      font-weight: 700;
-      color: #FF9800;
-      display: block;
-    }
-    .stat-mini-label {
-      font-size: 11px;
-      color: #666;
-      text-transform: uppercase;
-    }
-    .actividades-section {
-      padding: 20px;
-    }
-    .actividades-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #FF9800;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e0e0e0;
-    }
-    .actividad-item {
-      background: #fafafa;
-      padding: 15px;
-      margin-bottom: 12px;
-      border-radius: 8px;
-      border-left: 4px solid #FF9800;
-    }
-    .actividad-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-    .actividad-fecha {
-      color: #FF9800;
-      font-size: 14px;
-    }
-    .actividad-reporte {
-      background: #e0e0e0;
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-    .actividad-detalles {
-      font-size: 13px;
-      color: #666;
-      line-height: 1.6;
-    }
-    .actividad-detalles div {
-      margin-bottom: 4px;
-    }
-    .actividad-detalles strong {
-      color: #333;
-      margin-right: 6px;
-    }
-    .ubicacion-box {
-      background: white;
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 8px;
-      border: 1px solid #e0e0e0;
-    }
-    .footer {
-      background: #2c3e50;
-      color: white;
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-    }
-    @media print {
-      body { background: white; padding: 0; }
-      .vehiculo-card { page-break-inside: avoid; }
-      .vehiculos-grid { display: block; }
-      .vehiculo-card { margin-bottom: 20px; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🚜 INFORME DE VEHÍCULOS PESADOS</h1>
-      <div class="subtitle">Ministerio de Obras Públicas y Comunicaciones</div>
-    </div>
-    
-    <div class="period-info">
-      <p><strong>Período del Informe:</strong> ${inicio.toLocaleDateString('es-ES', { 
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-      })} al ${fin.toLocaleDateString('es-ES', { 
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-      })}</p>
-      <p style="margin-top: 8px; font-size: 14px;">Generado el ${new Date().toLocaleString('es-ES')}</p>
-    </div>
-    
-    <div class="summary">
-      <div class="stat-card">
-        <span class="stat-value">${listaVehiculos.length}</span>
-        <span class="stat-label">Vehículos Activos</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value">${listaVehiculos.reduce((sum, v) => sum + v.actividades.length, 0)}</span>
-        <span class="stat-label">Total Actividades</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value">${listaVehiculos.reduce((sum, v) => sum + v.totalKm, 0).toFixed(1)} km</span>
-        <span class="stat-label">Kilometraje Total</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value">${new Set(listaVehiculos.flatMap(v => Array.from(v.provincias))).size}</span>
-        <span class="stat-label">Provincias Cubiertas</span>
-      </div>
-    </div>
-    
-    <div class="vehiculos-grid">
-      ${listaVehiculos.map(vehiculo => `
-        <div class="vehiculo-card">
-          <div class="vehiculo-header">
-            <div class="vehiculo-title">🚜 ${vehiculo.tipo}</div>
-            <div class="vehiculo-info-grid">
-              <div><strong>Modelo:</strong> ${vehiculo.modelo}</div>
-              <div><strong>Ficha:</strong> ${vehiculo.ficha}</div>
-            </div>
-          </div>
-          
-          <div class="vehiculo-stats">
-            <div class="stat-mini">
-              <span class="stat-mini-value">${vehiculo.actividades.length}</span>
-              <span class="stat-mini-label">Actividades</span>
-            </div>
-            <div class="stat-mini">
-              <span class="stat-mini-value">${vehiculo.diasActivos.size}</span>
-              <span class="stat-mini-label">Días Activos</span>
-            </div>
-            <div class="stat-mini">
-              <span class="stat-mini-value">${vehiculo.totalKm.toFixed(1)} km</span>
-              <span class="stat-mini-label">Recorrido</span>
-            </div>
-            <div class="stat-mini">
-              <span class="stat-mini-value">${vehiculo.regiones.size}</span>
-              <span class="stat-mini-label">Regiones</span>
-            </div>
-          </div>
-          
-          <div class="actividades-section">
-            <div class="actividades-title">📋 Actividades y Recorridos</div>
-            ${vehiculo.actividades
-              .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-              .map((actividad: any) => `
-                <div class="actividad-item">
-                  <div class="actividad-header">
-                    <span class="actividad-fecha">📅 ${new Date(actividad.fecha).toLocaleDateString('es-ES', {
-                      weekday: 'short',
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}</span>
-                    <span class="actividad-reporte">#${actividad.numeroReporte}</span>
-                  </div>
-                  <div class="actividad-detalles">
-                    <div><strong>🔧 Tipo:</strong> ${actividad.tipoIntervencion}</div>
-                    <div class="ubicacion-box">
-                      <div><strong>📍 Región:</strong> ${actividad.region}</div>
-                      <div><strong>📍 Provincia:</strong> ${actividad.provincia}</div>
-                      <div><strong>📍 Distrito:</strong> ${actividad.distrito}</div>
-                      <div><strong>📍 Municipio:</strong> ${actividad.municipio}</div>
-                      <div><strong>📍 Sector:</strong> ${actividad.sector}</div>
-                    </div>
-                    <div style="margin-top: 8px;"><strong>👤 Registrado por:</strong> ${actividad.usuario}</div>
-                    ${actividad.kilometraje > 0 ? `<div><strong>📏 Kilometraje:</strong> ${actividad.kilometraje.toFixed(2)} km</div>` : ''}
-                  </div>
-                </div>
-              `).join('')}
-          </div>
-        </div>
-      `).join('')}
-    </div>
-    
-    <div class="footer">
-      <p><strong>Ministerio de Obras Públicas y Comunicaciones (MOPC)</strong></p>
-      <p>Sistema de Gestión de Vehículos Pesados</p>
-      <p style="margin-top: 10px; font-size: 12px; opacity: 0.8;">
-        Documento generado automáticamente - ${new Date().toLocaleString('es-ES')}
-      </p>
-    </div>
-  </div>
-  
-  <script>
-    // Imprimir automáticamente al cargar
-    window.onload = () => {
-      setTimeout(() => window.print(), 500);
-    };
-  </script>
-</body>
-</html>
-    `;
-    
-    // Abrir en nueva ventana
-    const ventana = window.open('', '_blank');
-    if (ventana) {
-      ventana.document.write(html);
-      ventana.document.close();
-    }
+  // Función para descargar informe como PDF
+  const descargarPDF = () => {
+    window.print();
   };
 
   return (
@@ -881,6 +557,152 @@ const VehiculosView: React.FC = () => {
               >
                 {exportando ? '⏳ Generando...' : '📊 Generar Informe'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal del Informe Generado */}
+      {showInforme && informeData && rangoFechas && (
+        <div className="informe-fullscreen-modal">
+          <div className="informe-container">
+            {/* Header del informe */}
+            <div className="informe-header">
+              <div className="informe-title-section">
+                <h1>🚜 INFORME DE VEHÍCULOS PESADOS</h1>
+                <p className="informe-subtitle">Ministerio de Obras Públicas y Comunicaciones</p>
+              </div>
+              <button 
+                className="informe-close-btn"
+                onClick={() => setShowInforme(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Información del período */}
+            <div className="informe-period">
+              <p><strong>Período del Informe:</strong> {rangoFechas.inicio.toLocaleDateString('es-ES', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+              })} al {rangoFechas.fin.toLocaleDateString('es-ES', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+              })}</p>
+              <p>Generado el {new Date().toLocaleString('es-ES')}</p>
+            </div>
+
+            {/* Botón de descarga PDF */}
+            <div className="informe-actions">
+              <button 
+                className="btn-descargar-pdf"
+                onClick={descargarPDF}
+              >
+                📄 Descargar PDF
+              </button>
+            </div>
+
+            {/* Contenido del informe */}
+            <div className="informe-content" id="informe-content">
+              {/* Resumen de estadísticas */}
+              <div className="informe-summary">
+                <div className="informe-stat-card">
+                  <span className="informe-stat-value">{Object.keys(informeData).length}</span>
+                  <span className="informe-stat-label">Vehículos Activos</span>
+                </div>
+                <div className="informe-stat-card">
+                  <span className="informe-stat-value">
+                    {Object.values(informeData).reduce((sum: number, v: any) => sum + v.actividades.length, 0)}
+                  </span>
+                  <span className="informe-stat-label">Total Actividades</span>
+                </div>
+                <div className="informe-stat-card">
+                  <span className="informe-stat-value">
+                    {Object.values(informeData).reduce((sum: number, v: any) => sum + v.totalKm, 0).toFixed(1)} km
+                  </span>
+                  <span className="informe-stat-label">Kilometraje Total</span>
+                </div>
+                <div className="informe-stat-card">
+                  <span className="informe-stat-value">
+                    {new Set(Object.values(informeData).flatMap((v: any) => Array.from(v.provincias))).size}
+                  </span>
+                  <span className="informe-stat-label">Provincias Cubiertas</span>
+                </div>
+              </div>
+
+              {/* Grid de vehículos */}
+              <div className="informe-vehiculos-grid">
+                {Object.values(informeData).map((vehiculo: any) => (
+                  <div key={vehiculo.ficha} className="informe-vehiculo-card">
+                    <div className="informe-vehiculo-header">
+                      <div className="informe-vehiculo-title">🚜 {vehiculo.tipo}</div>
+                      <div className="informe-vehiculo-info">
+                        <div><strong>Modelo:</strong> {vehiculo.modelo}</div>
+                        <div><strong>Ficha:</strong> {vehiculo.ficha}</div>
+                      </div>
+                    </div>
+
+                    <div className="informe-vehiculo-stats">
+                      <div className="informe-stat-mini">
+                        <span className="informe-stat-mini-value">{vehiculo.actividades.length}</span>
+                        <span className="informe-stat-mini-label">Actividades</span>
+                      </div>
+                      <div className="informe-stat-mini">
+                        <span className="informe-stat-mini-value">{vehiculo.diasActivos.size}</span>
+                        <span className="informe-stat-mini-label">Días Activos</span>
+                      </div>
+                      <div className="informe-stat-mini">
+                        <span className="informe-stat-mini-value">{vehiculo.totalKm.toFixed(1)} km</span>
+                        <span className="informe-stat-mini-label">Recorrido</span>
+                      </div>
+                      <div className="informe-stat-mini">
+                        <span className="informe-stat-mini-value">{vehiculo.regiones.size}</span>
+                        <span className="informe-stat-mini-label">Regiones</span>
+                      </div>
+                    </div>
+
+                    <div className="informe-actividades-section">
+                      <div className="informe-actividades-title">📋 Actividades y Recorridos</div>
+                      {vehiculo.actividades
+                        .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+                        .map((actividad: any, idx: number) => (
+                          <div key={idx} className="informe-actividad-item">
+                            <div className="informe-actividad-header">
+                              <span className="informe-actividad-fecha">
+                                📅 {new Date(actividad.fecha).toLocaleDateString('es-ES', {
+                                  weekday: 'short',
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                              <span className="informe-actividad-reporte">#{actividad.numeroReporte}</span>
+                            </div>
+                            <div className="informe-actividad-detalles">
+                              <div><strong>🔧 Tipo:</strong> {actividad.tipoIntervencion}</div>
+                              <div className="informe-ubicacion-box">
+                                <div><strong>📍 Región:</strong> {actividad.region}</div>
+                                <div><strong>📍 Provincia:</strong> {actividad.provincia}</div>
+                                <div><strong>📍 Distrito:</strong> {actividad.distrito}</div>
+                                <div><strong>📍 Municipio:</strong> {actividad.municipio}</div>
+                                <div><strong>📍 Sector:</strong> {actividad.sector}</div>
+                              </div>
+                              <div><strong>👤 Registrado por:</strong> {actividad.usuario}</div>
+                              {actividad.kilometraje > 0 && (
+                                <div><strong>📏 Kilometraje:</strong> {actividad.kilometraje.toFixed(2)} km</div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer del informe */}
+              <div className="informe-footer">
+                <p><strong>Ministerio de Obras Públicas y Comunicaciones (MOPC)</strong></p>
+                <p>Sistema de Gestión de Vehículos Pesados</p>
+                <p>Documento generado automáticamente - {new Date().toLocaleString('es-ES')}</p>
+              </div>
             </div>
           </div>
         </div>
