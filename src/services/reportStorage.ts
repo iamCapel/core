@@ -82,6 +82,9 @@ export interface ReportData {
   fechaProyecto?: string;
   esProyectoMultiDia?: boolean;
   
+  // Cálculos automáticos
+  kilometraje?: number;
+  
   // Metadata
   version: number;
   etiquetas?: string[];
