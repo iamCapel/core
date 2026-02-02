@@ -107,6 +107,10 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   const [regionsData, setRegionsData] = useState<Region[]>([]);
   const [allReportsFlat, setAllReportsFlat] = useState<Report[]>([]);
 
+  // Estados para modal de historial de vehículo
+  const [selectedVehicle, setSelectedVehicle] = useState<{tipo: string, modelo: string, ficha: string} | null>(null);
+  const [vehicleHistory, setVehicleHistory] = useState<any[]>([]);
+
   // Función para eliminar reporte (solo administradores)
   const deleteReport = async (reportId: string, reportNumber: string, e?: React.MouseEvent) => {
     if (e) {
@@ -131,6 +135,90 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         alert('Error al eliminar el reporte. Por favor intente nuevamente.');
       }
     }
+  };
+
+  // Función para cargar historial de un vehículo
+  const loadVehicleHistory = async (vehiculo: {tipo: string, modelo: string, ficha: string}) => {
+    setSelectedVehicle(vehiculo);
+    
+    try {
+      // Cargar todos los reportes desde Firebase
+      const allReports = await firebaseReportStorage.getAllReports();
+      
+      // Filtrar reportes que contengan este vehículo (por ficha)
+      const history: any[] = [];
+      
+      for (const report of allReports) {
+        if (report.vehiculos && Array.isArray(report.vehiculos)) {
+          const hasVehicle = report.vehiculos.some((v: any) => v.ficha === vehiculo.ficha);
+          
+          if (hasVehicle) {
+            // Si es multi-día, expandir cada día
+            if (report.esProyectoMultiDia && report.diasTrabajo && report.diasTrabajo.length > 0) {
+              report.diasTrabajo.forEach((dia: string, index: number) => {
+                const dayData = report.reportesPorDia?.[dia] || {};
+                const vehiculosDia = dayData.vehiculos || report.vehiculos || [];
+                const hasVehicleInDay = vehiculosDia.some((v: any) => v.ficha === vehiculo.ficha);
+                
+                if (hasVehicleInDay) {
+                  history.push({
+                    fecha: dia,
+                    fechaDisplay: new Date(dia).toLocaleDateString('es-ES', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    }),
+                    numeroReporte: `${report.numeroReporte} (Día ${index + 1}/${report.diasTrabajo.length})`,
+                    tipoIntervencion: report.tipoIntervencion,
+                    usuario: report.creadoPor,
+                    region: report.region,
+                    provincia: report.provincia,
+                    distrito: report.distrito,
+                    municipio: report.municipio,
+                    sector: report.sector
+                  });
+                }
+              });
+            } else {
+              // Reporte de un solo día
+              const fechaMostrar = report.fechaProyecto || report.fechaCreacion;
+              history.push({
+                fecha: fechaMostrar,
+                fechaDisplay: new Date(fechaMostrar).toLocaleDateString('es-ES', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }),
+                numeroReporte: report.numeroReporte,
+                tipoIntervencion: report.tipoIntervencion,
+                usuario: report.creadoPor,
+                region: report.region,
+                provincia: report.provincia,
+                distrito: report.distrito,
+                municipio: report.municipio,
+                sector: report.sector
+              });
+            }
+          }
+        }
+      }
+      
+      // Ordenar por fecha descendente
+      history.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      
+      setVehicleHistory(history);
+    } catch (error) {
+      console.error('Error al cargar historial de vehículo:', error);
+      setVehicleHistory([]);
+    }
+  };
+
+  // Función para cerrar modal de vehículo
+  const closeVehicleModal = () => {
+    setSelectedVehicle(null);
+    setVehicleHistory([]);
   };
 
   // Verificar si el usuario es administrador
@@ -675,10 +763,15 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                   {selectedReport.vehiculos.map((vehiculo, idx) => (
                     <div key={idx} className="report-field">
                       <label>Vehículo {idx + 1}:</label>
-                      <div className="field-value">
+                      <div 
+                        className="field-value vehicle-clickable"
+                        onClick={() => loadVehicleHistory(vehiculo)}
+                        title="Click para ver historial de este vehículo"
+                      >
                         <div><strong>Tipo:</strong> {vehiculo.tipo}</div>
                         <div><strong>Modelo:</strong> {vehiculo.modelo}</div>
                         <div><strong>Ficha:</strong> {vehiculo.ficha}</div>
+                        <div className="view-history-hint">📋 Ver historial →</div>
                       </div>
                     </div>
                   ))}
@@ -1264,6 +1357,88 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal de Historial de Vehículo */}
+      {selectedVehicle && (
+        <div className="vehicle-history-modal">
+          <div className="vehicle-history-container">
+            <div className="vehicle-history-header">
+              <div className="vehicle-history-title">
+                <h2>🚜 Historial del Vehículo</h2>
+                <div className="vehicle-info-header">
+                  <div><strong>Tipo:</strong> {selectedVehicle.tipo}</div>
+                  <div><strong>Modelo:</strong> {selectedVehicle.modelo}</div>
+                  <div><strong>Ficha:</strong> {selectedVehicle.ficha}</div>
+                </div>
+              </div>
+              <button className="close-btn" onClick={closeVehicleModal}>✕</button>
+            </div>
+            
+            <div className="vehicle-history-content">
+              {vehicleHistory.length === 0 ? (
+                <div className="no-history-message">
+                  <div className="no-history-icon">📭</div>
+                  <p>No se encontró historial para este vehículo</p>
+                </div>
+              ) : (
+                <div className="history-timeline">
+                  <div className="history-stats">
+                    <div className="stat-badge">
+                      <span className="stat-number">{vehicleHistory.length}</span>
+                      <span className="stat-label">Actividades Registradas</span>
+                    </div>
+                  </div>
+                  
+                  {vehicleHistory.map((activity, index) => (
+                    <div key={index} className="history-entry">
+                      <div className="history-date-badge">
+                        <div className="history-day">{new Date(activity.fecha).getDate()}</div>
+                        <div className="history-month">
+                          {new Date(activity.fecha).toLocaleDateString('es-ES', { month: 'short' })}
+                        </div>
+                      </div>
+                      
+                      <div className="history-details">
+                        <div className="history-header-row">
+                          <h3 className="history-activity">{activity.tipoIntervencion}</h3>
+                          <span className="history-report-num">#{activity.numeroReporte}</span>
+                        </div>
+                        
+                        <div className="history-date-full">
+                          📅 {activity.fechaDisplay}
+                        </div>
+                        
+                        <div className="history-location">
+                          <div className="location-item">
+                            <strong>📍 Ubicación:</strong>
+                          </div>
+                          <div className="location-details">
+                            <div>• <strong>Región:</strong> {activity.region}</div>
+                            <div>• <strong>Provincia:</strong> {activity.provincia}</div>
+                            <div>• <strong>Distrito:</strong> {activity.distrito}</div>
+                            <div>• <strong>Municipio:</strong> {activity.municipio}</div>
+                            <div>• <strong>Sector:</strong> {activity.sector}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="history-user">
+                          👤 <strong>Registrado por:</strong> {activity.usuario}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="vehicle-history-footer">
+              <button className="btn-close-modal" onClick={closeVehicleModal}>
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
