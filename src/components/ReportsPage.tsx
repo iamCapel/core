@@ -103,6 +103,10 @@ const VehiculosView: React.FC = () => {
   const [informeData, setInformeData] = useState<any>(null);
   const [rangoFechas, setRangoFechas] = useState<{inicio: Date, fin: Date} | null>(null);
 
+  // Estados para modal de detalle de reporte
+  const [selectedReporteDetail, setSelectedReporteDetail] = useState<any | null>(null);
+  const [showReporteModal, setShowReporteModal] = useState(false);
+
   useEffect(() => {
     cargarVehiculos();
     const interval = setInterval(cargarVehiculos, 10000);
@@ -323,6 +327,29 @@ const VehiculosView: React.FC = () => {
     }
   };
 
+  // Función para abrir modal de reporte clickeando en número de reporte
+  const abrirDetalleReporte = async (numeroReporte: string) => {
+    try {
+      const reportes = await firebaseReportStorage.getAllReports();
+      const reporte = reportes.find(r => r.numeroReporte === numeroReporte);
+      
+      if (reporte) {
+        setSelectedReporteDetail(reporte);
+        setShowReporteModal(true);
+      } else {
+        alert('No se encontró el reporte');
+      }
+    } catch (error) {
+      console.error('Error al cargar reporte:', error);
+      alert('Error al cargar el reporte');
+    }
+  };
+
+  const cerrarModalReporte = () => {
+    setSelectedReporteDetail(null);
+    setShowReporteModal(false);
+  };
+
   // Función para descargar informe como PDF
   const descargarPDF = () => {
     window.print();
@@ -415,7 +442,15 @@ const VehiculosView: React.FC = () => {
                   <span className="obra-fecha">{formatearFecha(vehiculo.ultimaObra.fecha)}</span>
                 </div>
                 <div className="ultima-obra-details">
-                  <p><strong>Reporte:</strong> {vehiculo.ultimaObra.numeroReporte}</p>
+                  <p>
+                    <strong>Reporte:</strong>{' '}
+                    <span 
+                      className="numero-reporte-clickeable"
+                      onClick={() => abrirDetalleReporte(vehiculo.ultimaObra.numeroReporte)}
+                    >
+                      {vehiculo.ultimaObra.numeroReporte}
+                    </span>
+                  </p>
                   <p><strong>Región:</strong> {vehiculo.ultimaObra.region}</p>
                   <p><strong>Provincia:</strong> {vehiculo.ultimaObra.provincia}</p>
                   <p><strong>Municipio:</strong> {vehiculo.ultimaObra.municipio}</p>
@@ -433,7 +468,12 @@ const VehiculosView: React.FC = () => {
                       .map((obra: any, index: number) => (
                         <div key={`${obra.id}-${index}`} className="obra-item">
                           <div className="obra-item-header">
-                            <span className="obra-numero">{obra.numeroReporte}</span>
+                            <span 
+                              className="obra-numero numero-reporte-clickeable"
+                              onClick={() => abrirDetalleReporte(obra.numeroReporte)}
+                            >
+                              {obra.numeroReporte}
+                            </span>
                             <span className="obra-fecha-small">{formatearFecha(obra.fechaCreacion)}</span>
                           </div>
                           <div className="obra-item-body">
@@ -679,7 +719,12 @@ const VehiculosView: React.FC = () => {
                                   day: 'numeric'
                                 })}
                               </span>
-                              <span className="informe-actividad-reporte">#{actividad.numeroReporte}</span>
+                              <span 
+                                className="informe-actividad-reporte numero-reporte-clickeable"
+                                onClick={() => abrirDetalleReporte(actividad.numeroReporte)}
+                              >
+                                #{actividad.numeroReporte}
+                              </span>
                             </div>
                             <div className="informe-actividad-detalles">
                               <div><strong>🔧 Tipo:</strong> {actividad.tipoIntervencion}</div>
@@ -708,6 +753,178 @@ const VehiculosView: React.FC = () => {
                 <p>Sistema de Gestión de Vehículos Pesados</p>
                 <p>Documento generado automáticamente - {new Date().toLocaleString('es-ES')}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalle del Reporte */}
+      {showReporteModal && selectedReporteDetail && (
+        <div className="reporte-detail-modal-overlay" onClick={cerrarModalReporte}>
+          <div className="reporte-detail-modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="reporte-detail-header">
+              <h2>📄 Reporte #{selectedReporteDetail.numeroReporte}</h2>
+              <button className="reporte-close-btn" onClick={cerrarModalReporte}>✕</button>
+            </div>
+            
+            <div className="reporte-detail-content">
+              {/* Información General */}
+              <div className="reporte-section">
+                <h3 className="reporte-section-title">📋 Información General</h3>
+                <div className="reporte-grid">
+                  <div className="reporte-field">
+                    <label>Número de Reporte:</label>
+                    <div className="field-value">{selectedReporteDetail.numeroReporte}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Creado por:</label>
+                    <div className="field-value">{selectedReporteDetail.creadoPor}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Fecha de Creación:</label>
+                    <div className="field-value">{new Date(selectedReporteDetail.fechaCreacion).toLocaleString('es-ES')}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Fecha del Proyecto:</label>
+                    <div className="field-value">{new Date(selectedReporteDetail.fechaProyecto || selectedReporteDetail.fechaCreacion).toLocaleDateString('es-ES')}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Estado:</label>
+                    <div className={`field-value estado-badge estado-${selectedReporteDetail.estado?.toLowerCase()}`}>
+                      {selectedReporteDetail.estado || 'Aprobado'}
+                    </div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Tipo de Intervención:</label>
+                    <div className="field-value">{selectedReporteDetail.tipoIntervencion}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ubicación */}
+              <div className="reporte-section">
+                <h3 className="reporte-section-title">📍 Ubicación</h3>
+                <div className="reporte-grid">
+                  <div className="reporte-field">
+                    <label>Región:</label>
+                    <div className="field-value">{selectedReporteDetail.region}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Provincia:</label>
+                    <div className="field-value">{selectedReporteDetail.provincia}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Distrito:</label>
+                    <div className="field-value">{selectedReporteDetail.distrito}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Municipio:</label>
+                    <div className="field-value">{selectedReporteDetail.municipio}</div>
+                  </div>
+                  <div className="reporte-field">
+                    <label>Sector:</label>
+                    <div className="field-value">{selectedReporteDetail.sector}</div>
+                  </div>
+                  {selectedReporteDetail.kilometraje && (
+                    <div className="reporte-field">
+                      <label>Kilometraje:</label>
+                      <div className="field-value">{selectedReporteDetail.kilometraje.toFixed(2)} km</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Vehículos */}
+              {selectedReporteDetail.vehiculos && selectedReporteDetail.vehiculos.length > 0 && (
+                <div className="reporte-section">
+                  <h3 className="reporte-section-title">🚜 Vehículos Utilizados</h3>
+                  <div className="reporte-vehiculos-list">
+                    {selectedReporteDetail.vehiculos.map((vehiculo: any, idx: number) => (
+                      <div key={idx} className="reporte-vehiculo-item">
+                        <div className="vehiculo-icon">🚜</div>
+                        <div className="vehiculo-details">
+                          <div><strong>Tipo:</strong> {vehiculo.tipo}</div>
+                          <div><strong>Modelo:</strong> {vehiculo.modelo}</div>
+                          <div><strong>Ficha:</strong> {vehiculo.ficha}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Detalles de la Intervención */}
+              {selectedReporteDetail.plantilla && Object.keys(selectedReporteDetail.plantilla).length > 0 && (
+                <div className="reporte-section">
+                  <h3 className="reporte-section-title">🔧 Detalles de la Intervención</h3>
+                  <div className="reporte-plantilla-grid">
+                    {Object.entries(selectedReporteDetail.plantilla).map(([key, value]: [string, any]) => (
+                      <div key={key} className="reporte-plantilla-item">
+                        <label>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</label>
+                        <div className="plantilla-value">{String(value)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Coordenadas GPS */}
+              {selectedReporteDetail.gpsData && (
+                <div className="reporte-section">
+                  <h3 className="reporte-section-title">🗺️ Coordenadas GPS</h3>
+                  <div className="reporte-grid">
+                    {selectedReporteDetail.gpsData.punto_inicial && (
+                      <div className="reporte-field">
+                        <label>Punto Inicial:</label>
+                        <div className="field-value">
+                          Lat: {selectedReporteDetail.gpsData.punto_inicial.lat}, 
+                          Lon: {selectedReporteDetail.gpsData.punto_inicial.lon}
+                        </div>
+                      </div>
+                    )}
+                    {selectedReporteDetail.gpsData.punto_alcanzado && (
+                      <div className="reporte-field">
+                        <label>Punto Alcanzado:</label>
+                        <div className="field-value">
+                          Lat: {selectedReporteDetail.gpsData.punto_alcanzado.lat}, 
+                          Lon: {selectedReporteDetail.gpsData.punto_alcanzado.lon}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Imágenes */}
+              {selectedReporteDetail.images && selectedReporteDetail.images.length > 0 && (
+                <div className="reporte-section">
+                  <h3 className="reporte-section-title">📷 Imágenes</h3>
+                  <div className="reporte-images-grid">
+                    {selectedReporteDetail.images.map((img: string, idx: number) => (
+                      <div key={idx} className="reporte-image-item">
+                        <img src={img} alt={`Imagen ${idx + 1}`} />
+                        <span className="image-label">Imagen {idx + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Observaciones */}
+              {selectedReporteDetail.observaciones && (
+                <div className="reporte-section">
+                  <h3 className="reporte-section-title">📝 Observaciones</h3>
+                  <div className="reporte-observaciones-box">
+                    {selectedReporteDetail.observaciones}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="reporte-detail-footer">
+              <button className="btn-cerrar-reporte" onClick={cerrarModalReporte}>
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
