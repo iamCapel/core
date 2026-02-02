@@ -5320,8 +5320,10 @@
 }
 
 .tabla-vehiculos-compacta thead {
-  background: linear-gradient(135deg, var(--primary-orange) 0%, var(--secondary-orange) 100%);
+  background: linear-gradient(135deg, #FF7700 0%, #FF9933 100%);
   color: white;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .tabla-vehiculos-compacta th {
@@ -5374,7 +5376,7 @@
 
 .tipo-vehiculo-cell .tipo-nombre {
   font-weight: 700;
-  color: var(--primary-orange);
+  color: #FF7700;
   font-size: 14px;
 }
 
@@ -5390,12 +5392,14 @@
 
 .ficha-badge {
   display: inline-block;
-  background: var(--pale-orange);
-  color: var(--primary-orange);
+  background: #FFF3E6;
+  color: #FF7700;
   padding: 6px 12px;
   border-radius: 8px;
   font-weight: 700;
   font-size: 13px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 /* Columna Actividades */
@@ -5407,7 +5411,7 @@
   display: block;
   font-size: 24px;
   font-weight: 700;
-  color: var(--primary-orange);
+  color: #FF7700;
   line-height: 1;
 }
 
