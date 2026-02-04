@@ -353,9 +353,9 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
       
       if (reporte) {
         // Cargar imágenes del reporte
-        console.log('📸 Cargando imágenes del reporte:', reporte.reportId);
+        console.log('📸 Cargando imágenes del reporte:', reporte.id);
         const firebaseImageStorage = await import('../services/firebaseImageStorage');
-        const imagesPerDay = await firebaseImageStorage.getReportImages(reporte.reportId);
+        const imagesPerDay = await firebaseImageStorage.getReportImages(reporte.id);
         console.log('✅ Imágenes cargadas:', imagesPerDay);
         
         // Agregar las imágenes al reporte
