@@ -625,6 +625,17 @@ const Dashboard: React.FC = () => {
       
       console.log('📦 Datos del reporte desde Firebase:', pendingReport);
       
+      // 📸 CARGAR IMÁGENES del reporte
+      let imagesPerDay: Record<string, any> = {};
+      try {
+        console.log('📸 Cargando imágenes del reporte...');
+        const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
+        imagesPerDay = await firebaseImageStorage.getReportImages(reportId);
+        console.log('✅ Imágenes cargadas:', imagesPerDay);
+      } catch (imageError) {
+        console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
+      }
+      
       if (pendingReport && pendingReport.estado === 'pendiente') {
         // Convertir el reporte completo a formato de edición
         const dataToLoad = {
@@ -648,6 +659,8 @@ const Dashboard: React.FC = () => {
           diasTrabajo: pendingReport.diasTrabajo || [],
           reportesPorDia: pendingReport.reportesPorDia || {},
           diaActual: pendingReport.diaActual || 0,
+          // 📸 Restaurar imágenes cargadas
+          imagesPerDay: imagesPerDay,
           _isEditingPending: true // Marca para identificar que se está editando un pendiente
         };
         

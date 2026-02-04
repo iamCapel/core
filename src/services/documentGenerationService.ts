@@ -248,6 +248,85 @@ export async function generatePDFBlob(reportData: ReportData): Promise<Blob> {
     yPos += obsLines.length * 6;
   }
 
+  // 📸 SECCIÓN DE IMÁGENES
+  if (reportData.imagesPerDay && Object.keys(reportData.imagesPerDay).length > 0) {
+    // Agregar nueva página para imágenes
+    doc.addPage();
+    yPos = 20;
+
+    // Título de sección
+    doc.setFillColor(255, 122, 0);
+    doc.rect(margin, yPos, contentWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('📸 EVIDENCIA FOTOGRÁFICA', margin + 3, yPos + 5.5);
+    yPos += 15;
+
+    // Para cada día con imágenes
+    for (const [dayKey, images] of Object.entries(reportData.imagesPerDay)) {
+      if (!images || images.length === 0) continue;
+
+      // Título del día
+      doc.setTextColor(255, 122, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
+      doc.text(dayLabel, margin + 3, yPos);
+      yPos += 8;
+
+      // Mostrar imágenes (máximo 2 por fila)
+      const imageWidth = (contentWidth - 15) / 2; // 2 imágenes por fila con espacio
+      const imageHeight = imageWidth * 0.75; // Ratio 4:3
+      let imageX = margin + 3;
+      let imagesInRow = 0;
+
+      for (let i = 0; i < images.length; i++) {
+        const image = images[i];
+        
+        try {
+          // Verificar si necesitamos nueva página
+          if (yPos + imageHeight + 10 > 280) {
+            doc.addPage();
+            yPos = 20;
+          }
+
+          // Cargar y agregar imagen
+          const imgData = await loadImageAsBase64(image.url);
+          if (imgData) {
+            doc.addImage(imgData, 'JPEG', imageX, yPos, imageWidth, imageHeight);
+            
+            // Agregar timestamp debajo de la imagen
+            doc.setTextColor(100, 100, 100);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            const timestamp = new Date(image.timestamp).toLocaleString('es-ES');
+            doc.text(timestamp, imageX, yPos + imageHeight + 4);
+          }
+
+          imagesInRow++;
+          
+          // Siguiente posición
+          if (imagesInRow === 2) {
+            imageX = margin + 3;
+            imagesInRow = 0;
+            yPos += imageHeight + 10;
+          } else {
+            imageX += imageWidth + 7;
+          }
+        } catch (error) {
+          console.warn('⚠️ Error cargando imagen en PDF:', error);
+        }
+      }
+
+      // Ajustar posición para el siguiente día
+      if (imagesInRow > 0) {
+        yPos += imageHeight + 10;
+      }
+      yPos += 5;
+    }
+  }
+
   // Pie de página
   const totalPages = (doc as any).internal.pages.length - 1;
   for (let i = 1; i <= totalPages; i++) {
@@ -259,6 +338,25 @@ export async function generatePDFBlob(reportData: ReportData): Promise<Blob> {
 
   // Convertir a Blob
   return doc.output('blob');
+}
+
+/**
+ * Función auxiliar para cargar imagen como base64
+ */
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error cargando imagen:', error);
+    return null;
+  }
 }
 
 /**
@@ -453,6 +551,89 @@ export async function generateExcelBlob(reportData: ReportData): Promise<Blob> {
     obsCell.value = reportData.observaciones;
     obsCell.alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
     currentRow++;
+  }
+
+  // 📸 SECCIÓN DE IMÁGENES
+  if (reportData.imagesPerDay && Object.keys(reportData.imagesPerDay).length > 0) {
+    currentRow += 2;
+    
+    worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+    const imagesHeader = worksheet.getCell(`A${currentRow}`);
+    imagesHeader.value = '📸 EVIDENCIA FOTOGRÁFICA';
+    imagesHeader.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    imagesHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF7A00' } };
+    imagesHeader.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    for (const [dayKey, images] of Object.entries(reportData.imagesPerDay)) {
+      if (!images || images.length === 0) continue;
+
+      // Título del día
+      const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
+      worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+      const dayCell = worksheet.getCell(`A${currentRow}`);
+      dayCell.value = dayLabel;
+      dayCell.font = { bold: true, size: 10, color: { argb: 'FFFF7A00' } };
+      dayCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+
+      // Agregar imágenes (2 por fila)
+      for (let i = 0; i < images.length; i += 2) {
+        const startRow = currentRow;
+        
+        // Primera imagen de la fila
+        try {
+          const imgData = await loadImageAsBase64(images[i].url);
+          if (imgData) {
+            const imageId = workbook.addImage({
+              base64: imgData.split(',')[1],
+              extension: 'jpeg',
+            });
+            
+            worksheet.addImage(imageId, {
+              tl: { col: 0, row: currentRow - 1 },
+              ext: { width: 200, height: 150 }
+            });
+
+            // Timestamp
+            worksheet.getCell(`A${currentRow + 8}`).value = 
+              new Date(images[i].timestamp).toLocaleString('es-ES');
+            worksheet.getCell(`A${currentRow + 8}`).font = { size: 8, color: { argb: 'FF666666' } };
+          }
+        } catch (error) {
+          console.warn('⚠️ Error agregando imagen a Excel:', error);
+        }
+
+        // Segunda imagen de la fila (si existe)
+        if (i + 1 < images.length) {
+          try {
+            const imgData = await loadImageAsBase64(images[i + 1].url);
+            if (imgData) {
+              const imageId = workbook.addImage({
+                base64: imgData.split(',')[1],
+                extension: 'jpeg',
+              });
+              
+              worksheet.addImage(imageId, {
+                tl: { col: 3, row: currentRow - 1 },
+                ext: { width: 200, height: 150 }
+              });
+
+              // Timestamp
+              worksheet.getCell(`D${currentRow + 8}`).value = 
+                new Date(images[i + 1].timestamp).toLocaleString('es-ES');
+              worksheet.getCell(`D${currentRow + 8}`).font = { size: 8, color: { argb: 'FF666666' } };
+            }
+          } catch (error) {
+            console.warn('⚠️ Error agregando imagen a Excel:', error);
+          }
+        }
+
+        currentRow += 10; // Espacio para la imagen + timestamp
+      }
+
+      currentRow++; // Espacio entre días
+    }
   }
 
   // Ajustar anchos de columna
@@ -784,6 +965,83 @@ export async function generateWordBlob(reportData: ReportData): Promise<Blob> {
         spacing: { after: 200 }
       })
     );
+  }
+
+  // 📸 SECCIÓN DE IMÁGENES
+  if (reportData.imagesPerDay && Object.keys(reportData.imagesPerDay).length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: '📸 EVIDENCIA FOTOGRÁFICA',
+            bold: true,
+            size: 22,
+            color: 'FFFFFF'
+          })
+        ],
+        shading: { fill: 'FF7A00' },
+        spacing: { after: 100 }
+      })
+    );
+
+    for (const [dayKey, images] of Object.entries(reportData.imagesPerDay)) {
+      if (!images || images.length === 0) continue;
+
+      // Título del día
+      const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: dayLabel,
+              bold: true,
+              size: 20,
+              color: 'FF7A00'
+            })
+          ],
+          spacing: { before: 200, after: 100 }
+        })
+      );
+
+      // Agregar imágenes
+      for (const image of images) {
+        try {
+          const imgData = await loadImageAsBase64(image.url);
+          if (imgData) {
+            const base64Data = imgData.split(',')[1];
+            const buffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+
+            children.push(
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    type: 'jpg',
+                    data: buffer,
+                    transformation: {
+                      width: 400,
+                      height: 300
+                    }
+                  })
+                ],
+                spacing: { after: 50 }
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: new Date(image.timestamp).toLocaleString('es-ES'),
+                    size: 16,
+                    color: '666666'
+                  })
+                ],
+                spacing: { after: 200 }
+              })
+            );
+          }
+        } catch (error) {
+          console.warn('⚠️ Error agregando imagen a Word:', error);
+        }
+      }
+    }
   }
 
   const doc = new Document({

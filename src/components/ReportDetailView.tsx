@@ -273,6 +273,59 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({ numeroReporte, onBa
             </div>
           )}
 
+          {/* Evidencia Fotográfica */}
+          {report.imagesPerDay && Object.keys(report.imagesPerDay).length > 0 && (
+            <div className="template-section">
+              <h3 className="section-title">📸 EVIDENCIA FOTOGRÁFICA</h3>
+              {Object.entries(report.imagesPerDay).map(([dayKey, images]) => {
+                if (!images || images.length === 0) return null;
+                
+                const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
+                
+                return (
+                  <div key={dayKey} style={{ marginBottom: '20px' }}>
+                    <h4 style={{ color: '#FF7A00', marginBottom: '10px' }}>{dayLabel}</h4>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                      gap: '15px'
+                    }}>
+                      {images.map((image: any, index: number) => (
+                        <div key={index} style={{
+                          border: '2px solid #FF7A00',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          backgroundColor: '#f8f9fa'
+                        }}>
+                          <img
+                            src={image.url}
+                            alt={`Foto ${index + 1} - ${dayLabel}`}
+                            style={{
+                              width: '100%',
+                              height: '200px',
+                              objectFit: 'cover'
+                            }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="250" height="200"%3E%3Crect fill="%23ddd" width="250" height="200"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImagen no disponible%3C/text%3E%3C/svg%3E';
+                            }}
+                          />
+                          <div style={{
+                            padding: '8px',
+                            fontSize: '12px',
+                            color: '#666',
+                            textAlign: 'center'
+                          }}>
+                            {new Date(image.timestamp).toLocaleString('es-DO')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Información del usuario */}
           <div className="template-footer">
             <div className="footer-item">

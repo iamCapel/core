@@ -47,9 +47,17 @@ export interface ReportData {
   };
   
   // Multimedia
-  images?: string[];
+  images?: string[]; // Para reportes simples
   videos?: string[];
   documentos?: string[];
+  
+  // Imágenes por día (para proyectos multi-día)
+  imagesPerDay?: Record<string, Array<{
+    url: string;
+    path: string;
+    size: number;
+    timestamp: string;
+  }>>;
   
   // Archivos generados automáticamente
   generatedFiles?: {

@@ -3,6 +3,33 @@ import { reportStorage } from '../services/reportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import './DetailedReportView.css';
 
+// Mapeo de etiquetas de campos con sus unidades (igual que en el PDF)
+const fieldLabels: Record<string, { label: string; unit: string }> = {
+  'longitud_intervencion': { label: 'Longitud de intervención', unit: 'km' },
+  'limpieza_superficie': { label: 'Limpieza de superficie', unit: 'm²' },
+  'perfilado_superficie': { label: 'Perfilado de superficie', unit: 'm²' },
+  'compactado_superficie': { label: 'Compactado de superficie', unit: 'm²' },
+  'conformacion_cunetas': { label: 'Conformación de cunetas', unit: 'ml' },
+  'extraccion_bote_material': { label: 'Extracción y bote de material inservible', unit: 'm³' },
+  'escarificacion_superficies': { label: 'Escarificación de superficies', unit: 'm²' },
+  'conformacion_plataforma': { label: 'Conformación de plataforma', unit: 'm²' },
+  'zafra_material': { label: 'Zafra de material', unit: 'm³' },
+  'motonivelacion_superficie': { label: 'Motonivelación de superficie', unit: 'm²' },
+  'escarpe_talud': { label: 'Escarpe de talud', unit: 'm²' },
+  'limpieza_alcantarillas': { label: 'Limpieza de alcantarillas', unit: 'und' },
+  'desmalezado_arbustos': { label: 'Desmalezado de arbustos', unit: 'm²' },
+  'corte_poda_arboles': { label: 'Corte y poda de árboles', unit: 'und' },
+  'escarificado_plataforma': { label: 'Escarificado de plataforma', unit: 'm²' },
+  'tapada_baches': { label: 'Tapada de baches', unit: 'm³' },
+  'reposicion_tuberias': { label: 'Reposición de tuberías', unit: 'und' },
+  'trabajos_especiales': { label: 'Trabajos especiales', unit: '' },
+  'cantidad_material_colocado': { label: 'Cantidad de material colocado', unit: 'm³' },
+  'camino_inicio': { label: 'Camino inicio', unit: '' },
+  'camino_termino': { label: 'Camino término', unit: '' },
+  'apertura_zanjas': { label: 'Apertura de zanjas', unit: 'ml' },
+  'mano_obra': { label: 'Mano de obra', unit: '' }
+};
+
 interface Report {
   id: string;
   reportNumber: string;
@@ -231,14 +258,22 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       try {
         let allReports = await firebaseReportStorage.getAllReports();
         
-        // IMPORTANTE: Excluir reportes con estado 'pendiente'
-        // Los reportes pendientes solo aparecen en consultas específicas de pendientes
-        allReports = allReports.filter(report => report.estado !== 'pendiente');
+        // ✅ Admin y Supervisor VEN reportes pendientes de todos los usuarios
+        // ✅ Técnicos VEN sus propios reportes pendientes
+        const isAdminOrSupervisor = user?.role === 'Admin' || user?.role === 'Supervisor' || user?.role === 'admin' || user?.role === 'supervisor';
+        const isTecnico = user?.role === 'Técnico' || user?.role === 'tecnico';
         
-        // Filtrar por rol si es técnico
-        if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-          allReports = allReports.filter(report => report.creadoPor === user.username);
+        // Filtrar por rol si es técnico (solo ven sus propios reportes)
+        if (isTecnico) {
+          // Técnicos ven TODOS sus reportes (completados Y pendientes)
+          allReports = allReports.filter(report => 
+            report.creadoPor === user.username || report.usuarioId === user.username
+          );
         }
+        
+        console.log(`📊 [${user?.role}] Total reportes cargados:`, allReports.length);
+        console.log(`🟠 Reportes pendientes visibles:`, allReports.filter(r => r.estado === 'pendiente').length);
+        console.log(`✅ Reportes completados visibles:`, allReports.filter(r => r.estado === 'completado').length);
         
         processReports(allReports);
       } catch (error) {
@@ -246,12 +281,13 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         // Fallback a localStorage
         let allReports = reportStorage.getAllReports();
         
-        // IMPORTANTE: Excluir reportes con estado 'pendiente'
-        allReports = allReports.filter(report => report.estado !== 'pendiente');
+        const isTecnico = user?.role === 'Técnico' || user?.role === 'tecnico';
         
         // Filtrar por rol si es técnico
-        if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-          allReports = allReports.filter(report => report.creadoPor === user.username);
+        if (isTecnico) {
+          allReports = allReports.filter(report => 
+            report.creadoPor === user.username || report.usuarioId === user.username
+          );
         }
         
         processReports(allReports);
@@ -617,7 +653,36 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
 
   const viewReport = (report: Report, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Mostrar el reporte inmediatamente
     setSelectedReport(report);
+    
+    // Cargar imágenes en segundo plano solo si no las tiene ya
+    if (!report.images || report.images.length === 0) {
+      setTimeout(async () => {
+        try {
+          const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
+          const imagesPerDay = await firebaseImageStorage.getReportImages(report.id);
+          
+          if (imagesPerDay && Object.keys(imagesPerDay).length > 0) {
+            // Convertir imagesPerDay a array de URLs
+            const allImages: string[] = [];
+            Object.values(imagesPerDay).forEach((dayImages: any) => {
+              if (Array.isArray(dayImages)) {
+                dayImages.forEach(img => allImages.push(img.url));
+              }
+            });
+            
+            if (allImages.length > 0) {
+              // Actualizar el reporte con las imágenes
+              setSelectedReport(prev => prev ? {...prev, images: allImages} : null);
+            }
+          }
+        } catch (imageError) {
+          console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
+        }
+      }, 100);
+    }
   };
 
   const closeReportView = () => {
@@ -649,68 +714,43 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   // Modal de detalle del reporte (cuando se selecciona uno)
   if (selectedReport) {
     return (
-      <div className="detailed-report-modal">
-        <div className="report-viewer">
+      <div className="detailed-report-modal" onClick={closeReportView}>
+        <div className="report-viewer" onClick={(e) => e.stopPropagation()}>
           <div className="report-viewer-header">
-            <h2>📄 Informe Completo - #{selectedReport.reportNumber}</h2>
-            <div className="report-actions-buttons">
-              <button 
-                className="report-edit-btn"
-                onClick={() => {
-                  if (onEditReport) {
-                    onEditReport(selectedReport);
-                  } else {
-                    alert('No se ha configurado la función de edición');
-                  }
-                }}
-                title="Editar reporte"
-              >
-                ✏️ Editar
-              </button>
-              {isAdmin && (
-                <button 
-                  className="report-delete-btn"
-                  onClick={() => deleteReport(selectedReport.id, selectedReport.reportNumber)}
-                  title="Eliminar reporte"
-                >
-                  🗑️ Eliminar
-                </button>
-              )}
+            <div className="report-viewer-header-left">
+              <img 
+                src="/mopc-logo.png" 
+                alt="MOPC Logo" 
+                className="report-viewer-logo"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+              <h2 className="report-viewer-title">DIRECCIÓN DE COORDINACIÓN REGIONAL</h2>
+              <p className="report-viewer-subtitle">{selectedReport.tipoIntervencion || 'INTERVENCIÓN VIAL'}</p>
             </div>
-          </div>
-          <div className="report-viewer-content">
-            {/* Información General */}
-            <div className="report-section">
-              <h3 className="section-title">📋 Información General</h3>
-              <div className="report-grid">
-                <div className="report-field">
-                  <label>Número de Reporte:</label>
-                  <div className="field-value">{selectedReport.reportNumber}</div>
-                </div>
-                <div className="report-field">
-                  <label>Creado por:</label>
-                  <div className="field-value">{selectedReport.createdBy}</div>
-                </div>
-                <div className="report-field">
-                  <label>Fecha del Proyecto:</label>
-                  <div className="field-value">{selectedReport.date}</div>
-                </div>
-                <div className="report-field">
-                  <label>Tipo de Intervención:</label>
-                  <div className="field-value">{selectedReport.tipoIntervencion}</div>
-                </div>
-                {selectedReport.esMultiDia && (
-                  <div className="report-field">
-                    <label>Día del Proyecto:</label>
-                    <div className="field-value">{selectedReport.diaNumero} de {selectedReport.totalDias}</div>
-                  </div>
-                )}
+            <div className="report-viewer-header-right">
+              <div className="report-info-box-row">
+                <span className="report-info-label">N° REPORTE:</span>
+              </div>
+              <div className="report-info-box-row">
+                <span className="report-info-value">{selectedReport.reportNumber}</span>
+              </div>
+              <div className="report-info-box-row" style={{ marginTop: '8px' }}>
+                <span className="report-info-label">CREADO POR:</span>
+              </div>
+              <div className="report-info-box-row">
+                <span className="report-info-value-normal">{selectedReport.createdBy}</span>
+              </div>
+              <div className="report-info-box-row" style={{ marginTop: '8px' }}>
+                <span className="report-info-label">FECHA:</span>
+                <span className="report-info-value-date">{selectedReport.date}</span>
               </div>
             </div>
-
-            {/* Ubicación Geográfica */}
+            <button className="close-btn" onClick={closeReportView} title="Cerrar">✕</button>
+          </div>
+          <div className="report-viewer-content">
+            {/* Ubicación */}
             <div className="report-section">
-              <h3 className="section-title">📍 Ubicación Geográfica</h3>
+              <h3 className="section-title">📍 UBICACIÓN</h3>
               <div className="report-grid">
                 <div className="report-field">
                   <label>Región:</label>
@@ -721,12 +761,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                   <div className="field-value">{selectedReport.province}</div>
                 </div>
                 <div className="report-field">
-                  <label>Distrito:</label>
-                  <div className="field-value">{selectedReport.district}</div>
-                </div>
-                <div className="report-field">
                   <label>Municipio:</label>
                   <div className="field-value">{selectedReport.municipio}</div>
+                </div>
+                <div className="report-field">
+                  <label>Distrito:</label>
+                  <div className="field-value">{selectedReport.district}</div>
                 </div>
                 <div className="report-field">
                   <label>Sector:</label>
@@ -735,23 +775,25 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               </div>
             </div>
 
-            {/* Datos Métricos */}
+            {/* Detalles de Intervención */}
             {selectedReport.metricData && Object.keys(selectedReport.metricData).length > 0 && (
               <div className="report-section">
-                <h3 className="section-title">📊 Datos Métricos</h3>
+                <h3 className="section-title">🔧 DETALLES DE INTERVENCIÓN</h3>
                 <div className="report-grid">
-                  {Object.entries(selectedReport.metricData).map(([key, value]) => (
-                    <div key={key} className="report-field">
-                      <label>{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</label>
-                      <div className="field-value">
-                        {value} {getUnitForMetric(key)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="report-field total-interventions">
-                  <label>Total de Intervenciones:</label>
-                  <div className="field-value highlight">{selectedReport.totalInterventions}</div>
+                  {Object.entries(selectedReport.metricData)
+                    .filter(([key]) => key !== 'punto_inicial' && key !== 'punto_alcanzado')
+                    .map(([key, value]) => {
+                      const fieldInfo = fieldLabels[key];
+                      const label = fieldInfo ? fieldInfo.label : key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                      const displayValue = fieldInfo?.unit ? `${value} ${fieldInfo.unit}` : value;
+                      
+                      return (
+                        <div key={key} className="report-field">
+                          <label>{label}:</label>
+                          <div className="field-value">{displayValue}</div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -759,7 +801,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             {/* Vehículos Pesados */}
             {selectedReport.vehiculos && selectedReport.vehiculos.length > 0 && (
               <div className="report-section">
-                <h3 className="section-title">🚜 Vehículos Pesados</h3>
+                <h3 className="section-title">🚜 VEHÍCULOS UTILIZADOS</h3>
                 <div className="report-grid">
                   {selectedReport.vehiculos.map((vehiculo, idx) => (
                     <div key={idx} className="report-field">
@@ -783,23 +825,21 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             {/* Coordenadas GPS */}
             {selectedReport.gpsData && (
               <div className="report-section">
-                <h3 className="section-title">🌍 Coordenadas GPS</h3>
+                <h3 className="section-title">🗺️ COORDENADAS GPS</h3>
                 <div className="report-grid">
                   {selectedReport.gpsData.punto_inicial && (
                     <div className="report-field">
                       <label>Punto Inicial:</label>
-                      <div className="field-value gps-coords">
-                        <span>Lat: {selectedReport.gpsData.punto_inicial.lat.toFixed(6)}°</span>
-                        <span>Lon: {selectedReport.gpsData.punto_inicial.lon.toFixed(6)}°</span>
+                      <div className="field-value">
+                        Lat: {selectedReport.gpsData.punto_inicial.lat.toFixed(6)}°, Lon: {selectedReport.gpsData.punto_inicial.lon.toFixed(6)}°
                       </div>
                     </div>
                   )}
                   {selectedReport.gpsData.punto_alcanzado && (
                     <div className="report-field">
                       <label>Punto Alcanzado:</label>
-                      <div className="field-value gps-coords">
-                        <span>Lat: {selectedReport.gpsData.punto_alcanzado.lat.toFixed(6)}°</span>
-                        <span>Lon: {selectedReport.gpsData.punto_alcanzado.lon.toFixed(6)}°</span>
+                      <div className="field-value">
+                        Lat: {selectedReport.gpsData.punto_alcanzado.lat.toFixed(6)}°, Lon: {selectedReport.gpsData.punto_alcanzado.lon.toFixed(6)}°
                       </div>
                     </div>
                   )}
@@ -807,14 +847,14 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               </div>
             )}
 
-            {/* Imágenes */}
+            {/* Imágenes - Solo mostrar si existen */}
             {selectedReport.images && selectedReport.images.length > 0 && (
               <div className="report-section">
-                <h3 className="section-title">📷 Imágenes del Proyecto</h3>
+                <h3 className="section-title">📸 EVIDENCIA FOTOGRÁFICA ({selectedReport.images.length} fotos)</h3>
                 <div className="images-grid">
                   {selectedReport.images.map((img, idx) => (
                     <div key={idx} className="image-item">
-                      <img src={img} alt={`Imagen ${idx + 1}`} />
+                      <img src={img} alt={`Imagen ${idx + 1}`} loading="lazy" />
                       <span className="image-label">Imagen {idx + 1}</span>
                     </div>
                   ))}
@@ -825,7 +865,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             {/* Observaciones */}
             {selectedReport.observations && (
               <div className="report-section">
-                <h3 className="section-title">📝 Observaciones</h3>
+                <h3 className="section-title">📝 OBSERVACIONES</h3>
                 <div className="observations-box">
                   {selectedReport.observations}
                 </div>
@@ -833,33 +873,35 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             )}
           </div>
           <div className="report-viewer-footer">
+            <div className="footer-actions-left">
+              <button 
+                className="report-edit-btn"
+                onClick={() => {
+                  if (onEditReport) {
+                    onEditReport(selectedReport);
+                  } else {
+                    alert('No se ha configurado la función de edición');
+                  }
+                }}
+                title="Editar reporte"
+              >
+                ✏️ Editar
+              </button>
+              {isAdmin && (
+                <button 
+                  className="report-delete-btn"
+                  onClick={() => deleteReport(selectedReport.id, selectedReport.reportNumber)}
+                  title="Eliminar reporte"
+                >
+                  🗑️ Eliminar
+                </button>
+              )}
+            </div>
             <button className="btn-secondary" onClick={closeReportView}>Cerrar Informe</button>
           </div>
         </div>
       </div>
     );
-  }
-
-  // Helper function para obtener unidades de medida
-  function getUnitForMetric(key: string): string {
-    const units: Record<string, string> = {
-      longitud_limpiada: 'm',
-      ancho_canal: 'm',
-      profundidad_canal: 'm',
-      volumen_excavado: 'm³',
-      altura_presa: 'm',
-      longitud_cresta: 'm',
-      capacidad_almacenamiento: 'm³',
-      longitud_drenaje: 'm',
-      diametro_tuberia: 'm',
-      longitud_camino: 'm',
-      ancho_camino: 'm',
-      espesor_capa: 'm',
-      longitud_puente: 'm',
-      ancho_puente: 'm',
-      numero_vanos: 'unidades'
-    };
-    return units[key] || '';
   }
 
   // Vista principal con filtros avanzados y múltiples modos
@@ -870,6 +912,34 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         <div className="header-left">
           <h2>📊 Informes y Estadísticas Detalladas</h2>
           <p className="header-subtitle">Análisis completo de intervenciones viales</p>
+          {/* Mensaje informativo para Admin/Supervisor */}
+          {(user?.role === 'Admin' || user?.role === 'Supervisor' || user?.role === 'admin' || user?.role === 'supervisor') && (
+            <p style={{
+              marginTop: '8px',
+              padding: '8px 12px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '4px',
+              fontSize: '13px',
+              color: '#856404'
+            }}>
+              🟠 <strong>{user.role}:</strong> Puedes ver reportes <strong>pendientes</strong> de todos los usuarios. Usa el filtro de estado para verlos.
+            </p>
+          )}
+          {/* Mensaje informativo para Técnico */}
+          {(user?.role === 'Técnico' || user?.role === 'tecnico') && (
+            <p style={{
+              marginTop: '8px',
+              padding: '8px 12px',
+              backgroundColor: '#e3f2fd',
+              border: '1px solid #2196F3',
+              borderRadius: '4px',
+              fontSize: '13px',
+              color: '#0d47a1'
+            }}>
+              ℹ️ <strong>Técnico:</strong> Puedes ver todos tus reportes, incluyendo los <strong>pendientes</strong>. Usa el filtro de estado para filtrarlos.
+            </p>
+          )}
         </div>
         <div className="header-right">
           <div className="view-mode-selector">

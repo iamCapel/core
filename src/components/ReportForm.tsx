@@ -66,6 +66,9 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [diaActual, setDiaActual] = useState(0);
   const [reportesPorDia, setReportesPorDia] = useState<Record<string, any>>({});
   
+  // 📸 Estado para imágenes del reporte
+  const [imagesPerDay, setImagesPerDay] = useState<Record<string, any>>({});
+  
   const [tipoIntervencion, setTipoIntervencion] = useState('');
   const [subTipoCanal, setSubTipoCanal] = useState('');
   const [observaciones, setObservaciones] = useState('');
@@ -144,20 +147,28 @@ const ReportForm: React.FC<ReportFormProps> = ({
         
         // Inicializar reportes por día si no existen
         const nuevosReportes: Record<string, any> = {};
-        dias.forEach(dia => {
+        let vehiculosPrevios: any[] = [];
+        
+        dias.forEach((dia, index) => {
           if (!reportesPorDia[dia]) {
+            // ✅ Los días después del primero heredan los vehículos del día anterior
             nuevosReportes[dia] = {
               fecha: dia,
               tipoIntervencion: '',
               subTipoCanal: '',
               observaciones: '',
-              vehiculos: [],
+              vehiculos: index === 0 ? [] : [...vehiculosPrevios], // Heredar vehículos
               plantillaValues: {},
               autoGpsFields: {},
               completado: false
             };
+            vehiculosPrevios = nuevosReportes[dia].vehiculos;
           } else {
             nuevosReportes[dia] = reportesPorDia[dia];
+            // Actualizar vehículos previos para el siguiente día
+            if (reportesPorDia[dia].vehiculos) {
+              vehiculosPrevios = reportesPorDia[dia].vehiculos;
+            }
           }
         });
         setReportesPorDia(nuevosReportes);
@@ -315,6 +326,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
       if (interventionToEdit.gpsData) {
         console.log('📍 Cargando datos GPS:', interventionToEdit.gpsData);
         setAutoGpsFields(interventionToEdit.gpsData);
+      }
+      
+      // 📸 Cargar imágenes si existen
+      if (interventionToEdit.imagesPerDay) {
+        console.log('📸 Cargando imágenes del reporte:', interventionToEdit.imagesPerDay);
+        setImagesPerDay(interventionToEdit.imagesPerDay);
       }
       
       // ⭐ PRIMERO: Cargar datos multi-día si existen (ANTES de cargar fechas simples)
@@ -515,6 +532,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
   const loadPendingReportData = async (pendingReport: any, reportId: string) => {
     if (pendingReport && pendingReport.formData) {
+      setIsLoadingPendingData(true); // 🔒 Bloquear auto-save durante carga
+      
       // Cargar TODOS los datos del reporte pendiente
       const data = pendingReport.formData;
       setRegion(data.region || '');
@@ -557,10 +576,42 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setTipoVehiculoActual('');
       setFichaVehiculoActual('');
       
+      // 🆕 Restaurar datos GPS
+      if (data.gpsData) {
+        setAutoGpsFields(data.gpsData);
+      }
+      
+      // 🆕 Restaurar datos multi-día si existen
+      if (data.diasTrabajo && Array.isArray(data.diasTrabajo) && data.diasTrabajo.length > 0) {
+        console.log('🔄 Restaurando datos multi-día:', data.diasTrabajo);
+        setDiasTrabajo(data.diasTrabajo);
+        
+        if (data.reportesPorDia) {
+          setReportesPorDia(data.reportesPorDia);
+        }
+        
+        if (data.fechaInicio) {
+          setFechaInicio(data.fechaInicio);
+        }
+        
+        if (data.fechaFinal) {
+          setFechaFinal(data.fechaFinal);
+        }
+        
+        if (data.diaActual !== undefined) {
+          setDiaActual(data.diaActual);
+        }
+      }
+      
       setCurrentPendingReportId(reportId);
       setShowPendingModal(false);
       
-      console.log('✅ Reporte pendiente cargado:', reportId);
+      console.log('✅ Reporte pendiente cargado completo:', reportId);
+      
+      // 🔓 Desbloquear después de un delay
+      setTimeout(() => {
+        setIsLoadingPendingData(false);
+      }, 1000);
     }
   };
 
@@ -640,7 +691,13 @@ const ReportForm: React.FC<ReportFormProps> = ({
               metricData: plantillaValues,
               observaciones,
               vehiculos,
-              gpsData: autoGpsFields // ¡IMPORTANTE! Guardar datos GPS
+              gpsData: autoGpsFields, // ¡IMPORTANTE! Guardar datos GPS
+              // 🆕 Guardar datos multi-día
+              diasTrabajo: diasTrabajo.length > 0 ? diasTrabajo : undefined,
+              reportesPorDia: diasTrabajo.length > 0 ? reportesPorDia : undefined,
+              fechaInicio: fechaInicio || undefined,
+              fechaFinal: fechaFinal || undefined,
+              diaActual: diasTrabajo.length > 0 ? diaActual : undefined
             },
             progress: 0,
             fieldsCompleted: []
@@ -678,6 +735,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
     observaciones,
     vehiculos,
     autoGpsFields, // ¡IMPORTANTE! Detectar cambios en datos GPS
+    diasTrabajo, // 🆕 Detectar cambios en días
+    reportesPorDia, // 🆕 Detectar cambios en reportes por día
+    fechaInicio, // 🆕 Detectar cambios en fechas
+    fechaFinal, // 🆕 Detectar cambios en fechas
+    diaActual, // 🆕 Detectar cambios en día actual
     isLoadingPendingData, // ✅ Reagendar cuando termine de cargar
     user.username,
     user.name
@@ -767,9 +829,30 @@ const ReportForm: React.FC<ReportFormProps> = ({
       setTipoIntervencion(reporte.tipoIntervencion || '');
       setSubTipoCanal(reporte.subTipoCanal || '');
       setObservaciones(reporte.observaciones || '');
-      setVehiculos(reporte.vehiculos || []);
+      
+      // ✅ Si el día tiene vehículos guardados, usarlos
+      // Si no tiene vehículos pero el día anterior sí tenía, heredarlos
+      if (reporte.vehiculos && reporte.vehiculos.length > 0) {
+        setVehiculos(reporte.vehiculos);
+      } else if (vehiculos.length > 0) {
+        // Copiar vehículos del día actual al nuevo día (persistencia)
+        console.log('🚜 Copiando vehículos al día', indiceDia, ':', vehiculos);
+        setVehiculos([...vehiculos]);
+      } else {
+        setVehiculos([]);
+      }
+      
       setPlantillaValues(reporte.plantillaValues || {});
       setAutoGpsFields(reporte.autoGpsFields || {});
+    } else {
+      // Si no hay reporte guardado para este día, copiar vehículos del día actual
+      console.log('📝 Día nuevo - copiando vehículos actuales:', vehiculos);
+      setTipoIntervencion('');
+      setSubTipoCanal('');
+      setObservaciones('');
+      setVehiculos([...vehiculos]); // ✅ Heredar vehículos
+      setPlantillaValues({});
+      setAutoGpsFields({});
     }
     
     setDiaActual(indiceDia);
@@ -860,6 +943,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 metricData: reporteDia.plantillaValues,
                 gpsData: reporteDia.autoGpsFields,
                 vehiculos: reporteDia.vehiculos || [],
+                imagesPerDay: imagesPerDay || undefined,
                 estado: 'completado' as const,
                 fechaProyecto: dia,
                 esProyectoMultiDia: true
@@ -939,6 +1023,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
         gpsData: autoGpsFields,
         // Información de vehículos (array)
         vehiculos: vehiculos,
+        // 📸 Imágenes del reporte
+        imagesPerDay: imagesPerDay && Object.keys(imagesPerDay).length > 0 ? imagesPerDay : undefined,
         estado: 'completado' as const,
         modificadoPor: interventionToEdit ? user?.name : undefined
       };
@@ -1928,6 +2014,71 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 </div>
               </div>
 
+              {/* 📸 SECCIÓN DE IMÁGENES */}
+              {imagesPerDay && Object.keys(imagesPerDay).length > 0 && (
+                <>
+                  <div className="template-separator" style={{ marginTop: '40px', marginBottom: '30px' }}>
+                    <div className="separator-line"></div>
+                    <span className="separator-text">📸 EVIDENCIA FOTOGRÁFICA</span>
+                    <div className="separator-line"></div>
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    {Object.entries(imagesPerDay).map(([dayKey, images]: [string, any]) => {
+                      if (!images || images.length === 0) return null;
+                      
+                      const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
+                      
+                      return (
+                        <div key={dayKey} style={{ marginBottom: '30px' }}>
+                          <h4 style={{ 
+                            color: 'var(--primary-orange)', 
+                            marginBottom: '15px',
+                            fontSize: '16px',
+                            fontWeight: '600'
+                          }}>
+                            {dayLabel}
+                          </h4>
+                          <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                            gap: '15px'
+                          }}>
+                            {images.map((image: any, index: number) => (
+                              <div key={index} style={{
+                                border: '2px solid #e0e0e0',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                backgroundColor: '#f8f9fa'
+                              }}>
+                                <img 
+                                  src={image.url} 
+                                  alt={`Foto ${index + 1}`}
+                                  style={{
+                                    width: '100%',
+                                    height: '200px',
+                                    objectFit: 'cover',
+                                    display: 'block'
+                                  }}
+                                />
+                                <div style={{
+                                  padding: '8px',
+                                  fontSize: '11px',
+                                  color: '#666',
+                                  textAlign: 'center'
+                                }}>
+                                  {new Date(image.timestamp).toLocaleString('es-ES')}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
               {/* Footer del template */}
               <div className="template-footer">
                 <div className="footer-left">
@@ -1991,7 +2142,82 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 const sectorFinal = sector === 'otros' ? sectorPersonalizado : sector;
                 const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
                 
-                // Validación
+                // Validación para sistema multi-día
+                const hayReportesGuardados = Object.values(reportesPorDia).some((r: any) => r.tipoIntervencion);
+                
+                if (diasTrabajo.length > 0 && hayReportesGuardados) {
+                  // 🔄 MODO MULTI-DÍA PENDIENTE
+                  console.log('🟠 Modo multi-día PENDIENTE detectado');
+                  
+                  if (!region || !provincia || !distritoFinal || !sectorFinal) {
+                    alert('Por favor complete todos los campos geográficos requeridos');
+                    return;
+                  }
+                  
+                  // Guardar día actual antes de proceder
+                  guardarDiaActual();
+                  
+                  setShowPendingAnimation(true);
+                  
+                  setTimeout(async () => {
+                    try {
+                      let reportesGuardados = 0;
+                      console.log('📊 Guardando días como PENDIENTES:', diasTrabajo);
+                      
+                      for (const dia of diasTrabajo) {
+                        const reporteDia = reportesPorDia[dia];
+                        
+                        if (reporteDia && reporteDia.tipoIntervencion) {
+                          const reportData = {
+                            timestamp: new Date(dia).toISOString(),
+                            fechaCreacion: new Date(dia).toISOString(),
+                            creadoPor: user?.name || 'Desconocido',
+                            usuarioId: user?.username || 'desconocido',
+                            region,
+                            provincia,
+                            distrito: distritoFinal,
+                            municipio,
+                            sector: sectorFinal,
+                            tipoIntervencion: reporteDia.tipoIntervencion === 'Canalización' 
+                              ? `${reporteDia.tipoIntervencion}:${reporteDia.subTipoCanal}` 
+                              : reporteDia.tipoIntervencion,
+                            subTipoCanal: reporteDia.tipoIntervencion === 'Canalización' ? reporteDia.subTipoCanal : undefined,
+                            observaciones: reporteDia.observaciones || undefined,
+                            metricData: reporteDia.plantillaValues,
+                            gpsData: reporteDia.autoGpsFields,
+                            vehiculos: reporteDia.vehiculos || [],
+                            estado: 'pendiente' as const, // 🟠 PENDIENTE
+                            fechaProyecto: dia,
+                            esProyectoMultiDia: true
+                          };
+                          
+                          const savedReport = await reportStorage.saveReport(reportData);
+                          await firebaseReportStorage.saveReport(savedReport);
+                          
+                          console.log(`🟠 Reporte guardado como PENDIENTE para ${dia}`);
+                          reportesGuardados++;
+                        }
+                      }
+                      
+                      setTimeout(() => {
+                        setShowPendingAnimation(false);
+                        alert(`🟠 ${reportesGuardados} reportes guardados como pendientes (no aparecerán en estadísticas)`);
+                        limpiarFormulario();
+                      }, 2000);
+                      
+                    } catch (error) {
+                      console.error('❌ Error al guardar reportes pendientes:', error);
+                      setShowPendingAnimation(false);
+                      alert('Error al guardar los reportes pendientes. Intente nuevamente.');
+                    }
+                  }, 500);
+                  
+                  return;
+                }
+                
+                // 📝 MODO UN SOLO DÍA PENDIENTE
+                console.log('🟠 Modo un solo día PENDIENTE');
+                
                 if (!region || !provincia || !distritoFinal || !sectorFinal || !fechaInicio || !tipoIntervencion) {
                   alert('Por favor complete todos los campos requeridos');
                   return;
@@ -2018,8 +2244,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
                       metricData: plantillaValues,
                       gpsData: autoGpsFields,
                       vehiculos: vehiculos,
-                      estado: 'pendiente' as const,  // ✅ Solo aparece en búsquedas de pendientes
-                      // Guardar datos multi-día si existen
+                      estado: 'pendiente' as const,  // 🟠 PENDIENTE
+                      // Guardar datos multi-día si existen (para futuro uso)
                       diasTrabajo: diasTrabajo.length > 0 ? diasTrabajo : undefined,
                       reportesPorDia: diasTrabajo.length > 0 ? reportesPorDia : undefined,
                       fechaInicio: fechaInicio || undefined,
@@ -2030,11 +2256,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
                     const savedReport = await reportStorage.saveReport(reportData);
                     await firebaseReportStorage.saveReport(savedReport);
                     
-                    console.log('✅ Reporte guardado como pendiente (sin estadísticas)');
+                    console.log('🟠 Reporte guardado como pendiente (sin estadísticas)');
                     
                     setTimeout(() => {
                       setShowPendingAnimation(false);
-                      alert('✅ Reporte guardado como pendiente');
+                      alert('🟠 Reporte guardado como pendiente (no aparecerá en estadísticas)');
                       limpiarFormulario();
                     }, 2000);
                   } catch (error) {

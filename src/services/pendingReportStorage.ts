@@ -54,6 +54,14 @@ export interface PendingReport {
     videos?: string[];
     documentos?: string[];
     
+    // Imágenes por día (para proyectos multi-día)
+    imagesPerDay?: Record<string, Array<{
+      url: string;
+      path: string;
+      size: number;
+      timestamp: string;
+    }>>;
+    
     // Campos para proyectos multi-día
     fechaProyecto?: string;
     esProyectoMultiDia?: boolean;

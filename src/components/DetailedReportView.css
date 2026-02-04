@@ -375,12 +375,12 @@
   display: none;
 }
 
-/* Visor de reporte completo */
+/* Visor de reporte completo - Estilo PDF */
 .report-viewer {
   background: white;
   border-radius: var(--radius-lg);
   width: 95%;
-  max-width: 1000px;
+  max-width: 1100px;
   max-height: 95vh;
   display: flex;
   flex-direction: column;
@@ -391,11 +391,114 @@
 .report-viewer-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-bottom: 3px solid var(--primary-orange);
-  background: linear-gradient(135deg, var(--pale-orange) 0%, white 100%);
+  align-items: flex-start;
+  padding: 24px 32px;
+  border-bottom: 3px solid #ff7a00;
+  background: white;
   position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px;
+  right: 32px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #999;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: var(--transition-fast);
+  z-index: 10;
+}
+
+.close-btn:hover {
+  background: #ffe5cc;
+  color: #ff7a00;
+  transform: rotate(90deg);
+}
+
+.report-viewer-header-left {
+  flex: 1;
+}
+
+.report-viewer-logo {
+  width: 80px;
+  height: auto;
+  margin-bottom: 12px;
+}
+
+.report-viewer-title {
+  color: #ff7a00;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-viewer-subtitle {
+  color: #333;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.report-viewer-header-right {
+  border: 2px solid #ff7a00;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: white;
+  min-width: 280px;
+}
+
+.report-info-box-row {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.report-info-box-row:last-child {
+  margin-bottom: 0;
+}
+
+.report-info-label {
+  font-weight: 700;
+  font-size: 11px;
+  color: #333;
+  text-transform: uppercase;
+}
+
+.report-info-value {
+  font-weight: 700;
+  font-size: 12px;
+  color: #ff7a00;
+}
+
+.report-info-value-normal {
+  font-weight: 400;
+  font-size: 11px;
+  color: #666;
+}
+
+.report-info-value-date {
+  font-weight: 400;
+  font-size: 10px;
+  color: #999;
+}
+
+.report-header-actions {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  display: flex;
+  gap: 8px;
 }
 
 .report-viewer-header h2 {
@@ -482,58 +585,64 @@
   background: #fafafa;
 }
 
-/* Secciones del reporte */
+/* Secciones del reporte - Estilo PDF */
 .report-section {
   background: white;
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-  border-left: 4px solid var(--primary-orange);
+  margin-bottom: 20px;
 }
 
 .section-title {
-  margin: 0 0 var(--spacing-md) 0;
-  color: var(--primary-orange-dark);
-  font-size: var(--font-size-lg);
+  background: #ff7a00;
+  color: white;
+  margin: 0 0 16px 0;
+  padding: 10px 16px;
+  font-size: 14px;
   font-weight: 700;
-  padding-bottom: var(--spacing-sm);
-  border-bottom: 2px solid var(--tertiary-orange);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 0;
 }
 
-/* Grid de campos */
+/* Grid de campos - Estilo PDF tabla */
 .report-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 16px;
 }
 
 .report-field {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
+  flex-direction: row;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.report-field:last-child {
+  border-bottom: none;
 }
 
 .report-field label {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 220px;
+  flex-shrink: 0;
 }
 
 .field-value {
-  background: #f8f9fa;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: var(--font-size-md);
-  font-weight: 500;
-  border: 1px solid #e0e0e0;
-  min-height: 38px;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: #666;
+  font-size: 13px;
+  font-weight: 400;
+  border: none;
+  min-height: auto;
   display: flex;
   align-items: center;
+  flex: 1;
 }
 
 /* Estilos para vehículos pesados */
@@ -545,20 +654,20 @@
 }
 
 .field-value > div > div {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .field-value > div > div strong {
-  color: var(--primary-orange-dark);
+  color: #333;
   margin-right: 6px;
 }
 
 .field-value.highlight {
-  background: linear-gradient(135deg, #fff9f5 0%, #ffe5cc 100%);
-  color: var(--primary-orange-dark);
+  background: transparent;
+  color: #ff7a00;
   font-weight: 700;
-  font-size: var(--font-size-lg);
-  border: 2px solid var(--primary-orange);
+  font-size: 15px;
+  border: none;
 }
 
 /* Campo de intervenciones totales */
@@ -583,67 +692,76 @@
   font-weight: 600;
 }
 
-/* Grid de imágenes */
+/* Grid de imágenes - Estilo PDF */
 .images-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 0;
+  padding: 16px;
 }
 
 .image-item {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
-  border: 2px solid var(--gray);
-  border-radius: var(--radius-md);
+  gap: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   overflow: hidden;
   transition: var(--transition-normal);
+  background: white;
 }
 
 .image-item:hover {
-  border-color: var(--primary-orange);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-4px);
+  border-color: #ff7a00;
+  box-shadow: 0 2px 8px rgba(255, 122, 0, 0.2);
+  transform: translateY(-2px);
 }
 
 .image-item img {
   width: 100%;
-  height: 150px;
+  height: 200px;
   object-fit: cover;
-  background: var(--off-white);
+  background: #f5f5f5;
 }
 
 .image-label {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: var(--off-white);
+  padding: 8px 12px;
+  background: #f8f8f8;
   text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: #666;
   font-weight: 600;
+  border-top: 1px solid #eee;
 }
 
-/* Caja de observaciones */
+/* Caja de observaciones - Estilo PDF */
 .observations-box {
-  background: #f8f9fa;
-  padding: var(--spacing-md);
-  border-radius: var(--radius-sm);
-  border: 1px solid #e0e0e0;
-  color: var(--text-primary);
-  font-size: var(--font-size-md);
-  line-height: 1.6;
-  min-height: 80px;
+  background: white;
+  padding: 16px;
+  border-radius: 0;
+  border: none;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.7;
+  min-height: 60px;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
 
 .report-viewer-footer {
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-top: 2px solid var(--gray);
+  padding: 20px 32px;
+  border-top: 2px solid #f0f0f0;
   display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-md);
-  background: var(--off-white);
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #fafafa;
+}
+
+.footer-actions-left {
+  display: flex;
+  gap: 12px;
 }
 
 .btn-secondary {

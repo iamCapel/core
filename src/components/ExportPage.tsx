@@ -136,6 +136,17 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
         return;
       }
 
+      // 📸 CARGAR IMÁGENES antes de generar PDF
+      try {
+        console.log('📸 Cargando imágenes del reporte para exportación...');
+        const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
+        const imagesPerDay = await firebaseImageStorage.getReportImages(fullReport.id);
+        fullReport.imagesPerDay = imagesPerDay;
+        console.log('✅ Imágenes cargadas para exportación:', imagesPerDay);
+      } catch (imageError) {
+        console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
+      }
+
       await generateProfessionalPDF(fullReport, report);
     } catch (error) {
       console.error('Error descargando PDF:', error);
@@ -482,6 +493,17 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
         return;
       }
       
+      // 📸 CARGAR IMÁGENES antes de generar Excel
+      try {
+        console.log('📸 Cargando imágenes del reporte para exportación...');
+        const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
+        const imagesPerDay = await firebaseImageStorage.getReportImages(fullReport.id);
+        fullReport.imagesPerDay = imagesPerDay;
+        console.log('✅ Imágenes cargadas para exportación:', imagesPerDay);
+      } catch (imageError) {
+        console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
+      }
+      
       await generateExcelContent(fullReport, report);
     } catch (error) {
       console.error('Error descargando Excel:', error);
@@ -498,6 +520,17 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
       if (!fullReport) {
         alert('No se pudo obtener la información completa del reporte desde Firebase');
         return;
+      }
+      
+      // 📸 CARGAR IMÁGENES antes de generar Word
+      try {
+        console.log('📸 Cargando imágenes del reporte para exportación...');
+        const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
+        const imagesPerDay = await firebaseImageStorage.getReportImages(fullReport.id);
+        fullReport.imagesPerDay = imagesPerDay;
+        console.log('✅ Imágenes cargadas para exportación:', imagesPerDay);
+      } catch (imageError) {
+        console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
       }
       
       await generateWordContent(fullReport, report);

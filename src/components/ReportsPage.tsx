@@ -83,7 +83,7 @@ function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: num
 }
 
 // Componente Vista de Vehículos
-const VehiculosView: React.FC = () => {
+const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [vehiculosFiltrados, setVehiculosFiltrados] = useState<any[]>([]);
   const [searchFicha, setSearchFicha] = useState('');
@@ -133,10 +133,28 @@ const VehiculosView: React.FC = () => {
       const reportes = await firebaseReportStorage.getAllReports();
       console.log('📊 Total de reportes cargados:', reportes.length);
       
+      // ✅ Filtrar reportes según rol del usuario
+      let reportesFiltrados = reportes;
+      
+      // Admin y Supervisor ven TODO (incluidos pendientes de todos)
+      const isAdminOrSupervisor = user?.role === 'Admin' || user?.role === 'Supervisor' || user?.role === 'admin' || user?.role === 'supervisor';
+      const isTecnico = user?.role === 'Técnico' || user?.role === 'tecnico';
+      
+      if (isTecnico) {
+        // Técnicos ven TODOS sus reportes (incluidos sus propios pendientes)
+        reportesFiltrados = reportes.filter(r => 
+          r.creadoPor === user.username || r.usuarioId === user.username
+        );
+      }
+      
+      console.log(`🚜 [${user?.role}] Reportes para vehículos:`, reportesFiltrados.length);
+      console.log(`🟠 Incluye pendientes propios:`, isTecnico || isAdminOrSupervisor);
+      console.log(`📋 Reportes pendientes en lista:`, reportesFiltrados.filter(r => r.estado === 'pendiente').length);
+      
       // Agrupar vehículos por ficha
       const vehiculosPorFicha: Record<string, any> = {};
       
-      reportes.forEach(reporte => {
+      reportesFiltrados.forEach(reporte => {
         if (reporte.vehiculos && Array.isArray(reporte.vehiculos) && reporte.vehiculos.length > 0) {
           console.log(`📋 Reporte ${reporte.numeroReporte} tiene ${reporte.vehiculos.length} vehículos:`, reporte.vehiculos);
           reporte.vehiculos.forEach((vehiculo: any) => {
@@ -334,7 +352,20 @@ const VehiculosView: React.FC = () => {
       const reporte = reportes.find(r => r.numeroReporte === numeroReporte);
       
       if (reporte) {
-        setSelectedReporteDetail(reporte);
+        // Cargar imágenes del reporte
+        console.log('📸 Cargando imágenes del reporte:', reporte.reportId);
+        const firebaseImageStorage = await import('../services/firebaseImageStorage');
+        const imagesPerDay = await firebaseImageStorage.getReportImages(reporte.reportId);
+        console.log('✅ Imágenes cargadas:', imagesPerDay);
+        
+        // Agregar las imágenes al reporte
+        const reporteConImagenes = {
+          ...reporte,
+          imagesPerDay,
+          images: Object.values(imagesPerDay).flat() // Convertir imagesPerDay a array plano para compatibilidad
+        };
+        
+        setSelectedReporteDetail(reporteConImagenes);
         setShowReporteModal(true);
       } else {
         alert('No se encontró el reporte');
@@ -362,6 +393,42 @@ const VehiculosView: React.FC = () => {
         <p className="vehiculos-subtitle">
           {vehiculos.length} vehículos registrados en el sistema
         </p>
+        {/* Mensaje informativo para Admin/Supervisor */}
+        {(user?.role === 'Admin' || user?.role === 'Supervisor' || user?.role === 'admin' || user?.role === 'supervisor') && (
+          <p style={{
+            marginTop: '12px',
+            padding: '10px 14px',
+            backgroundColor: '#e7f3ff',
+            border: '1px solid #2196F3',
+            borderRadius: '6px',
+            fontSize: '13px',
+            color: '#0d47a1',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{ fontSize: '16px' }}>ℹ️</span>
+            <strong>{user.role}:</strong> Los vehículos incluyen datos de reportes <strong>pendientes</strong> de todos los usuarios.
+          </p>
+        )}
+        {/* Mensaje informativo para Técnico */}
+        {(user?.role === 'Técnico' || user?.role === 'tecnico') && (
+          <p style={{
+            marginTop: '12px',
+            padding: '10px 14px',
+            backgroundColor: '#f1f8e9',
+            border: '1px solid #8bc34a',
+            borderRadius: '6px',
+            fontSize: '13px',
+            color: '#33691e',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{ fontSize: '16px' }}>✅</span>
+            <strong>Técnico:</strong> Los vehículos incluyen datos de <strong>tus reportes pendientes</strong>.
+          </p>
+        )}
       </div>
 
       <div className="vehiculos-controls">
@@ -1777,7 +1844,7 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                         </>
                       );
                     })()}
-                  </div>
+                  </div>user={user} 
                 </div>
               )}
             </div>
