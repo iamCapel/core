@@ -375,8 +375,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             diaNumero: index + 1,
             totalDias: report.diasTrabajo.length,
             reporteOriginalId: report.id,
-            // 📸 INCLUIR IMÁGENES
-            imagesPerDay: report.imagesPerDay || {}
+            // 📸 INCLUIR IMÁGENES (nuevo y legacy)
+            imagesPerDay: report.imagesPerDay || {},
+            images: report.images || []
           };
           
           hierarchyMap[region][provincia][distrito].push(formattedReport);
@@ -408,8 +409,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           estado: report.estado,
           kilometraje: km,
           vehiculos: report.vehiculos || [],
-          // 📸 INCLUIR IMÁGENES
-          imagesPerDay: report.imagesPerDay || {}
+          // 📸 INCLUIR IMÁGENES (nuevo y legacy)
+          imagesPerDay: report.imagesPerDay || {},
+          images: report.images || []
         };
         
         hierarchyMap[region][provincia][distrito].push(formattedReport);
