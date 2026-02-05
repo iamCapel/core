@@ -69,6 +69,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
   // 📸 Estado para imágenes del reporte
   const [imagesPerDay, setImagesPerDay] = useState<Record<string, any>>({});
   
+  // 🖼️ Estado para modal de visualización de fotos
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentDayKey, setCurrentDayKey] = useState('');
+  
   const [tipoIntervencion, setTipoIntervencion] = useState('');
   const [subTipoCanal, setSubTipoCanal] = useState('');
   const [observaciones, setObservaciones] = useState('');
@@ -183,6 +188,26 @@ const ReportForm: React.FC<ReportFormProps> = ({
       getPendingReports();
     }
   }, [showPendingModal]);
+
+  // 🖼️ Manejo de tecla ESC para cerrar modal de fotos
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && photoModalOpen) {
+        closePhotoModal();
+      }
+    };
+    
+    if (photoModalOpen) {
+      window.addEventListener('keydown', handleEsc);
+      // Prevenir scroll del body cuando el modal está abierto
+      document.body.style.overflow = 'hidden';
+    }
+    
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
+    };
+  }, [photoModalOpen]);
 
   // Lógica de habilitación de campos
   const provinciasDisponibles = region ? provinciasPorRegion[region] || [] : [];
@@ -1258,6 +1283,59 @@ const ReportForm: React.FC<ReportFormProps> = ({
     return basicFieldsCompleted;
   };
 
+  // 🖼️ Funciones para el modal de visualización de fotos
+  const openPhotoModal = (dayKey: string, photoIndex: number) => {
+    setCurrentDayKey(dayKey);
+    setCurrentPhotoIndex(photoIndex);
+    setPhotoModalOpen(true);
+  };
+
+  const closePhotoModal = () => {
+    setPhotoModalOpen(false);
+  };
+
+  const goToNextPhoto = () => {
+    const currentDayImages = imagesPerDay[currentDayKey] || [];
+    if (currentPhotoIndex < currentDayImages.length - 1) {
+      setCurrentPhotoIndex(currentPhotoIndex + 1);
+    } else {
+      // Ir al siguiente día con fotos
+      const dayKeys = Object.keys(imagesPerDay).filter(key => imagesPerDay[key]?.length > 0);
+      const currentDayIndex = dayKeys.indexOf(currentDayKey);
+      if (currentDayIndex < dayKeys.length - 1) {
+        const nextDayKey = dayKeys[currentDayIndex + 1];
+        setCurrentDayKey(nextDayKey);
+        setCurrentPhotoIndex(0);
+      }
+    }
+  };
+
+  const goToPrevPhoto = () => {
+    if (currentPhotoIndex > 0) {
+      setCurrentPhotoIndex(currentPhotoIndex - 1);
+    } else {
+      // Ir al día anterior con fotos
+      const dayKeys = Object.keys(imagesPerDay).filter(key => imagesPerDay[key]?.length > 0);
+      const currentDayIndex = dayKeys.indexOf(currentDayKey);
+      if (currentDayIndex > 0) {
+        const prevDayKey = dayKeys[currentDayIndex - 1];
+        setCurrentDayKey(prevDayKey);
+        const prevDayImages = imagesPerDay[prevDayKey] || [];
+        setCurrentPhotoIndex(prevDayImages.length - 1);
+      }
+    }
+  };
+
+  const downloadCurrentPhoto = () => {
+    const currentImage = imagesPerDay[currentDayKey]?.[currentPhotoIndex];
+    if (currentImage) {
+      const link = document.createElement('a');
+      link.href = currentImage.url;
+      link.download = `foto_${currentDayKey}_${currentPhotoIndex + 1}.jpg`;
+      link.click();
+    }
+  };
+
   return (
     <div className="dashboard">
       {/* Topbar similar al dashboard principal */}
@@ -2222,7 +2300,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                               }}
                               onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                               onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                              onClick={() => window.open(image.url, '_blank')}
+                              onClick={() => openPhotoModal(dayKey, index)}
                               >
                                 <img 
                                   src={image.url} 
@@ -2713,6 +2791,256 @@ const ReportForm: React.FC<ReportFormProps> = ({
         onContinueReport={handleContinuePendingReport}
         onCancelReport={handleCancelPendingReport}
       />
+
+      {/* 🖼️ Modal de visualización de fotos */}
+      {photoModalOpen && imagesPerDay[currentDayKey]?.[currentPhotoIndex] && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            zIndex: 10000,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onClick={closePhotoModal}
+        >
+          {/* Botón cerrar */}
+          <button
+            onClick={closePhotoModal}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: 'white',
+              fontSize: '32px',
+              cursor: 'pointer',
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              zIndex: 10001
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            ×
+          </button>
+
+          {/* Contenedor de la imagen */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center'
+            }}
+          >
+            {/* Imagen */}
+            <img
+              src={imagesPerDay[currentDayKey][currentPhotoIndex].url}
+              alt={`Foto ${currentPhotoIndex + 1}`}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '70vh',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+              }}
+            />
+
+            {/* Info y controles */}
+            <div style={{
+              marginTop: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '15px'
+            }}>
+              {/* Metadatos de la foto */}
+              <div style={{
+                color: 'white',
+                textAlign: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                fontSize: '14px'
+              }}>
+                <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '16px' }}>
+                  📸 {currentDayKey.replace('dia-', 'Día ').replace('general', 'General')} - Foto {currentPhotoIndex + 1} de {imagesPerDay[currentDayKey].length}
+                </div>
+                <div style={{ opacity: 0.9 }}>
+                  {new Date(imagesPerDay[currentDayKey][currentPhotoIndex].timestamp).toLocaleString('es-ES', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+
+              {/* Controles de navegación */}
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                alignItems: 'center'
+              }}>
+                {/* Botón anterior */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToPrevPhoto();
+                  }}
+                  disabled={currentPhotoIndex === 0 && Object.keys(imagesPerDay).indexOf(currentDayKey) === 0}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    transition: 'all 0.2s',
+                    opacity: currentPhotoIndex === 0 && Object.keys(imagesPerDay).indexOf(currentDayKey) === 0 ? 0.3 : 1
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(currentPhotoIndex === 0 && Object.keys(imagesPerDay).indexOf(currentDayKey) === 0)) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  }}
+                >
+                  ← Anterior
+                </button>
+
+                {/* Botón descargar */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadCurrentPhoto();
+                  }}
+                  style={{
+                    backgroundColor: '#FF7A00',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    transition: 'all 0.2s',
+                    fontWeight: '600'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FF9533';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#FF7A00';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  📥 Descargar
+                </button>
+
+                {/* Botón siguiente */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    goToNextPhoto();
+                  }}
+                  disabled={(() => {
+                    const dayKeys = Object.keys(imagesPerDay).filter(key => imagesPerDay[key]?.length > 0);
+                    const currentDayIndex = dayKeys.indexOf(currentDayKey);
+                    const currentDayImages = imagesPerDay[currentDayKey] || [];
+                    return currentPhotoIndex === currentDayImages.length - 1 && currentDayIndex === dayKeys.length - 1;
+                  })()}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    transition: 'all 0.2s',
+                    opacity: (() => {
+                      const dayKeys = Object.keys(imagesPerDay).filter(key => imagesPerDay[key]?.length > 0);
+                      const currentDayIndex = dayKeys.indexOf(currentDayKey);
+                      const currentDayImages = imagesPerDay[currentDayKey] || [];
+                      return currentPhotoIndex === currentDayImages.length - 1 && currentDayIndex === dayKeys.length - 1 ? 0.3 : 1;
+                    })()
+                  }}
+                  onMouseEnter={(e) => {
+                    const dayKeys = Object.keys(imagesPerDay).filter(key => imagesPerDay[key]?.length > 0);
+                    const currentDayIndex = dayKeys.indexOf(currentDayKey);
+                    const currentDayImages = imagesPerDay[currentDayKey] || [];
+                    if (!(currentPhotoIndex === currentDayImages.length - 1 && currentDayIndex === dayKeys.length - 1)) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                  }}
+                >
+                  Siguiente →
+                </button>
+              </div>
+
+              {/* Indicador de posición global */}
+              <div style={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '13px',
+                textAlign: 'center'
+              }}>
+                {(() => {
+                  const allPhotos: any[] = [];
+                  Object.entries(imagesPerDay).forEach(([dk, imgs]: [string, any]) => {
+                    if (imgs && Array.isArray(imgs)) {
+                      imgs.forEach((img: any, idx: number) => {
+                        allPhotos.push({ dayKey: dk, index: idx, ...img });
+                      });
+                    }
+                  });
+                  const currentGlobalIndex = allPhotos.findIndex(p => p.dayKey === currentDayKey && p.index === currentPhotoIndex) + 1;
+                  return `Foto ${currentGlobalIndex} de ${allPhotos.length} en total`;
+                })()}
+              </div>
+            </div>
+          </div>
+
+          {/* Hint para cerrar */}
+          <div style={{
+            position: 'absolute',
+            bottom: '20px',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontSize: '14px'
+          }}>
+            Presione ESC o haga clic fuera de la imagen para cerrar
+          </div>
+        </div>
+      )}
     </div>
   );
 };
