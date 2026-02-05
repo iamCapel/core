@@ -330,8 +330,13 @@ const ReportForm: React.FC<ReportFormProps> = ({
       
       // 📸 Cargar imágenes si existen
       if (interventionToEdit.imagesPerDay) {
+        const totalFotos = Object.values(interventionToEdit.imagesPerDay).flat().length;
         console.log('📸 Cargando imágenes del reporte:', interventionToEdit.imagesPerDay);
+        console.log('📸 Total de fotos encontradas:', totalFotos);
+        console.log('📸 Días con fotos:', Object.keys(interventionToEdit.imagesPerDay));
         setImagesPerDay(interventionToEdit.imagesPerDay);
+      } else {
+        console.log('📸 Este reporte NO tiene fotos (imagesPerDay no existe)');
       }
       
       // ⭐ PRIMERO: Cargar datos multi-día si existen (ANTES de cargar fechas simples)
@@ -2148,7 +2153,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
               </div>
 
               {/* 📸 VISTA PREVIA DE FOTOS (Solo visualización de fotos de app móvil) */}
-              {imagesPerDay && Object.keys(imagesPerDay).length > 0 && (
+              {/* Log de diagnóstico */}
+              {console.log('🔍 RENDER - Estado actual de imagesPerDay:', imagesPerDay)}
+              {console.log('🔍 RENDER - Cantidad de fotos:', imagesPerDay ? Object.values(imagesPerDay).flat().length : 0)}
+              
+              {imagesPerDay && Object.keys(imagesPerDay).length > 0 ? (
                 <div style={{ gridColumn: '1 / -1', marginTop: '30px' }}>
                   <div style={{
                     backgroundColor: '#fff3cd',
@@ -2264,7 +2273,24 @@ const ReportForm: React.FC<ReportFormProps> = ({
                     </div>
                   </div>
                 </div>
-              )}
+              ) : interventionToEdit ? (
+                <div style={{ gridColumn: '1 / -1', marginTop: '30px' }}>
+                  <div style={{
+                    backgroundColor: '#f8f9fa',
+                    border: '2px dashed #dee2e6',
+                    borderRadius: '8px',
+                    padding: '30px',
+                    textAlign: 'center',
+                    color: '#6c757d'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '10px' }}>📷</div>
+                    <h4 style={{ margin: '0 0 8px 0', color: '#495057' }}>Sin fotos</h4>
+                    <p style={{ margin: 0, fontSize: '14px' }}>
+                      Este reporte no tiene fotos adjuntas desde la aplicación móvil.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
 
 
 
