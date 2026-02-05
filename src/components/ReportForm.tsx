@@ -2313,7 +2313,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                               }}
                               onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                               onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                              onClick={() => openPhotoModal(dayKey, index)}
+                              onClick={() => window.open(image.url, '_blank')}
                               >
                                 <img 
                                   src={image.url} 
@@ -2360,7 +2360,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                       color: '#666',
                       textAlign: 'center'
                     }}>
-                      💡 Estas fotos fueron capturadas desde la aplicación móvil. Haga clic en cualquier foto para verla en tamaño completo.
+                      💡 Estas fotos fueron capturadas desde la aplicación móvil. Haga clic en cualquier foto para abrirla en tamaño completo en una nueva pestaña.
                     </div>
                   </div>
                 </div>
