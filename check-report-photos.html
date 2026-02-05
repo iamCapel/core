@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificar Reporte MOPC-348197</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+    }
+    
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+      font-size: 32px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 18px;
+    }
+    
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+    
+    input {
+      flex: 1;
+      padding: 15px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      transition: all 0.3s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    button {
+      padding: 15px 30px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+      background: #e74c3c;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #c0392b;
+    }
+    
+    .status {
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      display: none;
+    }
+    
+    .status.show {
+      display: block;
+    }
+    
+    .status.loading {
+      background: #fff3cd;
+      border-left: 5px solid #ffc107;
+      color: #856404;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      border-left: 5px solid #28a745;
+      color: #155724;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      border-left: 5px solid #dc3545;
+      color: #721c24;
+    }
+    
+    .status.info {
+      background: #d1ecf1;
+      border-left: 5px solid #17a2b8;
+      color: #0c5460;
+    }
+    
+    .report-card {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #dee2e6;
+    }
+    
+    .report-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+    
+    .report-badge {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .report-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .info-label {
+      font-size: 12px;
+      color: #666;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    .info-value {
+      font-size: 16px;
+      color: #2c3e50;
+      font-weight: 500;
+    }
+    
+    .photos-section {
+      margin-top: 30px;
+    }
+    
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .photo-count {
+      background: #28a745;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 15px;
+      font-size: 14px;
+    }
+    
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .photo-card {
+      background: white;
+      border: 3px solid #667eea;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .photo-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    }
+    
+    .photo-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    
+    .photo-info {
+      padding: 12px;
+      background: #f8f9fa;
+      border-top: 2px solid #dee2e6;
+    }
+    
+    .photo-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+    
+    .photo-date {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .day-section {
+      margin-bottom: 30px;
+    }
+    
+    .day-header {
+      font-size: 18px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+    
+    .no-photos {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 18px;
+    }
+    
+    .storage-info {
+      background: #e3f2fd;
+      border-left: 5px solid #2196f3;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    
+    .storage-title {
+      font-weight: 600;
+      color: #1565c0;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .json-viewer {
+      background: #2c3e50;
+      color: #ecf0f1;
+      padding: 20px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Verificador de Reportes con Fotos</h1>
+    <p class="subtitle">Verifica si tu reporte tiene fotos guardadas en Firebase y localStorage</p>
+    
+    <div class="search-box">
+      <input 
+        type="text" 
+        id="reportNumber" 
+        placeholder="Ingrese número de reporte (ej: DCR-2026-000006 o MOPC-348197)" 
+        value="DCR-2026-000006"
+      >
+      <button class="btn-primary" onclick="checkReport()">🔍 Buscar Reporte</button>
+      <button class="btn-secondary" onclick="checkAllReports()">📋 Ver Todos</button>
+    </div>
+    
+    <div id="status" class="status"></div>
+    <div id="results"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZYlrsJW2DVhJY9kJjHJI8RLmgKoyWv1U",
+      authDomain: "mopc-reports.firebaseapp.com",
+      projectId: "mopc-reports",
+      storageBucket: "mopc-reports.firebasestorage.app",
+      messagingSenderId: "1028816107140",
+      appId: "1:1028816107140:web:66e64fe3ba66a3f6fbebeb",
+      measurementId: "G-HY60DS5Y9Y"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.checkReport = async function() {
+      const reportNumber = document.getElementById('reportNumber').value.trim();
+      
+      if (!reportNumber) {
+        showStatus('Por favor ingrese un número de reporte', 'error');
+        return;
+      }
+
+      showStatus('🔄 Buscando reporte...', 'loading');
+      document.getElementById('results').innerHTML = '';
+
+      try {
+        // Buscar en Firebase
+        console.log('🔍 Buscando en Firebase:', reportNumber);
+        const reportsRef = collection(db, 'reports');
+        const snapshot = await getDocs(reportsRef);
+        
+        let found = false;
+        let foundInLocalStorage = false;
+        
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.numeroReporte === reportNumber || data.id === reportNumber || doc.id === reportNumber) {
+            found = true;
+            displayReport(data, 'Firebase');
+          }
+        });
+
+        // Buscar en localStorage
+        const localReports = JSON.parse(localStorage.getItem('mopcReports') || '[]');
+        const localReport = localReports.find(r => 
+          r.numeroReporte === reportNumber || r.id === reportNumber
+        );
+        
+        if (localReport) {
+          foundInLocalStorage = true;
+          displayReport(localReport, 'LocalStorage');
+        }
+
+        if (!found && !foundInLocalStorage) {
+          showStatus(`❌ No se encontró el reporte "${reportNumber}" en Firebase ni en localStorage`, 'error');
+          document.getElementById('results').innerHTML = `
+            <div class="storage-info">
+              <div class="storage-title">💡 Sugerencias:</div>
+              <ul style="margin-left: 20px; color: #1565c0;">
+                <li>Verifica que el número de reporte sea correcto</li>
+                <li>Intenta buscar sin el prefijo "MOPC-" o "DCR_"</li>
+                <li>Haz clic en "Ver Todos" para listar todos los reportes disponibles</li>
+                <li>El reporte puede haberse guardado con un número diferente</li>
+              </ul>
+            </div>
+          `;
+        } else {
+          showStatus(`✅ Reporte encontrado en: ${found ? 'Firebase' : ''} ${found && foundInLocalStorage ? 'y ' : ''} ${foundInLocalStorage ? 'LocalStorage' : ''}`, 'success');
+        }
+
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus(`❌ Error al buscar: ${error.message}`, 'error');
+      }
+    };
+
+    window.checkAllReports = async function() {
+      showStatus('🔄 Cargando todos los reportes...', 'loading');
+      document.getElementById('results').innerHTML = '<div class="spinner"></div>';
+
+      try {
+        const reportsRef = collection(db, 'reports');
+        const snapshot = await getDocs(reportsRef);
+        
+        const reports = [];
+        snapshot.forEach((doc) => {
+          reports.push(doc.data());
+        });
+
+        // También cargar de localStorage
+        const localReports = JSON.parse(localStorage.getItem('mopcReports') || '[]');
+        
+        const allReports = [...reports];
+        
+        if (allReports.length === 0 && localReports.length === 0) {
+          showStatus('❌ No se encontraron reportes', 'error');
+          document.getElementById('results').innerHTML = '';
+          return;
+        }
+
+        showStatus(`✅ Se encontraron ${allReports.length} reportes en Firebase y ${localReports.length} en localStorage`, 'success');
+        
+        let html = '<div class="storage-info"><div class="storage-title">📊 Reportes en Firebase</div></div>';
+        
+        allReports.forEach(report => {
+          html += generateReportSummary(report);
+        });
+
+        if (localReports.length > 0) {
+          html += '<div class="storage-info" style="margin-top: 30px;"><div class="storage-title">💾 Reportes en LocalStorage</div></div>';
+          localReports.forEach(report => {
+            html += generateReportSummary(report);
+          });
+        }
+        
+        document.getElementById('results').innerHTML = html;
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showStatus(`❌ Error al cargar reportes: ${error.message}`, 'error');
+      }
+    };
+
+    function generateReportSummary(report) {
+      const hasPhotos = report.imagesPerDay && Object.keys(report.imagesPerDay).length > 0;
+      const photoCount = hasPhotos ? Object.values(report.imagesPerDay).flat().length : 0;
+      
+      return `
+        <div class="report-card" style="cursor: pointer; border-left: 5px solid ${hasPhotos ? '#28a745' : '#dc3545'};" 
+             onclick="document.getElementById('reportNumber').value='${report.numeroReporte}'; checkReport();">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: 600; font-size: 16px; color: #2c3e50;">
+                📋 ${report.numeroReporte || report.id}
+              </div>
+              <div style="font-size: 14px; color: #666; margin-top: 5px;">
+                ${report.tipoIntervencion || 'Sin tipo'} - ${report.provincia || 'Sin provincia'}
+              </div>
+              <div style="font-size: 12px; color: #999; margin-top: 3px;">
+                ${new Date(report.fechaCreacion || report.timestamp).toLocaleString('es-ES')}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              ${hasPhotos 
+                ? `<div style="color: #28a745; font-weight: 600;">✅ ${photoCount} foto${photoCount !== 1 ? 's' : ''}</div>`
+                : `<div style="color: #dc3545; font-weight: 600;">❌ Sin fotos</div>`
+              }
+              <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                Estado: ${report.estado || 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function displayReport(report, source) {
+      const hasPhotos = report.imagesPerDay && Object.keys(report.imagesPerDay).length > 0;
+      const photoCount = hasPhotos ? Object.values(report.imagesPerDay).flat().length : 0;
+
+      let html = `
+        <div class="report-card">
+          <div class="report-header">
+            <div class="report-title">📄 Reporte: ${report.numeroReporte || report.id}</div>
+            <div class="report-badge">${source}</div>
+          </div>
+          
+          <div class="report-info">
+            <div class="info-item">
+              <div class="info-label">Tipo de Intervención</div>
+              <div class="info-value">${report.tipoIntervencion || 'No especificado'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Provincia</div>
+              <div class="info-value">${report.provincia || 'No especificada'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Municipio</div>
+              <div class="info-value">${report.municipio || 'No especificado'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Distrito</div>
+              <div class="info-value">${report.distrito || 'No especificado'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Sector</div>
+              <div class="info-value">${report.sector || 'No especificado'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Creado por</div>
+              <div class="info-value">${report.creadoPor || 'Desconocido'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Fecha de creación</div>
+              <div class="info-value">${new Date(report.fechaCreacion || report.timestamp).toLocaleString('es-ES')}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Estado</div>
+              <div class="info-value">${report.estado || 'No especificado'}</div>
+            </div>
+          </div>
+      `;
+
+      if (hasPhotos) {
+        html += `
+          <div class="photos-section">
+            <div class="section-title">
+              📸 Evidencia Fotográfica
+              <span class="photo-count">${photoCount} foto${photoCount !== 1 ? 's' : ''}</span>
+            </div>
+        `;
+
+        Object.entries(report.imagesPerDay).forEach(([dayKey, images]) => {
+          if (images && images.length > 0) {
+            const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
+            
+            html += `
+              <div class="day-section">
+                <div class="day-header">📅 ${dayLabel}</div>
+                <div class="photos-grid">
+            `;
+
+            images.forEach((image, index) => {
+              html += `
+                <div class="photo-card" onclick="window.open('${image.url}', '_blank')">
+                  <img src="${image.url}" alt="Foto ${index + 1}" 
+                       onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'200\\' height=\\'180\\'%3E%3Crect fill=\\'%23e9ecef\\' width=\\'200\\' height=\\'180\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%23999\\' font-size=\\'14\\'%3ENo disponible%3C/text%3E%3C/svg%3E'">
+                  <div class="photo-info">
+                    <div class="photo-label">Foto ${index + 1}</div>
+                    <div class="photo-date">${new Date(image.timestamp).toLocaleString('es-ES')}</div>
+                  </div>
+                </div>
+              `;
+            });
+
+            html += `
+                </div>
+              </div>
+            `;
+          }
+        });
+
+        html += '</div>';
+      } else {
+        html += `
+          <div class="no-photos">
+            ❌ Este reporte no tiene fotos guardadas
+          </div>
+        `;
+      }
+
+      html += `
+        <div class="actions">
+          <button class="btn-primary" onclick="showJSON(${JSON.stringify(report).replace(/"/g, '&quot;')})">
+            📄 Ver JSON Completo
+          </button>
+          <button class="btn-primary" onclick="downloadReport(${JSON.stringify(report).replace(/"/g, '&quot;')})">
+            💾 Descargar Reporte
+          </button>
+        </div>
+      </div>
+      `;
+
+      document.getElementById('results').innerHTML += html;
+    }
+
+    window.showJSON = function(report) {
+      const jsonViewer = document.createElement('div');
+      jsonViewer.className = 'json-viewer';
+      jsonViewer.textContent = JSON.stringify(report, null, 2);
+      document.getElementById('results').appendChild(jsonViewer);
+    };
+
+    window.downloadReport = function(report) {
+      const dataStr = JSON.stringify(report, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reporte_${report.numeroReporte || report.id}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      showStatus('✅ Reporte descargado exitosamente', 'success');
+    };
+
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status show ${type}`;
+      
+      if (type === 'success' || type === 'error') {
+        setTimeout(() => {
+          statusEl.classList.remove('show');
+        }, 5000);
+      }
+    }
+
+    // Buscar automáticamente al cargar
+    window.addEventListener('load', () => {
+      checkReport();
+    });
+  </script>
+</body>
+</html>
