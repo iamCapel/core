@@ -1325,6 +1325,118 @@ const ReportForm: React.FC<ReportFormProps> = ({
           {interventionToEdit ? '📝 Editar Intervención' : '📋 Registro de Obras Realizadas'}
         </h3>
 
+        {/* 🔄 BANNER DE MODO EDICIÓN */}
+        {interventionToEdit && (
+          <div style={{
+            backgroundColor: '#d1ecf1',
+            border: '3px solid #0c5460',
+            borderRadius: '12px',
+            padding: '20px',
+            marginBottom: '25px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '15px',
+              marginBottom: '15px'
+            }}>
+              <div style={{
+                backgroundColor: '#0c5460',
+                color: 'white',
+                padding: '12px',
+                borderRadius: '50%',
+                fontSize: '24px',
+                lineHeight: '1'
+              }}>
+                ✏️
+              </div>
+              <div>
+                <h4 style={{
+                  margin: '0 0 5px 0',
+                  color: '#0c5460',
+                  fontSize: '20px',
+                  fontWeight: '700'
+                }}>
+                  Modo Edición Activo
+                </h4>
+                <p style={{
+                  margin: 0,
+                  color: '#0c5460',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  Se han cargado los datos del reporte para su modificación
+                </p>
+              </div>
+            </div>
+            
+            {/* Información de datos cargados */}
+            <div style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              padding: '15px',
+              marginTop: '15px'
+            }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px',
+                marginBottom: '10px'
+              }}>
+                {interventionToEdit.numeroReporte && (
+                  <div style={{ fontSize: '13px' }}>
+                    <strong style={{ color: '#0c5460' }}>📋 Reporte:</strong>{' '}
+                    <span style={{ color: '#666' }}>{interventionToEdit.numeroReporte}</span>
+                  </div>
+                )}
+                {interventionToEdit.tipoIntervencion && (
+                  <div style={{ fontSize: '13px' }}>
+                    <strong style={{ color: '#0c5460' }}>🛠️ Tipo:</strong>{' '}
+                    <span style={{ color: '#666' }}>{interventionToEdit.tipoIntervencion}</span>
+                  </div>
+                )}
+                {interventionToEdit.provincia && (
+                  <div style={{ fontSize: '13px' }}>
+                    <strong style={{ color: '#0c5460' }}>📍 Provincia:</strong>{' '}
+                    <span style={{ color: '#666' }}>{interventionToEdit.provincia}</span>
+                  </div>
+                )}
+                {interventionToEdit.metricData && Object.keys(interventionToEdit.metricData).length > 0 && (
+                  <div style={{ fontSize: '13px' }}>
+                    <strong style={{ color: '#0c5460' }}>📊 Datos métricos:</strong>{' '}
+                    <span style={{ color: '#28a745', fontWeight: '600' }}>
+                      {Object.keys(interventionToEdit.metricData).length} campos cargados ✓
+                    </span>
+                  </div>
+                )}
+                {interventionToEdit.imagesPerDay && Object.keys(interventionToEdit.imagesPerDay).length > 0 && (
+                  <div style={{ fontSize: '13px' }}>
+                    <strong style={{ color: '#0c5460' }}>📸 Fotos:</strong>{' '}
+                    <span style={{ color: '#28a745', fontWeight: '600' }}>
+                      {Object.values(interventionToEdit.imagesPerDay).flat().length} imágenes cargadas ✓
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Nota informativa */}
+              <div style={{
+                marginTop: '12px',
+                padding: '10px',
+                backgroundColor: '#fff3cd',
+                borderLeft: '4px solid #ffc107',
+                borderRadius: '4px',
+                fontSize: '12px',
+                color: '#856404'
+              }}>
+                <strong>💡 Nota:</strong> Los datos de las plantillas y las fotos del reporte se muestran más abajo,
+                después de la sección de observaciones. Desplácese hacia abajo para verlos.
+              </div>
+            </div>
+          </div>
+        )}
+
         <form className="dashboard-form" onSubmit={handleGuardar}>
           {/* Sección de ubicación */}
           <div className="dashboard-row">
@@ -1898,11 +2010,32 @@ const ReportForm: React.FC<ReportFormProps> = ({
               {/* Grid de campos de la plantilla */}
               <div className="template-fields-grid">
                 {plantillaFields.map((field, index) => (
-                  <div key={field.key} className="template-field-card">
+                  <div key={field.key} className="template-field-card" style={
+                    interventionToEdit && plantillaValues[field.key] ? {
+                      backgroundColor: '#f0f8ff',
+                      borderColor: '#0c5460',
+                      borderWidth: '2px'
+                    } : {}
+                  }>
                     <div className="field-header">
                       <span className="field-number">{(index + 1).toString().padStart(2, '0')}</span>
                       <label className="field-label" htmlFor={field.key}>
                         {field.label}
+                        {/* Indicador de dato precargado */}
+                        {interventionToEdit && plantillaValues[field.key] && (
+                          <span style={{
+                            marginLeft: '8px',
+                            fontSize: '11px',
+                            color: '#28a745',
+                            fontWeight: '600',
+                            backgroundColor: '#d4edda',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                            border: '1px solid #c3e6cb'
+                          }}>
+                            ✓
+                          </span>
+                        )}
                       </label>
                       {field.unit && <span className="field-unit">({field.unit})</span>}
                     </div>
@@ -2014,60 +2147,103 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 </div>
               </div>
 
-              {/* 📸 SECCIÓN DE IMÁGENES */}
+              {/* 📸 VISTA PREVIA DE FOTOS DEBAJO DE OBSERVACIONES */}
               {imagesPerDay && Object.keys(imagesPerDay).length > 0 && (
-                <>
-                  <div className="template-separator" style={{ marginTop: '40px', marginBottom: '30px' }}>
-                    <div className="separator-line"></div>
-                    <span className="separator-text">📸 EVIDENCIA FOTOGRÁFICA</span>
-                    <div className="separator-line"></div>
-                  </div>
-
-                  <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ gridColumn: '1 / -1', marginTop: '30px' }}>
+                  <div style={{
+                    backgroundColor: '#fff3cd',
+                    border: '2px solid #ffc107',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    marginBottom: '20px'
+                  }}>
+                    <h3 style={{
+                      color: '#856404',
+                      margin: '0 0 15px 0',
+                      fontSize: '18px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}>
+                      📸 Evidencia Fotográfica del Reporte
+                      <span style={{
+                        fontSize: '14px',
+                        fontWeight: 'normal',
+                        color: '#666',
+                        backgroundColor: '#fff',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        marginLeft: 'auto'
+                      }}>
+                        {Object.values(imagesPerDay).flat().length} foto{Object.values(imagesPerDay).flat().length !== 1 ? 's' : ''}
+                      </span>
+                    </h3>
                     {Object.entries(imagesPerDay).map(([dayKey, images]: [string, any]) => {
                       if (!images || images.length === 0) return null;
                       
                       const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
                       
                       return (
-                        <div key={dayKey} style={{ marginBottom: '30px' }}>
+                        <div key={dayKey} style={{ marginBottom: '20px' }}>
                           <h4 style={{ 
-                            color: 'var(--primary-orange)', 
-                            marginBottom: '15px',
+                            color: '#FF7A00', 
+                            marginBottom: '12px',
                             fontSize: '16px',
-                            fontWeight: '600'
+                            fontWeight: '600',
+                            borderBottom: '2px solid #FF7A00',
+                            paddingBottom: '8px'
                           }}>
-                            {dayLabel}
+                            📅 {dayLabel}
                           </h4>
                           <div style={{ 
                             display: 'grid', 
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                            gap: '15px'
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                            gap: '12px'
                           }}>
                             {images.map((image: any, index: number) => (
                               <div key={index} style={{
-                                border: '2px solid #e0e0e0',
-                                borderRadius: '8px',
+                                border: '3px solid #FF7A00',
+                                borderRadius: '10px',
                                 overflow: 'hidden',
-                                backgroundColor: '#f8f9fa'
-                              }}>
+                                backgroundColor: '#fff',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                transition: 'transform 0.2s',
+                                cursor: 'pointer'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              onClick={() => window.open(image.url, '_blank')}
+                              >
                                 <img 
                                   src={image.url} 
-                                  alt={`Foto ${index + 1}`}
+                                  alt={`Foto ${index + 1} - ${dayLabel}`}
                                   style={{
                                     width: '100%',
-                                    height: '200px',
+                                    height: '180px',
                                     objectFit: 'cover',
                                     display: 'block'
                                   }}
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="180"%3E%3Crect fill="%23e9ecef" width="200" height="180"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="14"%3ENo disponible%3C/text%3E%3C/svg%3E';
+                                  }}
                                 />
                                 <div style={{
-                                  padding: '8px',
+                                  padding: '10px',
                                   fontSize: '11px',
                                   color: '#666',
-                                  textAlign: 'center'
+                                  textAlign: 'center',
+                                  backgroundColor: '#f8f9fa',
+                                  borderTop: '1px solid #dee2e6'
                                 }}>
-                                  {new Date(image.timestamp).toLocaleString('es-ES')}
+                                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>Foto {index + 1}</div>
+                                  <div>{new Date(image.timestamp).toLocaleString('es-ES', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}</div>
                                 </div>
                               </div>
                             ))}
@@ -2075,9 +2251,22 @@ const ReportForm: React.FC<ReportFormProps> = ({
                         </div>
                       );
                     })}
+                    <div style={{
+                      marginTop: '15px',
+                      padding: '10px',
+                      backgroundColor: '#fff',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      color: '#666',
+                      textAlign: 'center'
+                    }}>
+                      💡 Haga clic en cualquier foto para verla en tamaño completo
+                    </div>
                   </div>
-                </>
+                </div>
               )}
+
+
 
               {/* Footer del template */}
               <div className="template-footer">

@@ -50,7 +50,9 @@ interface Report {
     punto_inicial?: { lat: number; lon: number };
     punto_alcanzado?: { lat: number; lon: number };
   };
-  // Imágenes
+  // Imágenes organizadas por día
+  imagesPerDay?: Record<string, Array<{ url: string; timestamp: string }>>;
+  // Imágenes (legacy - array simple)
   images?: string[];
   // Otros campos
   observations?: string;
@@ -258,6 +260,19 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       try {
         let allReports = await firebaseReportStorage.getAllReports();
         
+        console.log('📊 Total reportes cargados desde Firebase:', allReports.length);
+        
+        // Verificar cuántos reportes tienen imágenes
+        const reportesConImagenes = allReports.filter(r => r.imagesPerDay && Object.keys(r.imagesPerDay).length > 0);
+        console.log(`📸 Reportes con imágenes: ${reportesConImagenes.length}/${allReports.length}`);
+        
+        if (reportesConImagenes.length > 0) {
+          console.log('📸 Reportes con fotos:', reportesConImagenes.map(r => ({
+            numeroReporte: r.numeroReporte,
+            totalFotos: Object.values(r.imagesPerDay || {}).flat().length
+          })));
+        }
+        
         // ✅ Admin y Supervisor VEN reportes pendientes de todos los usuarios
         // ✅ Técnicos VEN sus propios reportes pendientes
         const isAdminOrSupervisor = user?.role === 'Admin' || user?.role === 'Supervisor' || user?.role === 'admin' || user?.role === 'supervisor';
@@ -359,7 +374,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             esMultiDia: true,
             diaNumero: index + 1,
             totalDias: report.diasTrabajo.length,
-            reporteOriginalId: report.id
+            reporteOriginalId: report.id,
+            // 📸 INCLUIR IMÁGENES
+            imagesPerDay: report.imagesPerDay || {}
           };
           
           hierarchyMap[region][provincia][distrito].push(formattedReport);
@@ -390,7 +407,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           creadoPor: report.creadoPor,
           estado: report.estado,
           kilometraje: km,
-          vehiculos: report.vehiculos || []
+          vehiculos: report.vehiculos || [],
+          // 📸 INCLUIR IMÁGENES
+          imagesPerDay: report.imagesPerDay || {}
         };
         
         hierarchyMap[region][provincia][distrito].push(formattedReport);
@@ -657,32 +676,11 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     // Mostrar el reporte inmediatamente
     setSelectedReport(report);
     
-    // Cargar imágenes en segundo plano solo si no las tiene ya
-    if (!report.images || report.images.length === 0) {
-      setTimeout(async () => {
-        try {
-          const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
-          const imagesPerDay = await firebaseImageStorage.getReportImages(report.id);
-          
-          if (imagesPerDay && Object.keys(imagesPerDay).length > 0) {
-            // Convertir imagesPerDay a array de URLs
-            const allImages: string[] = [];
-            Object.values(imagesPerDay).forEach((dayImages: any) => {
-              if (Array.isArray(dayImages)) {
-                dayImages.forEach(img => allImages.push(img.url));
-              }
-            });
-            
-            if (allImages.length > 0) {
-              // Actualizar el reporte con las imágenes
-              setSelectedReport(prev => prev ? {...prev, images: allImages} : null);
-            }
-          }
-        } catch (imageError) {
-          console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
-        }
-      }, 100);
-    }
+    // Si el reporte ya tiene imagesPerDay, no cargar de nuevo
+    // Esto significa que ya vino de Firebase con las fotos
+    console.log('📸 Verificando fotos del reporte:', report.id);
+    console.log('📸 imagesPerDay:', report.imagesPerDay);
+    console.log('📸 images (legacy):', report.images);
   };
 
   const closeReportView = () => {
@@ -747,6 +745,32 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             </div>
             <button className="close-btn" onClick={closeReportView} title="Cerrar">✕</button>
           </div>
+          
+          {/* 📸 Banner de información de fotos */}
+          {selectedReport.imagesPerDay && Object.keys(selectedReport.imagesPerDay).length > 0 && (
+            <div style={{
+              backgroundColor: '#d1f2eb',
+              border: '2px solid #28a745',
+              borderRadius: '8px',
+              padding: '15px',
+              margin: '15px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              boxShadow: '0 2px 8px rgba(40, 167, 69, 0.2)'
+            }}>
+              <div style={{ fontSize: '32px' }}>📸</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '700', color: '#155724', marginBottom: '5px', fontSize: '16px' }}>
+                  Este reporte contiene {Object.values(selectedReport.imagesPerDay).flat().length} foto{Object.values(selectedReport.imagesPerDay).flat().length !== 1 ? 's' : ''}
+                </div>
+                <div style={{ fontSize: '13px', color: '#155724' }}>
+                  Desplácese hacia abajo para ver la evidencia fotográfica después de las coordenadas GPS
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="report-viewer-content">
             {/* Ubicación */}
             <div className="report-section">
@@ -847,8 +871,84 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               </div>
             )}
 
-            {/* Imágenes - Solo mostrar si existen */}
-            {selectedReport.images && selectedReport.images.length > 0 && (
+            {/* Imágenes - Priorizar imagesPerDay sobre images */}
+            {selectedReport.imagesPerDay && Object.keys(selectedReport.imagesPerDay).length > 0 ? (
+              <div className="report-section">
+                <h3 className="section-title">📸 EVIDENCIA FOTOGRÁFICA</h3>
+                {Object.entries(selectedReport.imagesPerDay).map(([dayKey, images]: [string, any]) => {
+                  if (!images || images.length === 0) return null;
+                  
+                  const dayLabel = dayKey.replace('dia-', 'Día ').replace('general', 'General');
+                  
+                  return (
+                    <div key={dayKey} style={{ marginBottom: '25px' }}>
+                      <h4 style={{ 
+                        color: '#667eea', 
+                        marginBottom: '12px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        borderBottom: '2px solid #667eea',
+                        paddingBottom: '8px'
+                      }}>
+                        📅 {dayLabel} ({images.length} foto{images.length !== 1 ? 's' : ''})
+                      </h4>
+                      <div className="images-grid" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                        gap: '15px'
+                      }}>
+                        {images.map((image: any, idx: number) => (
+                          <div key={idx} className="image-item" style={{
+                            border: '3px solid #667eea',
+                            borderRadius: '10px',
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          }}
+                          onClick={() => window.open(image.url, '_blank')}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            <img 
+                              src={image.url} 
+                              alt={`Foto ${idx + 1} - ${dayLabel}`} 
+                              loading="lazy"
+                              style={{
+                                width: '100%',
+                                height: '180px',
+                                objectFit: 'cover',
+                                display: 'block'
+                              }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="180"%3E%3Crect fill="%23e9ecef" width="200" height="180"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="14"%3ENo disponible%3C/text%3E%3C/svg%3E';
+                              }}
+                            />
+                            <div style={{
+                              padding: '10px',
+                              fontSize: '11px',
+                              color: '#666',
+                              textAlign: 'center',
+                              backgroundColor: '#f8f9fa',
+                              borderTop: '1px solid #dee2e6'
+                            }}>
+                              <div style={{ fontWeight: '600', marginBottom: '4px' }}>Foto {idx + 1}</div>
+                              <div>{new Date(image.timestamp).toLocaleString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : selectedReport.images && selectedReport.images.length > 0 ? (
               <div className="report-section">
                 <h3 className="section-title">📸 EVIDENCIA FOTOGRÁFICA ({selectedReport.images.length} fotos)</h3>
                 <div className="images-grid">
@@ -860,7 +960,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                   ))}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Observaciones */}
             {selectedReport.observations && (
