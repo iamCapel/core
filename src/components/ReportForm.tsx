@@ -353,15 +353,28 @@ const ReportForm: React.FC<ReportFormProps> = ({
         setAutoGpsFields(interventionToEdit.gpsData);
       }
       
-      // 📸 Cargar imágenes si existen
-      if (interventionToEdit.imagesPerDay) {
+      // 📸 Cargar imágenes si existen (con conversión automática desde formato legacy)
+      if (interventionToEdit.imagesPerDay && Object.keys(interventionToEdit.imagesPerDay).length > 0) {
         const totalFotos = Object.values(interventionToEdit.imagesPerDay).flat().length;
         console.log('📸 Cargando imágenes del reporte:', interventionToEdit.imagesPerDay);
         console.log('📸 Total de fotos encontradas:', totalFotos);
         console.log('📸 Días con fotos:', Object.keys(interventionToEdit.imagesPerDay));
         setImagesPerDay(interventionToEdit.imagesPerDay);
+      } else if (interventionToEdit.images && Array.isArray(interventionToEdit.images) && interventionToEdit.images.length > 0) {
+        // 🔄 Conversión de formato legacy images → imagesPerDay
+        console.log('🔄 ReportForm: Convirtiendo images (legacy) → imagesPerDay');
+        console.log('📸 Array de images:', interventionToEdit.images);
+        const convertedImages = {
+          'general': interventionToEdit.images.map((url: string, index: number) => ({
+            url: url,
+            timestamp: new Date().toISOString()
+          }))
+        };
+        console.log('✅ ReportForm: Fotos convertidas:', convertedImages);
+        console.log('✅ ReportForm: Total fotos:', convertedImages.general.length);
+        setImagesPerDay(convertedImages);
       } else {
-        console.log('📸 Este reporte NO tiene fotos (imagesPerDay no existe)');
+        console.log('📸 Este reporte NO tiene fotos (ni imagesPerDay ni images)');
       }
       
       // ⭐ PRIMERO: Cargar datos multi-día si existen (ANTES de cargar fechas simples)
