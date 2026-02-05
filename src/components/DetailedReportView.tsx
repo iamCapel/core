@@ -977,6 +977,10 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               <button 
                 className="report-edit-btn"
                 onClick={() => {
+                  console.log('🔍 EDITAR - Reporte seleccionado completo:', selectedReport);
+                  console.log('🔍 EDITAR - numeroReporte:', selectedReport?.numeroReporte);
+                  console.log('🔍 EDITAR - imagesPerDay:', selectedReport?.imagesPerDay);
+                  console.log('🔍 EDITAR - Cantidad de fotos:', selectedReport?.imagesPerDay ? Object.values(selectedReport.imagesPerDay).flat().length : 0);
                   if (onEditReport) {
                     onEditReport(selectedReport);
                   } else {
