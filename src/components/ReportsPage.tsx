@@ -354,7 +354,7 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
       if (reporte) {
         // Cargar imágenes del reporte
         console.log('📸 Cargando imágenes del reporte:', reporte.id);
-        const firebaseImageStorage = await import('../services/firebaseImageStorage');
+        const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
         const imagesPerDay = await firebaseImageStorage.getReportImages(reporte.id);
         console.log('✅ Imágenes cargadas:', imagesPerDay);
         
@@ -1844,7 +1844,7 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                         </>
                       );
                     })()}
-                  </div>user={user} 
+                  </div>
                 </div>
               )}
             </div>
@@ -1862,7 +1862,7 @@ Observaciones: ${r.observaciones || 'Ninguna'}
           )}
 
           {currentView === 'vehiculos' && (
-            <VehiculosView />
+            <VehiculosView user={user} />
           )}
 
           {currentView === 'exportar' && (
