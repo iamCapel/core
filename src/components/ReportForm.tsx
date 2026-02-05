@@ -1036,7 +1036,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
       
       // Guardar usando reportStorage
       const reportData = {
-        id: interventionTo Edit?.id,
+        id: interventionToEdit?.id,
         timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
         fechaCreacion: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
         creadoPor: user?.name || 'Desconocido',
