@@ -673,14 +673,33 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   const viewReport = (report: Report, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Mostrar el reporte inmediatamente
-    setSelectedReport(report);
+    // 🔄 MIGRACIÓN: Convertir formato legacy a imagesPerDay si es necesario
+    let reportToShow = report;
+    if (report.images && Array.isArray(report.images) && report.images.length > 0) {
+      if (!report.imagesPerDay || Object.keys(report.imagesPerDay).length === 0) {
+        console.log('🔄 MIGRACIÓN viewReport: Convirtiendo images → imagesPerDay para', report.numeroReporte);
+        reportToShow = {
+          ...report,
+          imagesPerDay: {
+            'general': report.images.map((url: string, index: number) => ({
+              url: url,
+              timestamp: new Date().toISOString()
+            }))
+          }
+        };
+        console.log('✅ MIGRACIÓN viewReport: Fotos convertidas:', reportToShow.imagesPerDay);
+      }
+    }
     
-    // Si el reporte ya tiene imagesPerDay, no cargar de nuevo
-    // Esto significa que ya vino de Firebase con las fotos
-    console.log('📸 Verificando fotos del reporte:', report.id);
-    console.log('📸 imagesPerDay:', report.imagesPerDay);
-    console.log('📸 images (legacy):', report.images);
+    // Mostrar el reporte inmediatamente
+    setSelectedReport(reportToShow);
+    
+    console.log('📸 Verificando fotos del reporte:', reportToShow.id);
+    console.log('📸 imagesPerDay:', reportToShow.imagesPerDay);
+    console.log('📸 images (legacy):', reportToShow.images);
+    
+    const totalFotos = reportToShow.imagesPerDay ? Object.values(reportToShow.imagesPerDay).flat().length : 0;
+    console.log('📸 Total fotos a mostrar:', totalFotos);
   };
 
   const closeReportView = () => {
@@ -980,9 +999,33 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                   console.log('🔍 EDITAR - Reporte seleccionado completo:', selectedReport);
                   console.log('🔍 EDITAR - numeroReporte:', selectedReport?.numeroReporte);
                   console.log('🔍 EDITAR - imagesPerDay:', selectedReport?.imagesPerDay);
-                  console.log('🔍 EDITAR - Cantidad de fotos:', selectedReport?.imagesPerDay ? Object.values(selectedReport.imagesPerDay).flat().length : 0);
+                  console.log('🔍 EDITAR - images (legacy):', selectedReport?.images);
+                  
+                  // 🔄 MIGRACIÓN: Convertir formato legacy a imagesPerDay si es necesario
+                  let reportToEdit = selectedReport;
+                  if (selectedReport && selectedReport.images && Array.isArray(selectedReport.images) && selectedReport.images.length > 0) {
+                    if (!selectedReport.imagesPerDay || Object.keys(selectedReport.imagesPerDay).length === 0) {
+                      console.log('🔄 MIGRACIÓN: Convirtiendo images (legacy) → imagesPerDay');
+                      const convertedImages = {
+                        'general': selectedReport.images.map((url: string, index: number) => ({
+                          url: url,
+                          timestamp: new Date().toISOString()
+                        }))
+                      };
+                      reportToEdit = {
+                        ...selectedReport,
+                        imagesPerDay: convertedImages
+                      };
+                      console.log('✅ MIGRACIÓN: Fotos convertidas:', reportToEdit.imagesPerDay);
+                      console.log('✅ MIGRACIÓN: Total fotos:', convertedImages.general.length);
+                    }
+                  }
+                  
+                  const totalFotos = reportToEdit?.imagesPerDay ? Object.values(reportToEdit.imagesPerDay).flat().length : 0;
+                  console.log('🔍 EDITAR - Cantidad de fotos FINAL:', totalFotos);
+                  
                   if (onEditReport) {
-                    onEditReport(selectedReport);
+                    onEditReport(reportToEdit);
                   } else {
                     alert('No se ha configurado la función de edición');
                   }
