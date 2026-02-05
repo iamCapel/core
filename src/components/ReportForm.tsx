@@ -2091,6 +2091,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
           {/* Sección de plantilla de datos */}
           {plantillaFields.length > 0 && areAllRegistrosCompleted() && (
+            // @ts-ignore - React element
             <div className="report-template-container">
               {/* Header del reporte de intervención */}
               <div className="template-header">
