@@ -4,6 +4,8 @@ import { firebasePendingReportStorage } from '../services/firebasePendingReportS
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import PendingClockAnimation from './PendingClockAnimation';
 import PendingReportsModal from './PendingReportsModal';
+import { useReportImages } from '../hooks/useReportImages';
+import firebaseImageStorage from '../services/firebaseImageStorage';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
 
@@ -68,6 +70,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
   
   // 📸 Estado para imágenes del reporte
   const [imagesPerDay, setImagesPerDay] = useState<Record<string, any>>({});
+  
+  // 📸 Hook para manejar captura de fotos del día actual
+  const reportIdForPhotos = interventionToEdit?.id || `TEMP_${Date.now()}`;
+  const photoHook = useReportImages(reportIdForPhotos, diaActual, 10); // Máx 10 fotos por día
   
   const [tipoIntervencion, setTipoIntervencion] = useState('');
   const [subTipoCanal, setSubTipoCanal] = useState('');
@@ -920,6 +926,18 @@ const ReportForm: React.FC<ReportFormProps> = ({
           console.log('📊 Días a procesar:', diasTrabajo);
           console.log('📦 Reportes por día:', reportesPorDia);
           
+          // 📸 SYNC: Cargar fotos desde Firebase Storage antes de guardar
+          let fotosActualizadas = imagesPerDay;
+          try {
+            const fotosDeFirebase = await firebaseImageStorage.getReportImages(reportIdForPhotos);
+            if (fotosDeFirebase && Object.keys(fotosDeFirebase).length > 0) {
+              fotosActualizadas = fotosDeFirebase;
+              console.log('📸 Fotos multi-día sincronizadas desde Firebase Storage:', fotosDeFirebase);
+            }
+          } catch (error) {
+            console.warn('⚠️ No se pudieron cargar fotos desde Storage (multi-día), usando estado actual:', error);
+          }
+          
           for (const dia of diasTrabajo) {
             const reporteDia = reportesPorDia[dia];
             console.log(`🔍 Procesando día ${dia}:`, reporteDia);
@@ -943,7 +961,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 metricData: reporteDia.plantillaValues,
                 gpsData: reporteDia.autoGpsFields,
                 vehiculos: reporteDia.vehiculos || [],
-                imagesPerDay: imagesPerDay || undefined,
+                imagesPerDay: fotosActualizadas || undefined,
                 estado: 'completado' as const,
                 fechaProyecto: dia,
                 esProyectoMultiDia: true
@@ -1004,9 +1022,21 @@ const ReportForm: React.FC<ReportFormProps> = ({
       const sectorFinal = sector === 'otros' ? sectorPersonalizado : sector;
       const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
       
+      // 📸 SYNC: Cargar fotos desde Firebase Storage antes de guardar
+      let fotosActualizadas = imagesPerDay;
+      try {
+        const fotosDeFirebase = await firebaseImageStorage.getReportImages(reportIdForPhotos);
+        if (fotosDeFirebase && Object.keys(fotosDeFirebase).length > 0) {
+          fotosActualizadas = fotosDeFirebase;
+          console.log('📸 Fotos sincronizadas desde Firebase Storage:', fotosDeFirebase);
+        }
+      } catch (error) {
+        console.warn('⚠️ No se pudieron cargar fotos desde Storage, usando estado actual:', error);
+      }
+      
       // Guardar usando reportStorage
       const reportData = {
-        id: interventionToEdit?.id,
+        id: interventionTo Edit?.id,
         timestamp: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
         fechaCreacion: fechaReporte ? new Date(fechaReporte).toISOString() : new Date().toISOString(),
         creadoPor: user?.name || 'Desconocido',
@@ -1023,8 +1053,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
         gpsData: autoGpsFields,
         // Información de vehículos (array)
         vehiculos: vehiculos,
-        // 📸 Imágenes del reporte
-        imagesPerDay: imagesPerDay && Object.keys(imagesPerDay).length > 0 ? imagesPerDay : undefined,
+        // 📸 Imágenes del reporte (sincronizadas desde Firebase Storage)
+        imagesPerDay: fotosActualizadas && Object.keys(fotosActualizadas).length > 0 ? fotosActualizadas : undefined,
         estado: 'completado' as const,
         modificadoPor: interventionToEdit ? user?.name : undefined
       };
@@ -2147,6 +2177,184 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 </div>
               </div>
 
+              {/* 📸 CAPTURA DE FOTOS */}
+              <div style={{ gridColumn: '1 / -1', marginTop: '30px' }}>
+                <div style={{
+                  backgroundColor: '#e3f2fd',
+                  border: '2px solid #2196f3',
+                  borderRadius: '8px',
+                  padding: '20px'
+                }}>
+                  <h3 style={{
+                    color: '#1565c0',
+                    margin: '0 0 15px 0',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    📸 Evidencia Fotográfica
+                    {diasTrabajo.length > 0 && (
+                      <span style={{
+                        fontSize: '14px',
+                        fontWeight: 'normal',
+                        color: '#666',
+                        backgroundColor: '#fff',
+                        padding: '4px 12px',
+                        borderRadius: '12px'
+                      }}>
+                        Día {diaActual + 1} de {diasTrabajo.length}
+                      </span>
+                    )}
+                  </h3>
+                  
+                  <div style={{ marginBottom: '15px' }}>
+                    <label htmlFor="foto-input" style={{
+                      display: 'inline-block',
+                      padding: '12px 24px',
+                      backgroundColor: '#2196f3',
+                      color: 'white',
+                      borderRadius: '8px',
+                      cursor: photoHook.uploading ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                      fontSize: '16px',
+                      opacity: photoHook.uploading ? 0.6 : 1,
+                      transition: 'all 0.3s'
+                    }}>
+                      {photoHook.uploading ? '⏳ Subiendo...' : '📷 Tomar/Agregar Foto'}
+                    </label>
+                    <input
+                      id="foto-input"
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          await photoHook.addImage(file);
+                          // Actualizar estado imagesPerDay
+                          const dayKey = diasTrabajo.length > 0 ? diasTrabajo[diaActual] : 'general';
+                          const updatedImages = await firebaseImageStorage.getReportImages(reportIdForPhotos);
+                          setImagesPerDay(updatedImages);
+                        }
+                        e.target.value = ''; // Permitir seleccionar el mismo archivo de nuevo
+                      }}
+                      style={{ display: 'none' }}
+                      disabled={photoHook.uploading}
+                    />
+                    <span style={{
+                      marginLeft: '15px',
+                      fontSize: '13px',
+                      color: '#666'
+                    }}>
+                      {photoHook.images.length} / 10 fotos
+                    </span>
+                  </div>
+                  
+                  {photoHook.uploading && (
+                    <div style={{ marginBottom: '15px' }}>
+                      <div style={{
+                        backgroundColor: '#fff',
+                        borderRadius: '10px',
+                        height: '8px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          backgroundColor: '#2196f3',
+                          height: '100%',
+                          width: `${photoHook.uploadProgress}%`,
+                          transition: 'width 0.3s'
+                        }} />
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '5px', textAlign: 'center' }}>
+                        Subiendo... {photoHook.uploadProgress}%
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Vista previa de fotos capturadas */}
+                  {photoHook.images.length > 0 && (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                      gap: '12px',
+                      marginTop: '15px'
+                    }}>
+                      {photoHook.images.map((img, index) => (
+                        <div key={index} style={{
+                          position: 'relative',
+                          border: '3px solid #2196f3',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          backgroundColor: '#fff'
+                        }}>
+                          <img
+                            src={img.localPreview || img.url}
+                            alt={`Foto ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '150px',
+                              objectFit: 'cover',
+                              display: 'block'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await photoHook.removeImage(index);
+                              // Actualizar estado imagesPerDay
+                              const updatedImages = await firebaseImageStorage.getReportImages(reportIdForPhotos);
+                              setImagesPerDay(updatedImages);
+                            }}
+                            style={{
+                              position: 'absolute',
+                              top: '5px',
+                              right: '5px',
+                              backgroundColor: '#f44336',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '30px',
+                              height: '30px',
+                              cursor: 'pointer',
+                              fontSize: '16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '700'
+                            }}
+                          >
+                            ×
+                          </button>
+                          <div style={{
+                            padding: '8px',
+                            fontSize: '11px',
+                            color: '#666',
+                            textAlign: 'center',
+                            backgroundColor: '#f8f9fa',
+                            fontWeight: '600'
+                          }}>
+                            Foto {index + 1}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div style={
+                    marginTop: '15px',
+                    padding: '10px',
+                    backgroundColor: '#fff3cd',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: '#856404'
+                  }}>
+                    💡 <strong>Tip:</strong> Las fotos se guardan automáticamente en Firebase al subirlas. Máximo 10 fotos por día.
+                  </div>
+                </div>
+              </div>
+              
               {/* 📸 VISTA PREVIA DE FOTOS DEBAJO DE OBSERVACIONES */}
               {imagesPerDay && Object.keys(imagesPerDay).length > 0 && (
                 <div style={{ gridColumn: '1 / -1', marginTop: '30px' }}>
