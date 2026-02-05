@@ -2342,7 +2342,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
                     </div>
                   )}
                   
-                  <div style={
+                  <div style={{
                     marginTop: '15px',
                     padding: '10px',
                     backgroundColor: '#fff3cd',
