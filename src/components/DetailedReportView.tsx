@@ -708,6 +708,46 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     setSelectedReport(null);
   };
 
+  // 🖼️ Función para abrir fotos en nueva pestaña (maneja base64)
+  const openPhotoInNewTab = (imageUrl: string) => {
+    // Si la URL es base64, convertir a blob para mejor compatibilidad del navegador
+    if (imageUrl.startsWith('data:')) {
+      try {
+        // Extraer el tipo MIME y los datos base64
+        const [header, base64Data] = imageUrl.split(',');
+        const mimeMatch = header.match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        
+        // Convertir base64 a binary
+        const binaryString = window.atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Crear blob y URL
+        const blob = new Blob([bytes], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Abrir en nueva pestaña
+        const newWindow = window.open(blobUrl, '_blank');
+        
+        // Liberar el blob URL después de un tiempo
+        if (newWindow) {
+          setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error al abrir imagen:', error);
+        alert('Error al abrir la imagen. Por favor intente de nuevo.');
+      }
+    } else {
+      // URL normal, abrir directamente
+      window.open(imageUrl, '_blank');
+    }
+  };
+
   const getProgressPercentage = (current: number, max: number) => {
     if (max === 0) return 0;
     return Math.min((current / max) * 100, 100);
@@ -927,7 +967,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                             transition: 'transform 0.2s',
                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                           }}
-                          onClick={() => window.open(image.url, '_blank')}
+                          onClick={() => openPhotoInNewTab(image.url)}
                           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                           >
