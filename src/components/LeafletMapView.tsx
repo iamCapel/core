@@ -3,7 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { reportStorage } from '../services/reportStorage';
-import ReportDetailView from './ReportDetailView';
+import firebaseReportStorage from '../services/firebaseReportStorage';
+import DetailedReportView from './DetailedReportView';
 
 // Configurar iconos de Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -12,6 +13,9 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
+
+// Tipo de vista del mapa
+type MapViewMode = 'vehiculos' | 'actividades' | 'operadores';
 
 interface Intervention {
   id: number;
@@ -26,12 +30,77 @@ interface Intervention {
   usuario: string;
   latitud?: number;
   longitud?: number;
+  vehiculos?: Array<{tipo: string; modelo: string; ficha: string}>;
+  fechaInicio?: string;
+  fechaFinal?: string;
+  diasTrabajo?: string[];
+  creadoPor?: string;
   [key: string]: any;
+}
+
+interface VehiculoMarker {
+  id: string;
+  ficha: string;
+  tipo: string;
+  modelo: string;
+  latitud: number;
+  longitud: number;
+  actividad: string;
+  reportes: Array<{
+    numeroReporte: string;
+    fechaInicio: string;
+    fechaFin: string;
+    tipoIntervencion: string;
+  }>;
+}
+
+// Nuevo interface para reportes con vehículos
+interface ReporteConVehiculos {
+  id: string;
+  numeroReporte: string;
+  tipoIntervencion: string;
+  municipio: string;
+  provincia: string;
+  fechaInicio: string;
+  fechaFin: string;
+  latitud: number;
+  longitud: number;
+  vehiculos: Array<{
+    tipo: string;
+    modelo: string;
+    ficha: string;
+  }>;
+}
+
+interface OperadorMarker {
+  id: string;
+  username: string;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+  ultimaActividad?: string;
+  reportesCercanos: Array<{
+    numeroReporte: string;
+    tipoIntervencion: string;
+    distancia: number;
+  }>;
 }
 
 interface LeafletMapViewProps {
   user: any;
   onBack: () => void;
+}
+
+// Función para calcular distancia entre coordenadas (Haversine)
+function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
 
 // Coordenadas de República Dominicana por municipios principales
@@ -200,42 +269,219 @@ const INTERVENTION_COLORS = {
 
 const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
+  const [vehiculosMarkers, setVehiculosMarkers] = useState<VehiculoMarker[]>([]);
+  const [reportesConVehiculos, setReportesConVehiculos] = useState<ReporteConVehiculos[]>([]);
+  const [operadoresMarkers, setOperadoresMarkers] = useState<OperadorMarker[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
+  const [mapViewMode, setMapViewMode] = useState<MapViewMode>('actividades');
+  const [loading, setLoading] = useState(false);
+  const [busquedaFicha, setBusquedaFicha] = useState<string>('');
 
+  // Cargar datos según el modo de vista
   useEffect(() => {
-    // Cargar intervenciones desde reportStorage
-    let reports = reportStorage.getAllReports();
+    loadMapData();
+  }, [user, mapViewMode]);
+
+  const loadMapData = async () => {
+    setLoading(true);
     
-    // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
-    if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-      reports = reports.filter(report => report.creadoPor === user.username);
+    try {
+      // Cargar reportes desde Firebase
+      const reports = await firebaseReportStorage.getAllReports();
+      
+      // Filtrar reportes para usuarios técnicos
+      let filteredReports = reports;
+      if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+        filteredReports = reports.filter(report => report.creadoPor === user.username);
+      }
+
+      // Procesar datos según el modo
+      if (mapViewMode === 'actividades') {
+        const interventionsData = filteredReports.map((report: any, index: number) => {
+          // Obtener coordenadas basadas en la dirección seleccionada en el reporte
+          // Prioridad: municipio > provincia > región
+          let latitud: number | undefined;
+          let longitud: number | undefined;
+          
+          // Buscar por municipio primero
+          if (report.municipio && municipioCoordinates[report.municipio]) {
+            latitud = municipioCoordinates[report.municipio].lat;
+            longitud = municipioCoordinates[report.municipio].lng;
+          }
+          // Buscar por distrito si no hay municipio
+          else if (report.distrito && municipioCoordinates[report.distrito]) {
+            latitud = municipioCoordinates[report.distrito].lat;
+            longitud = municipioCoordinates[report.distrito].lng;
+          }
+          // Buscar por provincia si no hay municipio ni distrito
+          else if (report.provincia && municipioCoordinates[report.provincia]) {
+            latitud = municipioCoordinates[report.provincia].lat;
+            longitud = municipioCoordinates[report.provincia].lng;
+          }
+          
+          return {
+            id: index,
+            timestamp: report.timestamp || report.fechaCreacion,
+            numeroReporte: report.numeroReporte,
+            region: report.region,
+            provincia: report.provincia,
+            distrito: report.distrito,
+            municipio: report.municipio,
+            sector: report.sector,
+            tipoIntervencion: report.tipoIntervencion,
+            usuario: report.creadoPor,
+            creadoPor: report.creadoPor,
+            latitud: latitud,
+            longitud: longitud,
+            fechaInicio: report.fechaInicio || report.fechaProyecto,
+            fechaFinal: report.fechaFinal || report.fechaProyecto,
+            diasTrabajo: report.diasTrabajo
+          };
+        });
+        setInterventions(interventionsData);
+        
+        // Obtener tipos únicos
+        const typeSet = new Set<string>();
+        interventionsData.forEach((i: Intervention) => typeSet.add(i.tipoIntervencion));
+        setSelectedTypes(Array.from(typeSet));
+      }
+      
+      if (mapViewMode === 'vehiculos') {
+        // Crear lista de reportes que tienen vehículos
+        const reportesVehiculos: ReporteConVehiculos[] = [];
+        
+        filteredReports.forEach((report: any) => {
+          if (report.vehiculos && Array.isArray(report.vehiculos) && report.vehiculos.length > 0) {
+            // Obtener coordenadas basadas en la dirección seleccionada en el reporte
+            // Prioridad: municipio > distrito > provincia
+            let finalLat: number | undefined;
+            let finalLon: number | undefined;
+            
+            // Buscar por municipio primero
+            if (report.municipio && municipioCoordinates[report.municipio]) {
+              finalLat = municipioCoordinates[report.municipio].lat;
+              finalLon = municipioCoordinates[report.municipio].lng;
+            }
+            // Buscar por distrito si no hay municipio
+            else if (report.distrito && municipioCoordinates[report.distrito]) {
+              finalLat = municipioCoordinates[report.distrito].lat;
+              finalLon = municipioCoordinates[report.distrito].lng;
+            }
+            // Buscar por provincia si no hay municipio ni distrito
+            else if (report.provincia && municipioCoordinates[report.provincia]) {
+              finalLat = municipioCoordinates[report.provincia].lat;
+              finalLon = municipioCoordinates[report.provincia].lng;
+            }
+            
+            if (finalLat && finalLon) {
+              // Obtener fechas - Priorizar fechaInicio y fechaFinal del formulario
+              // Estas son las fechas seleccionadas por el usuario al llenar el reporte
+              let fechaInicioReporte = report.fechaInicio;
+              let fechaFinReporte = report.fechaFinal;
+              
+              // Fallback: si no hay fechas explícitas, usar diasTrabajo
+              if (!fechaInicioReporte && report.diasTrabajo && report.diasTrabajo.length > 0) {
+                const diasOrdenados = [...report.diasTrabajo].sort();
+                fechaInicioReporte = diasOrdenados[0];
+              }
+              if (!fechaFinReporte && report.diasTrabajo && report.diasTrabajo.length > 0) {
+                const diasOrdenados = [...report.diasTrabajo].sort();
+                fechaFinReporte = diasOrdenados[diasOrdenados.length - 1];
+              }
+              
+              // Último fallback: fechaProyecto o fechaCreacion
+              fechaInicioReporte = fechaInicioReporte || report.fechaProyecto || report.fechaCreacion;
+              fechaFinReporte = fechaFinReporte || report.fechaProyecto || report.fechaCreacion;
+              
+              // Filtrar vehículos válidos (con ficha)
+              const vehiculosValidos = report.vehiculos.filter((v: any) => v.ficha?.trim());
+              
+              if (vehiculosValidos.length > 0) {
+                reportesVehiculos.push({
+                  id: report.id || report.numeroReporte,
+                  numeroReporte: report.numeroReporte,
+                  tipoIntervencion: report.tipoIntervencion,
+                  municipio: report.municipio,
+                  provincia: report.provincia,
+                  fechaInicio: fechaInicioReporte,
+                  fechaFin: fechaFinReporte,
+                  latitud: finalLat,
+                  longitud: finalLon,
+                  vehiculos: vehiculosValidos.map((v: any) => ({
+                    tipo: v.tipo || 'Sin tipo',
+                    modelo: v.modelo || 'Sin modelo',
+                    ficha: v.ficha
+                  }))
+                });
+              }
+            }
+          }
+        });
+        
+        setReportesConVehiculos(reportesVehiculos);
+      }
+      
+      if (mapViewMode === 'operadores') {
+        // Obtener técnicos únicos de los reportes
+        const tecnicosMap: Record<string, OperadorMarker> = {};
+        
+        filteredReports.forEach((report: any) => {
+          const username = report.creadoPor;
+          if (!username) return;
+          
+          const lat = report.gpsData?.punto_inicial?.lat || report.gpsData?.punto_alcanzado?.lat;
+          const lon = report.gpsData?.punto_inicial?.lon || report.gpsData?.punto_alcanzado?.lon;
+          
+          let finalLat = lat;
+          let finalLon = lon;
+          if (!lat || !lon) {
+            const coords = municipioCoordinates[report.municipio];
+            if (coords) {
+              finalLat = coords.lat;
+              finalLon = coords.lng;
+            }
+          }
+          
+          if (finalLat && finalLon) {
+            if (!tecnicosMap[username]) {
+              tecnicosMap[username] = {
+                id: username,
+                username: username,
+                nombre: username,
+                latitud: finalLat,
+                longitud: finalLon,
+                ultimaActividad: report.tipoIntervencion,
+                reportesCercanos: [{
+                  numeroReporte: report.numeroReporte,
+                  tipoIntervencion: report.tipoIntervencion,
+                  distancia: 0
+                }]
+              };
+            } else {
+              // Actualizar a la ubicación más reciente
+              const fechaActual = new Date(report.fechaCreacion || report.timestamp);
+              tecnicosMap[username].latitud = finalLat;
+              tecnicosMap[username].longitud = finalLon;
+              tecnicosMap[username].ultimaActividad = report.tipoIntervencion;
+              tecnicosMap[username].reportesCercanos.push({
+                numeroReporte: report.numeroReporte,
+                tipoIntervencion: report.tipoIntervencion,
+                distancia: 0
+              });
+            }
+          }
+        });
+        
+        setOperadoresMarkers(Object.values(tecnicosMap));
+      }
+    } catch (error) {
+      console.error('Error cargando datos del mapa:', error);
     }
     
-    const interventionsData = reports.map((report, index) => ({
-      id: index,
-      timestamp: report.timestamp,
-      numeroReporte: report.numeroReporte,
-      region: report.region,
-      provincia: report.provincia,
-      distrito: report.distrito,
-      municipio: report.municipio,
-      sector: report.sector,
-      tipoIntervencion: report.tipoIntervencion,
-      usuario: report.creadoPor,
-      latitud: report.gpsData?.punto_inicial?.lat || report.gpsData?.punto_alcanzado?.lat,
-      longitud: report.gpsData?.punto_inicial?.lon || report.gpsData?.punto_alcanzado?.lon
-    }));
-    
-    setInterventions(interventionsData);
-
-    // Obtener tipos únicos de intervenciones
-    const typeSet = new Set();
-    interventionsData.forEach((i: Intervention) => typeSet.add(i.tipoIntervencion));
-    const types = Array.from(typeSet) as string[];
-    setSelectedTypes(types); // Mostrar todos por defecto
-  }, [user]);
+    setLoading(false);
+  };
 
   const filteredInterventions = interventions.filter(intervention => 
     selectedTypes.includes(intervention.tipoIntervencion)
@@ -260,7 +506,13 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   };
 
   if (showDetailView && selectedReportNumber) {
-    return <ReportDetailView numeroReporte={selectedReportNumber} onBack={handleBackToMap} />;
+    return (
+      <DetailedReportView 
+        user={user} 
+        initialReportNumber={selectedReportNumber} 
+        onBack={handleBackToMap} 
+      />
+    );
   }
 
   // Crear iconos personalizados para cada tipo de intervención
@@ -277,6 +529,67 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       iconSize: [24, 24],
       iconAnchor: [12, 12],
       popupAnchor: [0, -12]
+    });
+  };
+
+  // Icono de vehículo pesado (excavadora)
+  const createVehiculoIcon = () => {
+    const svgIcon = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
+        <circle cx="20" cy="20" r="18" fill="#FF7700" stroke="#fff" stroke-width="2"/>
+        <text x="20" y="26" font-size="20" text-anchor="middle" fill="white">🚜</text>
+      </svg>
+    `;
+    return L.divIcon({
+      html: svgIcon,
+      className: 'custom-marker vehiculo-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+      popupAnchor: [0, -20]
+    });
+  };
+
+  // Icono de actividad (obrero con pala)
+  const createActividadIcon = (color: string) => {
+    const svgIcon = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36">
+        <circle cx="18" cy="18" r="16" fill="${color}" stroke="#fff" stroke-width="2"/>
+        <text x="18" y="24" font-size="18" text-anchor="middle" fill="white">⛏️</text>
+      </svg>
+    `;
+    return L.divIcon({
+      html: svgIcon,
+      className: 'custom-marker actividad-marker',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18]
+    });
+  };
+
+  // Icono de operador (técnico)
+  const createOperadorIcon = () => {
+    const svgIcon = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36">
+        <circle cx="18" cy="18" r="16" fill="#3498db" stroke="#fff" stroke-width="2"/>
+        <text x="18" y="24" font-size="18" text-anchor="middle" fill="white">👷</text>
+      </svg>
+    `;
+    return L.divIcon({
+      html: svgIcon,
+      className: 'custom-marker operador-marker',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18]
+    });
+  };
+
+  // Formatear fecha corta
+  const formatearFechaCorta = (fecha: string | undefined): string => {
+    if (!fecha) return 'N/A';
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
     });
   };
 
@@ -366,70 +679,199 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       </div>      <div style={{ display: 'flex', gap: '20px', height: 'calc(100vh - 120px)' }}>
         {/* Panel de control */}
         <div style={{ 
-          width: '300px', 
+          width: '280px', 
           backgroundColor: 'white', 
-          padding: '20px', 
+          padding: '16px', 
           borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
           overflowY: 'auto'
         }}>
-          <h3 style={{ marginTop: 0, color: '#2c3e50' }}>📊 Filtros</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#2c3e50', fontSize: '16px' }}>🗺️ Ver en el Mapa</h3>
           
-          {/* Búsqueda por Número de Reporte */}
-          <div style={{ 
-            marginBottom: '20px', 
-            padding: '15px', 
-            backgroundColor: '#f8f9fa', 
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <img 
-                src="/images/search-report-icon.svg" 
-                alt="Buscar reporte" 
-                style={{ width: '24px', height: '24px', marginRight: '8px' }}
-              />
-              <h4 style={{ color: '#495057', margin: 0, fontSize: '14px' }}>
-                Buscar por Número de Reporte
-              </h4>
-            </div>
-            <input
-              type="text"
-              placeholder="Ingrese # de reporte (ej: DCR-2025-000001)"
+          {/* Menú de selección de vista */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Opción Vehículos */}
+            <button
+              onClick={() => setMapViewMode('vehiculos')}
               style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #ced4da',
-                borderRadius: '4px',
-                fontSize: '14px',
-                marginBottom: '8px'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                backgroundColor: mapViewMode === 'vehiculos' ? '#FFF3E6' : '#f8f9fa',
+                border: mapViewMode === 'vehiculos' ? '2px solid #FF7700' : '1px solid #e9ecef',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'left'
               }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  const reportNumber = (e.target as HTMLInputElement).value;
-                  if (reportNumber.trim()) {
-                    // Búsqueda optimizada usando reportStorage (O(1))
-                    const report = reportStorage.getReportByNumber(reportNumber.trim());
-                    
-                    if (report) {
-                      // Centrar mapa en el municipio de la intervención encontrada
-                      alert(`✅ Reporte encontrado: ${report.numeroReporte} en ${report.municipio}, ${report.provincia}\nTipo: ${report.tipoIntervencion}`);
-                      console.log('📍 Reporte encontrado vía búsqueda optimizada:', report);
-                      // Aquí podrías agregar lógica para centrar el mapa en las coordenadas del municipio
-                    } else {
-                      alert('❌ No se encontró ningún reporte con ese número');
-                      console.log('❌ Búsqueda sin resultados para:', reportNumber);
-                    }
-                  }
-                }
+            >
+              <span style={{ fontSize: '28px' }}>🚜</span>
+              <div>
+                <div style={{ fontWeight: '600', color: mapViewMode === 'vehiculos' ? '#FF7700' : '#2c3e50', fontSize: '14px' }}>
+                  Vehículos
+                </div>
+                <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                  {reportesConVehiculos.length} obras con vehículos
+                </div>
+              </div>
+              {mapViewMode === 'vehiculos' && (
+                <span style={{ marginLeft: 'auto', color: '#FF7700', fontWeight: 'bold' }}>✓</span>
+              )}
+            </button>
+
+            {/* Filtro de búsqueda por ficha - Solo visible en modo Vehículos */}
+            {mapViewMode === 'vehiculos' && (
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#FFF3E6', 
+                borderRadius: '8px',
+                border: '1px solid #FFD699'
+              }}>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#FF7700', marginBottom: '6px', display: 'block' }}>
+                  🔍 Buscar por Ficha
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: 12345"
+                  value={busquedaFicha}
+                  onChange={(e) => setBusquedaFicha(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #FFD699',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {busquedaFicha && (
+                  <button
+                    onClick={() => setBusquedaFicha('')}
+                    style={{
+                      marginTop: '8px',
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      backgroundColor: '#fff',
+                      border: '1px solid #FF7700',
+                      color: '#FF7700',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✕ Limpiar filtro
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Opción Actividades */}
+            <button
+              onClick={() => setMapViewMode('actividades')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                backgroundColor: mapViewMode === 'actividades' ? '#e8f5e9' : '#f8f9fa',
+                border: mapViewMode === 'actividades' ? '2px solid #4CAF50' : '1px solid #e9ecef',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'left'
               }}
-            />
-            <p style={{ fontSize: '12px', color: '#6c757d', margin: 0 }}>
-              Presione Enter para buscar y ubicar en el mapa
-            </p>
+            >
+              <span style={{ fontSize: '28px' }}>⛏️</span>
+              <div>
+                <div style={{ fontWeight: '600', color: mapViewMode === 'actividades' ? '#4CAF50' : '#2c3e50', fontSize: '14px' }}>
+                  Actividades
+                </div>
+                <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                  {interventions.length} intervenciones
+                </div>
+              </div>
+              {mapViewMode === 'actividades' && (
+                <span style={{ marginLeft: 'auto', color: '#4CAF50', fontWeight: 'bold' }}>✓</span>
+              )}
+            </button>
+
+            {/* Opción Operadores */}
+            <button
+              onClick={() => setMapViewMode('operadores')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                backgroundColor: mapViewMode === 'operadores' ? '#e3f2fd' : '#f8f9fa',
+                border: mapViewMode === 'operadores' ? '2px solid #2196F3' : '1px solid #e9ecef',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textAlign: 'left'
+              }}
+            >
+              <span style={{ fontSize: '28px' }}>👷</span>
+              <div>
+                <div style={{ fontWeight: '600', color: mapViewMode === 'operadores' ? '#2196F3' : '#2c3e50', fontSize: '14px' }}>
+                  Operadores
+                </div>
+                <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                  {operadoresMarkers.length} técnicos
+                </div>
+              </div>
+              {mapViewMode === 'operadores' && (
+                <span style={{ marginLeft: 'auto', color: '#2196F3', fontWeight: 'bold' }}>✓</span>
+              )}
+            </button>
           </div>
 
-
+          {/* Información de la vista actual */}
+          <div style={{ 
+            marginTop: '20px', 
+            padding: '12px', 
+            backgroundColor: '#f8f9fa', 
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: '#6c757d'
+          }}>
+            {loading ? (
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ fontSize: '20px' }}>⏳</span>
+                <p style={{ margin: '8px 0 0' }}>Cargando datos...</p>
+              </div>
+            ) : (
+              <>
+                {mapViewMode === 'vehiculos' && (
+                  <div>
+                    <p style={{ margin: '0 0 8px' }}>
+                      <strong>🚜 Vehículos:</strong> Muestra las obras que tienen vehículos registrados. 
+                      Haz clic en un marcador para ver la lista de fichas.
+                    </p>
+                    {busquedaFicha && (
+                      <p style={{ margin: 0, color: '#FF7700', fontWeight: '600' }}>
+                        🔍 Filtrando por ficha: "{busquedaFicha}" - {reportesConVehiculos.filter(r => 
+                          r.vehiculos.some(v => v.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()))
+                        ).length} obras encontradas
+                      </p>
+                    )}
+                  </div>
+                )}
+                {mapViewMode === 'actividades' && (
+                  <p style={{ margin: 0 }}>
+                    <strong>⛏️ Actividades:</strong> Muestra las intervenciones registradas. 
+                    Haz clic en un icono para ver el detalle del reporte.
+                  </p>
+                )}
+                {mapViewMode === 'operadores' && (
+                  <p style={{ margin: 0 }}>
+                    <strong>👷 Operadores:</strong> Muestra la última ubicación conocida de los técnicos 
+                    basada en sus reportes más recientes.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Mapa */}
@@ -450,85 +892,219 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             
-            {filteredInterventions.map((intervention, index) => {
-              let position: [number, number];
+            {/* Marcadores de VEHÍCULOS (Reportes con vehículos) */}
+            {mapViewMode === 'vehiculos' && reportesConVehiculos
+              .filter(reporte => {
+                // Filtrar por búsqueda de ficha si hay texto
+                if (!busquedaFicha.trim()) return true;
+                return reporte.vehiculos.some(v => 
+                  v.ficha.toLowerCase().includes(busquedaFicha.toLowerCase())
+                );
+              })
+              .map((reporte) => (
+              <Marker 
+                key={reporte.id} 
+                position={[reporte.latitud, reporte.longitud]}
+                icon={createVehiculoIcon()}
+              >
+                <Popup closeOnClick={false}>
+                  <div style={{ fontFamily: 'Arial, sans-serif', minWidth: '280px', maxWidth: '340px' }}>
+                    <div style={{ 
+                      background: 'linear-gradient(135deg, #FF7700 0%, #FF9944 100%)', 
+                      color: 'white', 
+                      padding: '12px', 
+                      margin: '-13px -20px 12px -20px',
+                      borderRadius: '8px 8px 0 0'
+                    }}>
+                      <p 
+                        onMouseDown={(e) => { e.preventDefault(); handleViewDetail(reporte.numeroReporte); }}
+                        style={{ 
+                          margin: '0 0 6px', 
+                          fontSize: '14px', 
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        📋 {reporte.numeroReporte}
+                      </p>
+                      <h3 style={{ margin: 0, fontSize: '15px' }}>
+                        ⛏️ {reporte.tipoIntervencion}
+                      </h3>
+                      <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.9 }}>
+                        📍 {reporte.municipio}, {reporte.provincia}
+                      </p>
+                    </div>
+                    
+                    <div style={{ fontSize: '13px' }}>
+                      {/* Fechas del reporte */}
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '12px', 
+                        marginBottom: '12px',
+                        padding: '8px',
+                        backgroundColor: '#e8f5e9',
+                        borderRadius: '6px'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '10px', color: '#666', fontWeight: '600' }}>📅 INICIO</div>
+                          <div style={{ fontWeight: '700', color: '#2e7d32' }}>{formatearFechaCorta(reporte.fechaInicio)}</div>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '10px', color: '#666', fontWeight: '600' }}>🏁 FIN</div>
+                          <div style={{ fontWeight: '700', color: '#c62828' }}>{formatearFechaCorta(reporte.fechaFin)}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Lista de vehículos/fichas */}
+                      <div style={{ 
+                        background: '#f8f9fa', 
+                        borderRadius: '6px', 
+                        padding: '10px',
+                        maxHeight: '180px',
+                        overflowY: 'auto'
+                      }}>
+                        <p style={{ margin: '0 0 8px', fontWeight: '600', color: '#FF7700', fontSize: '12px' }}>
+                          🚜 VEHÍCULOS EN ESTA OBRA ({reporte.vehiculos.length})
+                        </p>
+                        {reporte.vehiculos.map((vehiculo, idx) => (
+                          <div key={idx} style={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px',
+                            marginBottom: idx < reporte.vehiculos.length - 1 ? '6px' : 0,
+                            backgroundColor: busquedaFicha && vehiculo.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()) 
+                              ? '#FFF3E6' : '#fff',
+                            borderRadius: '6px',
+                            border: busquedaFicha && vehiculo.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()) 
+                              ? '2px solid #FF7700' : '1px solid #e9ecef'
+                          }}>
+                            <span style={{ fontSize: '20px' }}>🚜</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: '600', color: '#2c3e50', fontSize: '13px' }}>
+                                {vehiculo.tipo}
+                              </div>
+                              <div style={{ fontSize: '11px', color: '#6c757d' }}>
+                                {vehiculo.modelo}
+                              </div>
+                            </div>
+                            <div style={{ 
+                              backgroundColor: '#FF7700',
+                              color: 'white',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: '700'
+                            }}>
+                              {vehiculo.ficha}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Botón ver detalle */}
+                      <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                        <button
+                          onMouseDown={(e) => { e.preventDefault(); handleViewDetail(reporte.numeroReporte); }}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#FF7700',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '20px',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Ver Reporte Completo →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
 
-              // Usar coordenadas GPS si están disponibles
+            {/* Marcadores de ACTIVIDADES */}
+            {mapViewMode === 'actividades' && filteredInterventions.map((intervention, index) => {
+              let position: [number, number];
               if (intervention.latitud && intervention.longitud) {
                 position = [intervention.latitud, intervention.longitud];
               } else {
-                // Usar coordenadas del municipio
                 const municipioCoords = municipioCoordinates[intervention.municipio];
                 if (municipioCoords) {
                   position = [municipioCoords.lat, municipioCoords.lng];
                 } else {
-                  // Coordenadas por defecto (Santo Domingo)
                   position = [18.4861, -69.9312];
                 }
               }
-
               const markerColor = getTypeColor(intervention.tipoIntervencion);
-              const customIcon = createCustomIcon(markerColor);
 
               return (
                 <Marker 
                   key={intervention.id} 
                   position={position}
-                  icon={customIcon}
+                  icon={createActividadIcon(markerColor)}
                 >
-                  <Popup>
-                    <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '300px' }}>
-                      <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: '16px' }}>
-                        {intervention.tipoIntervencion}
-                      </h3>
-                      <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
+                  <Popup closeOnClick={false}>
+                    <div style={{ fontFamily: 'Arial, sans-serif', minWidth: '260px', maxWidth: '300px' }}>
+                      <div style={{ 
+                        background: `linear-gradient(135deg, ${markerColor} 0%, ${markerColor}cc 100%)`, 
+                        color: 'white', 
+                        padding: '12px', 
+                        margin: '-13px -20px 12px -20px',
+                        borderRadius: '8px 8px 0 0'
+                      }}>
                         {intervention.numeroReporte && (
-                          <p style={{ margin: '5px 0', padding: '5px 10px', backgroundColor: '#3498db', color: 'white', borderRadius: '4px', fontWeight: 'bold', textAlign: 'center' }}>
+                          <p 
+                            onMouseDown={(e) => { e.preventDefault(); handleViewDetail(intervention.numeroReporte!); }}
+                            style={{ 
+                              margin: '0 0 6px', 
+                              fontSize: '14px', 
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              textDecoration: 'underline'
+                            }}
+                          >
                             📋 {intervention.numeroReporte}
                           </p>
                         )}
-                        <p style={{ margin: '5px 0' }}><strong>📍 Ubicación:</strong></p>
-                        <p style={{ margin: '2px 0 10px 20px', color: '#555' }}>
-                          {intervention.region} → {intervention.provincia}<br />
-                          {intervention.distrito} → {intervention.municipio}<br />
-                          Sector: {intervention.sector}
+                        <h3 style={{ margin: 0, fontSize: '15px' }}>
+                          ⛏️ {intervention.tipoIntervencion}
+                        </h3>
+                      </div>
+                      
+                      <div style={{ fontSize: '13px' }}>
+                        <p style={{ margin: '0 0 6px' }}>
+                          <strong>👤 Técnico:</strong> {intervention.usuario || intervention.creadoPor}
                         </p>
-                        <p style={{ margin: '5px 0' }}><strong>👤 Usuario:</strong> {intervention.usuario}</p>
-                        <p style={{ margin: '5px 0' }}><strong>📅 Fecha:</strong> {new Date(intervention.timestamp).toLocaleDateString('es-DO')}</p>
-                        {intervention.latitud && intervention.longitud ? 
-                          <p style={{ margin: '5px 0' }}><strong>📌 GPS:</strong> {intervention.latitud.toFixed(6)}, {intervention.longitud.toFixed(6)}</p> : 
-                          <p style={{ margin: '5px 0', color: '#e74c3c' }}><strong>📌 GPS:</strong> Ubicación aproximada</p>
-                        }
-                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                        <p style={{ margin: '0 0 6px' }}>
+                          <strong>📅 Inicio:</strong> {formatearFechaCorta(intervention.fechaInicio || intervention.timestamp)}
+                        </p>
+                        <p style={{ margin: '0 0 6px' }}>
+                          <strong>🏁 Fin:</strong> {formatearFechaCorta(intervention.fechaFinal || intervention.timestamp)}
+                        </p>
+                        <p style={{ margin: '0 0 6px' }}>
+                          <strong>📍 Ubicación:</strong> {intervention.municipio}, {intervention.provincia}
+                        </p>
+                        
+                        <div style={{ marginTop: '12px', textAlign: 'center' }}>
                           <button
-                            onClick={() => intervention.numeroReporte && handleViewDetail(intervention.numeroReporte)}
+                            onMouseDown={(e) => { e.preventDefault(); intervention.numeroReporte && handleViewDetail(intervention.numeroReporte); }}
                             style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '8px',
-                              padding: '10px 20px',
-                              backgroundColor: '#3498db',
+                              padding: '8px 16px',
+                              backgroundColor: markerColor,
                               color: 'white',
-                              border: '2px solid #3498db',
-                              borderRadius: '50px',
-                              fontSize: '14px',
+                              border: 'none',
+                              borderRadius: '20px',
+                              fontSize: '13px',
                               fontWeight: 'bold',
-                              cursor: 'pointer',
-                              transition: 'all 0.3s ease',
-                              boxShadow: '0 2px 8px rgba(52, 152, 219, 0.3)'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.backgroundColor = '#2980b9';
-                              e.currentTarget.style.transform = 'scale(1.05)';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.backgroundColor = '#3498db';
-                              e.currentTarget.style.transform = 'scale(1)';
+                              cursor: 'pointer'
                             }}
                           >
-                            Ir
-                            <span style={{ fontSize: '16px' }}>→</span>
+                            Ver Reporte →
                           </button>
                         </div>
                       </div>
@@ -537,6 +1113,77 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </Marker>
               );
             })}
+
+            {/* Marcadores de OPERADORES */}
+            {mapViewMode === 'operadores' && operadoresMarkers.map((operador) => (
+              <Marker 
+                key={operador.id} 
+                position={[operador.latitud, operador.longitud]}
+                icon={createOperadorIcon()}
+              >
+                <Popup closeOnClick={false}>
+                  <div style={{ fontFamily: 'Arial, sans-serif', minWidth: '260px', maxWidth: '300px' }}>
+                    <div style={{ 
+                      background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)', 
+                      color: 'white', 
+                      padding: '12px', 
+                      margin: '-13px -20px 12px -20px',
+                      borderRadius: '8px 8px 0 0'
+                    }}>
+                      <h3 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        👷 {operador.nombre}
+                      </h3>
+                      <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.9 }}>
+                        Técnico de Campo
+                      </p>
+                    </div>
+                    
+                    <div style={{ fontSize: '13px' }}>
+                      {operador.ultimaActividad && (
+                        <p style={{ margin: '0 0 8px' }}>
+                          <strong>🔧 Última actividad:</strong> {operador.ultimaActividad}
+                        </p>
+                      )}
+                      
+                      <div style={{ 
+                        background: '#f8f9fa', 
+                        borderRadius: '6px', 
+                        padding: '10px',
+                        maxHeight: '150px',
+                        overflowY: 'auto'
+                      }}>
+                        <p style={{ margin: '0 0 6px', fontWeight: '600', color: '#495057', fontSize: '11px' }}>
+                          📋 REPORTES RECIENTES ({operador.reportesCercanos.length})
+                        </p>
+                        {operador.reportesCercanos.slice(0, 5).map((rep, idx) => (
+                          <div key={idx} style={{ 
+                            borderBottom: idx < Math.min(operador.reportesCercanos.length, 5) - 1 ? '1px solid #e9ecef' : 'none',
+                            paddingBottom: '4px',
+                            marginBottom: '4px'
+                          }}>
+                            <span 
+                              onMouseDown={(e) => { e.preventDefault(); handleViewDetail(rep.numeroReporte); }}
+                              style={{ 
+                                color: '#3498db', 
+                                fontWeight: '700', 
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                fontSize: '12px'
+                              }}
+                            >
+                              {rep.numeroReporte}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#6c757d', marginLeft: '6px' }}>
+                              - {rep.tipoIntervencion}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
           </MapContainer>
         </div>
       </div>
@@ -547,9 +1194,19 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           border: none !important;
         }
         
+        .vehiculo-marker, .actividad-marker, .operador-marker {
+          background: transparent !important;
+          border: none !important;
+        }
+        
         .leaflet-popup-content-wrapper {
           border-radius: 8px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          padding: 0;
+        }
+        
+        .leaflet-popup-content {
+          margin: 13px 20px;
         }
         
         .leaflet-popup-tip {

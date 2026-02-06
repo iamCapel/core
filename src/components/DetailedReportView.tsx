@@ -97,6 +97,8 @@ interface DetailedReportViewProps {
     name: string;
     role?: string;
   };
+  initialReportNumber?: string;
+  onBack?: () => void;
 }
 
 type ViewMode = 'hierarchy' | 'table' | 'stats';
@@ -104,7 +106,7 @@ type FilterPeriod = 'todos' | 'hoy' | 'semana' | 'mes' | 'trimestre' | 'año' | 
 type SortField = 'reportNumber' | 'date' | 'tipo' | 'estado' | 'kilometraje';
 type SortOrder = 'asc' | 'desc';
 
-const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user }) => {
+const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user, initialReportNumber, onBack }) => {
   // Estados de vista
   const [viewMode, setViewMode] = useState<ViewMode>('hierarchy');
   
@@ -454,6 +456,32 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     setAllReportsFlat(flatReports);
   };
 
+  // Efecto para seleccionar automáticamente un reporte si se pasa initialReportNumber
+  useEffect(() => {
+    if (initialReportNumber && allReportsFlat.length > 0 && !selectedReport) {
+      const report = allReportsFlat.find(r => r.numeroReporte === initialReportNumber || r.reportNumber === initialReportNumber);
+      if (report) {
+        // Aplicar la misma lógica de migración de imágenes
+        let reportToShow = report;
+        if (report.images && Array.isArray(report.images) && report.images.length > 0) {
+          if (!report.imagesPerDay || Object.keys(report.imagesPerDay).length === 0) {
+            reportToShow = {
+              ...report,
+              imagesPerDay: {
+                'general': report.images.map((url: string, index: number) => ({
+                  url: url,
+                  timestamp: new Date().toISOString()
+                }))
+              }
+            };
+          }
+        }
+        setSelectedReport(reportToShow);
+        console.log('📋 Reporte seleccionado automáticamente desde mapa:', initialReportNumber);
+      }
+    }
+  }, [initialReportNumber, allReportsFlat, selectedReport]);
+
   // Aplicar filtros avanzados
   const filteredReports = useMemo(() => {
     let filtered = [...allReportsFlat];
@@ -705,7 +733,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   };
 
   const closeReportView = () => {
-    setSelectedReport(null);
+    // Si hay un onBack (venimos del mapa), volver al mapa
+    if (onBack && initialReportNumber) {
+      onBack();
+    } else {
+      setSelectedReport(null);
+    }
   };
 
   // 🖼️ Función para abrir fotos en nueva pestaña (maneja base64)

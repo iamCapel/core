@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { reportStorage, ReportData } from '../services/reportStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import { Wrapper } from '@googlemaps/react-wrapper';
 import { GOOGLE_MAPS_API_KEY } from '../config/googleMapsConfig';
 import './ReportDetailView.css';
@@ -18,14 +19,34 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({ numeroReporte, onBa
   const panoramaRef = useRef<google.maps.StreetViewPanorama | null>(null);
 
   useEffect(() => {
-    // Cargar el reporte desde reportStorage
-    const loadedReport = reportStorage.getReportByNumber(numeroReporte);
-    if (loadedReport) {
-      setReport(loadedReport);
+    const loadReport = async () => {
+      setLoading(true);
+      
+      // Primero intentar cargar desde reportStorage local
+      let loadedReport = reportStorage.getReportByNumber(numeroReporte);
+      
+      // Si no se encuentra localmente, buscar en Firebase
+      if (!loadedReport) {
+        try {
+          const firebaseReports = await firebaseReportStorage.getAllReports();
+          const foundReport = firebaseReports.find(
+            (r: any) => r.numeroReporte === numeroReporte
+          );
+          if (foundReport) {
+            loadedReport = foundReport as ReportData;
+          }
+        } catch (error) {
+          console.error('Error buscando reporte en Firebase:', error);
+        }
+      }
+      
+      if (loadedReport) {
+        setReport(loadedReport);
+      }
       setLoading(false);
-    } else {
-      setLoading(false);
-    }
+    };
+    
+    loadReport();
   }, [numeroReporte]);
 
   useEffect(() => {

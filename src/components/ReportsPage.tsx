@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
@@ -82,6 +82,62 @@ function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: num
   return R * c;
 }
 
+// Función para calcular días de duración de una actividad
+function calcularDiasActividad(obra: any): number {
+  // Para reportes multi-día, usar el array diasTrabajo
+  if (obra.diasTrabajo && Array.isArray(obra.diasTrabajo) && obra.diasTrabajo.length > 0) {
+    return obra.diasTrabajo.length;
+  }
+  
+  // Para reportes normales, calcular la diferencia entre fechas
+  const inicio = obra.fechaInicio || obra.fechaProyecto || obra.fechaCreacion;
+  const fin = obra.fechaFinal || obra.fechaProyecto || obra.fechaCreacion;
+  
+  if (!inicio || !fin) return 1;
+  
+  const fechaInicioDate = new Date(inicio);
+  const fechaFinDate = new Date(fin);
+  
+  // Asegurar que la fecha de inicio no sea mayor que la de fin
+  if (fechaInicioDate > fechaFinDate) {
+    return 1;
+  }
+  
+  const diffTime = Math.abs(fechaFinDate.getTime() - fechaInicioDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Mínimo 1 día
+  return Math.max(1, diffDays + 1);
+}
+
+// Función para obtener fechas de inicio y fin de una obra
+function obtenerFechasObra(obra: any): { inicio: string; fin: string } {
+  // Para reportes multi-día, usar el primer y último día del array
+  if (obra.diasTrabajo && Array.isArray(obra.diasTrabajo) && obra.diasTrabajo.length > 0) {
+    const diasOrdenados = [...obra.diasTrabajo].sort();
+    return {
+      inicio: diasOrdenados[0],
+      fin: diasOrdenados[diasOrdenados.length - 1]
+    };
+  }
+  
+  // Para reportes normales
+  return {
+    inicio: obra.fechaInicio || obra.fechaProyecto || obra.fechaCreacion || '',
+    fin: obra.fechaFinal || obra.fechaProyecto || obra.fechaCreacion || ''
+  };
+}
+
+// Función para formatear fecha corta
+function formatearFechaCorta(fecha: string | undefined): string {
+  if (!fecha) return 'N/A';
+  return new Date(fecha).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
 // Componente Vista de Vehículos
 const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
   const [vehiculos, setVehiculos] = useState<any[]>([]);
@@ -106,10 +162,13 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
   // Estados para modal de detalle de reporte
   const [selectedReporteDetail, setSelectedReporteDetail] = useState<any | null>(null);
   const [showReporteModal, setShowReporteModal] = useState(false);
+  
+  // Ref para controlar si es la primera carga
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    cargarVehiculos();
-    const interval = setInterval(cargarVehiculos, 10000);
+    cargarVehiculos(true); // Primera carga con loading
+    const interval = setInterval(() => cargarVehiculos(false), 30000); // Actualizar cada 30s sin loading
     return () => clearInterval(interval);
   }, []);
 
@@ -127,8 +186,11 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
     }
   }, [searchFicha, vehiculos, viewMode]);
 
-  const cargarVehiculos = async () => {
-    setLoading(true);
+  const cargarVehiculos = async (showLoading: boolean = true) => {
+    // Solo mostrar loading en la primera carga
+    if (showLoading && isFirstLoad.current) {
+      setLoading(true);
+    }
     try {
       const reportes = await firebaseReportStorage.getAllReports();
       console.log('📊 Total de reportes cargados:', reportes.length);
@@ -217,6 +279,7 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
       console.error('Error cargando vehículos:', error);
     }
     setLoading(false);
+    isFirstLoad.current = false; // Marcar que ya no es la primera carga
   };
 
   const formatearFecha = (fecha: string) => {
@@ -477,78 +540,82 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
           <p>Cargando vehículos...</p>
         </div>
       ) : (
-        <div className="vehiculos-grid">
+        <div className="vehiculos-lista-compacta">
           {vehiculosFiltrados.map((vehiculo) => (
             <div 
               key={vehiculo.ficha} 
-              className={`vehiculo-card ${selectedVehiculo === vehiculo.ficha ? 'expanded' : ''}`}
+              className={`vehiculo-carpeta ${selectedVehiculo === vehiculo.ficha ? 'abierta' : ''}`}
             >
               <div 
-                className="vehiculo-header"
+                className="carpeta-header"
                 onClick={() => setSelectedVehiculo(
                   selectedVehiculo === vehiculo.ficha ? null : vehiculo.ficha
                 )}
               >
-                <div className="vehiculo-icon">🚜</div>
-                <div className="vehiculo-info">
-                  <h3 className="vehiculo-tipo">{vehiculo.tipo}</h3>
-                  <p className="vehiculo-modelo">{vehiculo.modelo}</p>
-                  <p className="vehiculo-ficha">Ficha: <strong>{vehiculo.ficha}</strong></p>
+                <div className="carpeta-icono">
+                  {selectedVehiculo === vehiculo.ficha ? '📂' : '📁'}
                 </div>
-                <div className="vehiculo-stats">
-                  <div className="stat-badge">
-                    <span className="stat-value">{vehiculo.totalObras}</span>
-                    <span className="stat-label">Obras</span>
-                  </div>
+                <div className="carpeta-info">
+                  <span className="carpeta-ficha">{vehiculo.ficha}</span>
+                  <span className="carpeta-tipo">{vehiculo.tipo} • {vehiculo.modelo}</span>
                 </div>
-              </div>
-
-              <div className="vehiculo-ultima-obra">
-                <div className="ultima-obra-header">
-                  <span className="obra-badge">📍 Última Posición</span>
-                  <span className="obra-fecha">{formatearFecha(vehiculo.ultimaObra.fecha)}</span>
+                <div className="carpeta-badges">
+                  <span className="badge-obras">{vehiculo.totalObras} obras</span>
+                  <span className="badge-dias">
+                    {vehiculo.obras.reduce((total: number, obra: any) => total + calcularDiasActividad(obra), 0)}d
+                  </span>
                 </div>
-                <div className="ultima-obra-details">
-                  <p>
-                    <strong>Reporte:</strong>{' '}
-                    <span 
-                      className="numero-reporte-clickeable"
-                      onClick={() => abrirDetalleReporte(vehiculo.ultimaObra.numeroReporte)}
-                    >
-                      {vehiculo.ultimaObra.numeroReporte}
-                    </span>
-                  </p>
-                  <p><strong>Región:</strong> {vehiculo.ultimaObra.region}</p>
-                  <p><strong>Provincia:</strong> {vehiculo.ultimaObra.provincia}</p>
-                  <p><strong>Municipio:</strong> {vehiculo.ultimaObra.municipio}</p>
-                  <p><strong>Sector:</strong> {vehiculo.ultimaObra.sector}</p>
-                  <p><strong>Intervención:</strong> {vehiculo.ultimaObra.tipoIntervencion}</p>
+                <div className="carpeta-flecha">
+                  {selectedVehiculo === vehiculo.ficha ? '▼' : '▶'}
                 </div>
               </div>
 
               {selectedVehiculo === vehiculo.ficha && (
-                <div className="vehiculo-obras-historial">
-                  <h4 className="historial-title">📋 Historial de Obras ({vehiculo.obras.length})</h4>
-                  <div className="obras-lista">
-                    {vehiculo.obras
-                      .sort((a: any, b: any) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
-                      .map((obra: any, index: number) => (
-                        <div key={`${obra.id}-${index}`} className="obra-item">
-                          <div className="obra-item-header">
-                            <span 
-                              className="obra-numero numero-reporte-clickeable"
-                              onClick={() => abrirDetalleReporte(obra.numeroReporte)}
-                            >
-                              {obra.numeroReporte}
-                            </span>
-                            <span className="obra-fecha-small">{formatearFecha(obra.fechaCreacion)}</span>
-                          </div>
-                          <div className="obra-item-body">
-                            <p>📍 {obra.provincia} › {obra.municipio} › {obra.sector}</p>
-                            <p>🔧 {obra.tipoIntervencion}</p>
-                          </div>
-                        </div>
-                      ))}
+                <div className="carpeta-contenido">
+                  <table className="obras-tabla-compacta">
+                    <thead>
+                      <tr>
+                        <th>Reporte</th>
+                        <th>Inicio</th>
+                        <th>Fin</th>
+                        <th>Días</th>
+                        <th>Ubicación</th>
+                        <th>Intervención</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vehiculo.obras
+                        .sort((a: any, b: any) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
+                        .map((obra: any, index: number) => {
+                          const diasActividad = calcularDiasActividad(obra);
+                          const { inicio, fin } = obtenerFechasObra(obra);
+                          
+                          return (
+                            <tr key={`${obra.id}-${index}`}>
+                              <td>
+                                <span 
+                                  className="reporte-link"
+                                  onClick={() => abrirDetalleReporte(obra.numeroReporte)}
+                                >
+                                  {obra.numeroReporte}
+                                </span>
+                              </td>
+                              <td className="fecha-celda">{formatearFechaCorta(inicio)}</td>
+                              <td className="fecha-celda">{formatearFechaCorta(fin)}</td>
+                              <td>
+                                <span className={`dias-mini ${diasActividad > 5 ? 'largo' : diasActividad > 1 ? 'medio' : 'corto'}`}>
+                                  {diasActividad}
+                                </span>
+                              </td>
+                              <td className="ubicacion-celda">{obra.provincia} › {obra.municipio}</td>
+                              <td className="intervencion-celda">{obra.tipoIntervencion}</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                  <div className="carpeta-resumen">
+                    <span>📊 Total: <strong>{vehiculo.obras.reduce((total: number, obra: any) => total + calcularDiasActividad(obra), 0)} días</strong> en {vehiculo.totalObras} actividades</span>
                   </div>
                 </div>
               )}

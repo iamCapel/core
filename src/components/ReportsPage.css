@@ -4369,6 +4369,297 @@
   to { transform: rotate(360deg); }
 }
 
+/* ================================================= */
+/* Vista Compacta de Vehículos - Estilo Carpetas     */
+/* ================================================= */
+
+.vehiculos-lista-compacta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.vehiculo-carpeta {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  border: 1px solid #e8e8e8;
+}
+
+.vehiculo-carpeta:hover {
+  box-shadow: 0 3px 10px rgba(255, 122, 0, 0.12);
+  border-color: var(--primary-orange);
+}
+
+.vehiculo-carpeta.abierta {
+  box-shadow: 0 4px 15px rgba(255, 122, 0, 0.18);
+  border-color: var(--primary-orange);
+}
+
+.carpeta-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #fafafa 0%, #fff 100%);
+  transition: background 0.2s ease;
+}
+
+.carpeta-header:hover {
+  background: linear-gradient(135deg, #FFF8F0 0%, #fff 100%);
+}
+
+.vehiculo-carpeta.abierta .carpeta-header {
+  background: linear-gradient(135deg, #FFF3E6 0%, #FFE8CC 100%);
+  border-bottom: 2px solid var(--primary-orange);
+}
+
+.carpeta-icono {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.carpeta-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.carpeta-ficha {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-orange);
+}
+
+.carpeta-tipo {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carpeta-badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.badge-obras {
+  background: var(--primary-orange);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.badge-dias {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.carpeta-flecha {
+  font-size: 10px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.vehiculo-carpeta.abierta .carpeta-flecha {
+  color: var(--primary-orange);
+}
+
+/* Contenido expandido de la carpeta */
+.carpeta-contenido {
+  padding: 12px;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+  overflow-x: auto;
+}
+
+/* Tabla compacta de obras */
+.obras-tabla-compacta {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  min-width: 500px;
+}
+
+.obras-tabla-compacta th {
+  background: var(--primary-orange);
+  color: white;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.obras-tabla-compacta th:first-child {
+  border-radius: 6px 0 0 0;
+}
+
+.obras-tabla-compacta th:last-child {
+  border-radius: 0 6px 0 0;
+}
+
+.obras-tabla-compacta td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eee;
+  background: white;
+  vertical-align: middle;
+}
+
+.obras-tabla-compacta tr:last-child td {
+  border-bottom: none;
+}
+
+.obras-tabla-compacta tr:hover td {
+  background: #FFF8F0;
+}
+
+.reporte-link {
+  color: var(--primary-orange);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.reporte-link:hover {
+  background: var(--primary-orange);
+  color: white;
+}
+
+.fecha-celda {
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.ubicacion-celda {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.intervencion-celda {
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--primary-orange);
+  font-weight: 500;
+}
+
+.dias-mini {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 10px;
+  text-align: center;
+  min-width: 20px;
+}
+
+.dias-mini.corto {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.dias-mini.medio {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.dias-mini.largo {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.carpeta-resumen {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #FFF3E6 0%, #FFE8CC 100%);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.carpeta-resumen strong {
+  color: var(--primary-orange);
+  font-weight: 700;
+}
+
+/* Responsive para vista compacta */
+@media (max-width: 768px) {
+  .carpeta-header {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  
+  .carpeta-icono {
+    font-size: 18px;
+  }
+  
+  .carpeta-ficha {
+    font-size: 12px;
+  }
+  
+  .carpeta-tipo {
+    font-size: 10px;
+  }
+  
+  .badge-obras, .badge-dias {
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+  
+  .carpeta-contenido {
+    padding: 8px;
+  }
+  
+  .obras-tabla-compacta {
+    font-size: 10px;
+  }
+  
+  .obras-tabla-compacta th,
+  .obras-tabla-compacta td {
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .carpeta-badges {
+    flex-direction: column;
+    gap: 3px;
+  }
+  
+  .badge-obras, .badge-dias {
+    text-align: center;
+  }
+}
+
+/* ================================================= */
+/* Vista Grid Original (legacy)                      */
+/* ================================================= */
+
 .vehiculos-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
@@ -4561,6 +4852,180 @@
   margin: 0;
   font-size: 12px;
   color: var(--text-primary);
+}
+
+/* =============================================== */
+/* Estilos para historial de actividades detallado */
+/* =============================================== */
+
+.historial-resumen {
+  background: linear-gradient(135deg, #FFF3E6 0%, #FFE8CC 100%);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--primary-orange);
+}
+
+.resumen-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.resumen-icon {
+  font-size: 24px;
+}
+
+.resumen-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.resumen-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary-orange);
+  background: white;
+  padding: 4px 14px;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(255, 119, 0, 0.2);
+}
+
+.obra-item-detallada {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 5px solid var(--primary-orange);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.obra-item-detallada:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.obra-item-detallada .obra-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e0e0e0;
+}
+
+.dias-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dias-corto {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.dias-medio {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.dias-largo {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.obra-fechas-detalle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.fecha-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fecha-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.fecha-valor {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.fecha-inicio .fecha-valor {
+  color: #2e7d32;
+}
+
+.fecha-fin .fecha-valor {
+  color: #c62828;
+}
+
+.fecha-separador {
+  font-size: 16px;
+  color: #bdbdbd;
+  font-weight: bold;
+}
+
+.obra-ubicacion {
+  font-weight: 500;
+  color: #37474f;
+}
+
+.obra-intervencion {
+  font-weight: 600;
+  color: var(--primary-orange);
+}
+
+/* Responsive para historial detallado */
+@media (max-width: 480px) {
+  .historial-resumen {
+    padding: 12px 16px;
+  }
+  
+  .resumen-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .resumen-value {
+    font-size: 18px;
+  }
+  
+  .obra-fechas-detalle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .fecha-separador {
+    transform: rotate(90deg);
+    margin: 0 auto;
+  }
+  
+  .dias-badge {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
 }
 
 .vehiculos-empty {

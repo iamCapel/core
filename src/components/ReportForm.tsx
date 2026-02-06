@@ -989,7 +989,11 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 imagesPerDay: imagesPerDay && Object.keys(imagesPerDay).length > 0 ? imagesPerDay : undefined,
                 estado: 'completado' as const,
                 fechaProyecto: dia,
-                esProyectoMultiDia: true
+                esProyectoMultiDia: true,
+                // 📅 Guardar fechas de inicio y fin seleccionadas en el formulario
+                fechaInicio: fechaInicio,
+                fechaFinal: fechaFinal,
+                diasTrabajo: diasTrabajo
               };
               
               // Guardar como COMPLETADO en Firebase
@@ -1069,7 +1073,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
         // 📸 Imágenes del reporte (preservadas del estado actual)
         imagesPerDay: imagesPerDay && Object.keys(imagesPerDay).length > 0 ? imagesPerDay : undefined,
         estado: 'completado' as const,
-        modificadoPor: interventionToEdit ? user?.name : undefined
+        modificadoPor: interventionToEdit ? user?.name : undefined,
+        // 📅 Fechas de inicio y fin (para reportes de un solo día son la misma)
+        fechaInicio: fechaInicio || fechaReporte || undefined,
+        fechaFinal: fechaFinal || fechaReporte || undefined
       };
 
       console.log('🚜 Vehículos en el estado antes de guardar:', vehiculos);
