@@ -1066,6 +1066,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
   const [statsMode, setStatsMode] = useState<StatsMode>('intervenciones');
   const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
   const [regionesData, setRegionesData] = useState<RegionData[]>([]);
+  const [provinciasData, setProvinciasData] = useState<Array<ProvinciaData & { region: string, regionIcon: string, regionColor: string }>>([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [expandedProvincias, setExpandedProvincias] = useState<Set<string>>(new Set());
@@ -1277,6 +1278,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
     });
 
     setRegionesData(regiones);
+    
+    // Extraer todas las provincias de todas las regiones para vista directa
+    const todasProvincias = regiones.flatMap(region => 
+      region.provincias.map(provincia => ({
+        ...provincia,
+        region: region.name,
+        regionIcon: region.icon,
+        regionColor: region.color
+      }))
+    );
+    
+    // Ordenar provincias por kilometraje descendente
+    todasProvincias.sort((a, b) => b.kilometraje - a.kilometraje);
+    setProvinciasData(todasProvincias);
   };
 
   const toggleProvinciaExpansion = (regionId: number, provinciaNombre: string) => {
@@ -1310,11 +1325,8 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
     });
   };
 
-  const loadMunicipioReportes = async (regionId: number, provinciaNombre: string, municipioNombre: string, key: string) => {
+  const loadMunicipioReportes = async (key: string, regionNombre: string, provinciaNombre: string, municipioNombre: string) => {
     try {
-      const region = regionesData.find(r => r.id === regionId);
-      if (!region) return;
-
       // Obtener todos los reportes
       let allReports = await firebaseReportStorage.getAllReports();
       
@@ -1324,7 +1336,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
       }
 
       // Filtrar reportes del municipio
-      const regionKey = region.name.toLowerCase();
+      const regionKey = regionNombre.toLowerCase();
       const reportesMunicipio = allReports.filter(r => 
         r.region?.toLowerCase() === regionKey &&
         r.provincia === provinciaNombre &&
@@ -1727,8 +1739,8 @@ Observaciones: ${r.observaciones || 'Ninguna'}
               <div className="stats-header-section">
                 <div className="stats-header-left">
                   <div>
-                    <h2 className="stats-title">Regiones de República Dominicana</h2>
-                    <p className="stats-subtitle">Selecciona una región para ver sus estadísticas detalladas</p>
+                    <h2 className="stats-title">Provincias de República Dominicana</h2>
+                    <p className="stats-subtitle">Vista de provinciasty sus municipios</p>
                   </div>
                 </div>
                 
@@ -1751,244 +1763,177 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                 </div>
               </div>
 
-              <div className="regions-grid">
-                {regionesData.map((region) => (
-                  <div 
-                    key={region.id}
-                    className={`region-card ${selectedRegion === region.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedRegion(region.id)}
-                    style={{ 
-                      '--region-color': region.color,
-                      borderLeftColor: region.color 
-                    } as React.CSSProperties}
-                  >
-                    <div className="region-icon">{region.icon}</div>
-                    <div className="region-info">
-                      <h3 className="region-name">{region.name}</h3>
-                      
-                      {statsMode === 'intervenciones' ? (
-                        <div className="region-stats">
-                          <div className="stat-item">
-                            <span className="stat-label">Total</span>
-                            <span className="stat-value">{region.total}</span>
-                          </div>
-                          <div className="stat-item">
-                            <span className="stat-label">Completados</span>
-                            <span className="stat-value" style={{ color: '#00C49F' }}>
-                              {region.completados}
-                            </span>
-                          </div>
-                          <div className="stat-item">
-                            <span className="stat-label">Pendientes</span>
-                            <span className="stat-value" style={{ color: '#FFBB28' }}>
-                              {region.pendientes}
-                            </span>
-                          </div>
-                          <div className="stat-item">
-                            <span className="stat-label">En Progreso</span>
-                            <span className="stat-value" style={{ color: '#FF8042' }}>
-                              {region.enProgreso}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="region-stats">
-                          <div className="stat-item-km">
-                            <span className="stat-label">Kilometraje Total</span>
-                            <span className="stat-value-lg">{region.kilometraje.toFixed(2)} km</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="region-arrow">→</div>
-                  </div>
-                ))}
-              </div>
-
-              {selectedRegion && (
-                <div className="region-details-panel">
-                  <div className="panel-header">
-                    <h3>
-                      {regionesData.find(r => r.id === selectedRegion)?.icon} {' '}
-                      {regionesData.find(r => r.id === selectedRegion)?.name}
-                    </h3>
-                    <button className="close-btn" onClick={() => setSelectedRegion(null)}>✕</button>
-                  </div>
-                  <div className="panel-content">
-                    {(() => {
-                      const region = regionesData.find(r => r.id === selectedRegion);
-                      if (!region || region.provincias.length === 0) {
-                        return <p className="no-data">No hay provincias registradas en esta región.</p>;
-                      }
-
-                      return (
+              {/* Vista de tabla de provincias */}
+              <div className="provincias-table-container">
+                <table className="provincias-table">
+                  <thead>
+                    <tr>
+                      <th>PROVINCIA</th>
+                      <th>REGIÓN</th>
+                      {statsMode === 'kilometraje' && <th>KILOMETRAJE</th>}
+                      {statsMode === 'intervenciones' && (
                         <>
-                          <div className="provincias-summary">
-                            <div className="summary-stat">
-                              <span className="summary-label">Total Provincias</span>
-                              <span className="summary-value">{region.provincias.length}</span>
-                            </div>
-                            <div className="summary-stat">
-                              <span className="summary-label">Kilometraje Total</span>
-                              <span className="summary-value">{region.kilometraje.toFixed(2)} km</span>
-                            </div>
-                          </div>
+                          <th>COMPLETADOS</th>
+                          <th>PENDIENTES</th>
+                          <th>EN PROGRESO</th>
+                        </>
+                      )}
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {provinciasData.map((provincia, index) => {
+                      const provinciaKey = `provincia-${provincia.nombre}`;
+                      const isExpanded = expandedProvincias.has(provinciaKey);
+                      
+                      return (
+                        <React.Fragment key={provinciaKey}>
+                          <tr 
+                            className="provincia-row clickable"
+                            onClick={() => {
+                              setExpandedProvincias(prev => {
+                                const newSet = new Set(prev);
+                                if (newSet.has(provinciaKey)) {
+                                  newSet.delete(provinciaKey);
+                                } else {
+                                  newSet.add(provinciaKey);
+                                }
+                                return newSet;
+                              });
+                            }}
+                          >
+                            <td className="provincia-nombre-cell">
+                              <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
+                              <span className="provincia-nombre-text">{provincia.nombre}</span>
+                            </td>
+                            <td>
+                              <span className="region-badge" style={{ backgroundColor: provincia.regionColor }}>
+                                {provincia.regionIcon} {provincia.region}
+                              </span>
+                            </td>
+                            {statsMode === 'kilometraje' && (
+                              <td className="kilometraje-cell">
+                                <strong>{provincia.kilometraje.toFixed(2)} km</strong>
+                              </td>
+                            )}
+                            {statsMode === 'intervenciones' && (
+                              <>
+                                <td className="stat-completados">{provincia.completados}</td>
+                                <td className="stat-pendientes">{provincia.pendientes}</td>
+                                <td className="stat-progreso">{provincia.enProgreso}</td>
+                              </>
+                            )}
+                            <td className="arrow-cell">→</td>
+                          </tr>
 
-                          <div className="provincias-list">
-                            <h4 className="list-title">Provincias de {region.name}</h4>
-                            {region.provincias.map((provincia, index) => {
-                              const provinciaKey = `${selectedRegion}-${provincia.nombre}`;
-                              const isExpanded = expandedProvincias.has(provinciaKey);
-                              
-                              return (
-                                <div key={provinciaKey} className="provincia-card-expandable">
-                                  <div 
-                                    className="provincia-card clickable"
-                                    onClick={() => toggleProvinciaExpansion(selectedRegion, provincia.nombre)}
-                                  >
-                                    <div className="provincia-header">
-                                      <div className="provincia-header-left">
-                                        <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
-                                        <h5 className="provincia-nombre">{provincia.nombre}</h5>
-                                      </div>
-                                    </div>
-                                    <div className="provincia-stats">
-                                      <div className="provincia-stat">
-                                        <span className="stat-icon">✅</span>
-                                        <span className="stat-text">
-                                          <strong>{provincia.completados}</strong> Completados
-                                        </span>
-                                      </div>
-                                      <div className="provincia-stat">
-                                        <span className="stat-icon">⏳</span>
-                                        <span className="stat-text">
-                                          <strong>{provincia.pendientes}</strong> Pendientes
-                                        </span>
-                                      </div>
-                                      <div className="provincia-stat">
-                                        <span className="stat-icon">🔄</span>
-                                        <span className="stat-text">
-                                          <strong>{provincia.enProgreso}</strong> En Progreso
-                                        </span>
-                                      </div>
-                                      <div className="provincia-stat highlight">
-                                        <span className="stat-icon">📏</span>
-                                        <span className="stat-text">
-                                          <strong>{provincia.kilometraje.toFixed(2)} km</strong> Recorridos
-                                        </span>
-                                      </div>
-                                    </div>
+                          {/* Municipios expandibles */}
+                          {isExpanded && provincia.municipios.length > 0 && (
+                            <tr className="municipios-row">
+                              <td colSpan={statsMode === 'kilometraje' ? 4 : 6}>
+                                <div className="municipios-expandidos">
+                                  <div className="municipios-header-small">
+                                    <span>📂 Municipios/Distritos ({provincia.municipios.length})</span>
                                   </div>
-
-                                  {/* Lista de municipios expandible */}
-                                  {isExpanded && provincia.municipios.length > 0 && (
-                                    <div className="municipios-list">
-                                      <div className="municipios-header">
-                                        <h6 className="municipios-title">
-                                          Municipios/Distritos en {provincia.nombre}
-                                        </h6>
-                                        <span className="municipios-count">
-                                          {provincia.municipios.length} {provincia.municipios.length === 1 ? 'municipio' : 'municipios'}
-                                        </span>
-                                      </div>
-                                      {provincia.municipios.map((municipio, munIndex) => {
-                                        const municipioKey = `${selectedRegion}-${provincia.nombre}-${municipio.nombre}`;
-                                        const isMunicipioExpanded = expandedMunicipios.has(municipioKey);
-                                        const reportes = municipioReportes[municipioKey] || [];
-                                        
-                                        return (
-                                          <div key={`${provincia.nombre}-${municipio.nombre}`} className="municipio-item-expandable">
-                                            <div 
-                                              className={`municipio-item ${statsMode === 'kilometraje' ? 'clickable' : ''}`}
-                                              onClick={() => {
-                                                if (statsMode === 'kilometraje') {
-                                                  toggleMunicipioExpansion(selectedRegion, provincia.nombre, municipio.nombre);
+                                  {provincia.municipios.map((municipio, munIndex) => {
+                                    const municipioKey = `${provinciaKey}-${municipio.nombre}`;
+                                    const isMunicipioExpanded = expandedMunicipios.has(municipioKey);
+                                    const reportes = municipioReportes[municipioKey] || [];
+                                    
+                                    return (
+                                      <div key={municipioKey} className="municipio-item-table">
+                                        <div 
+                                          className={`municipio-row-content ${statsMode === 'kilometraje' ? 'clickable' : ''}`}
+                                          onClick={() => {
+                                            if (statsMode === 'kilometraje') {
+                                              setExpandedMunicipios(prev => {
+                                                const newSet = new Set(prev);
+                                                if (newSet.has(municipioKey)) {
+                                                  newSet.delete(municipioKey);
+                                                } else {
+                                                  newSet.add(municipioKey);
+                                                  // Cargar reportes del municipio
+                                                  loadMunicipioReportes(municipioKey, provincia.region, provincia.nombre, municipio.nombre);
                                                 }
-                                              }}
-                                            >
-                                              <div className="municipio-header">
-                                                {statsMode === 'kilometraje' && (
-                                                  <span className="expand-icon-small">{isMunicipioExpanded ? '▼' : '▶'}</span>
-                                                )}
-                                                <span className="municipio-icon">📍</span>
-                                                <span className="municipio-nombre">{municipio.nombre}</span>
-                                              </div>
-                                              <div className="municipio-stats-grid">
-                                                <div className="municipio-stat">
-                                                  <span className="municipio-stat-label">Completados</span>
-                                                  <span className="municipio-stat-value completados">{municipio.completados}</span>
-                                                </div>
-                                                <div className="municipio-stat">
-                                                  <span className="municipio-stat-label">Pendientes</span>
-                                                  <span className="municipio-stat-value pendientes">{municipio.pendientes}</span>
-                                                </div>
-                                                <div className="municipio-stat">
-                                                  <span className="municipio-stat-label">En Progreso</span>
-                                                  <span className="municipio-stat-value en-progreso">{municipio.enProgreso}</span>
-                                                </div>
-                                                <div className="municipio-stat">
-                                                  <span className="municipio-stat-label">Kilometraje</span>
-                                                  <span className="municipio-stat-value kilometraje">{municipio.kilometraje.toFixed(2)} km</span>
-                                                </div>
-                                              </div>
-                                            </div>
+                                                return newSet;
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          <div className="municipio-nombre-section">
+                                            {statsMode === 'kilometraje' && (
+                                              <span className="expand-icon-small">{isMunicipioExpanded ? '▼' : '▶'}</span>
+                                            )}
+                                            <span className="municipio-icon">📍</span>
+                                            <span className="municipio-nombre">{municipio.nombre}</span>
+                                          </div>
+                                          <div className="municipio-stats-section">
+                                            {statsMode === 'kilometraje' && (
+                                              <span className="kilometraje-badge">{municipio.kilometraje.toFixed(2)} km</span>
+                                            )}
+                                            {statsMode === 'intervenciones' && (
+                                              <>
+                                                <span className="stat-badge completados">✅ {municipio.completados}</span>
+                                                <span className="stat-badge pendientes">⏳ {municipio.pendientes}</span>
+                                                <span className="stat-badge progreso">🔄 {municipio.enProgreso}</span>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
 
-                                            {/* Lista de reportes cuando está expandido en modo kilometraje */}
-                                            {statsMode === 'kilometraje' && isMunicipioExpanded && (
-                                              <div className="reportes-list-container">
-                                                {reportes.length > 0 ? (
-                                                  <div className="reportes-list">
-                                                    {reportes.map((reporte, idx) => {
-                                                      const kmReporte = parseFloat(reporte.metricData?.longitud_intervencion || '0') || 0;
-                                                      return (
-                                                        <div 
-                                                          key={reporte.id || idx}
-                                                          className="reporte-item-km"
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleOpenReport(reporte.numeroReporte);
-                                                          }}
-                                                        >
-                                                          <div className="reporte-item-left">
-                                                            <span className="reporte-icon">📄</span>
-                                                            <div className="reporte-info">
-                                                              <span className="reporte-numero">{reporte.numeroReporte}</span>
-                                                              <span className="reporte-fecha">
-                                                                {new Date(reporte.fechaCreacion).toLocaleDateString('es-ES')}
-                                                              </span>
-                                                            </div>
-                                                          </div>
-                                                          <div className="reporte-item-right">
-                                                            <span className="reporte-km">{kmReporte.toFixed(2)} km</span>
-                                                            <span className="reporte-tipo">{reporte.tipoIntervencion}</span>
-                                                          </div>
-                                                          <span className="reporte-arrow">→</span>
+                                        {/* Lista de reportes para modo kilometraje */}
+                                        {statsMode === 'kilometraje' && isMunicipioExpanded && (
+                                          <div className="reportes-list-container">
+                                            {reportes.length > 0 ? (
+                                              <div className="reportes-list">
+                                                {reportes.map((reporte, idx) => {
+                                                  const kmReporte = parseFloat(reporte.metricData?.longitud_intervencion || '0') || 0;
+                                                  return (
+                                                    <div 
+                                                      key={reporte.id || idx}
+                                                      className="reporte-item-km"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenReport(reporte.numeroReporte);
+                                                      }}
+                                                    >
+                                                      <div className="reporte-item-left">
+                                                        <span className="reporte-icon">📄</span>
+                                                        <div className="reporte-info">
+                                                          <span className="reporte-numero">{reporte.numeroReporte}</span>
+                                                          <span className="reporte-fecha">
+                                                            {new Date(reporte.fechaCreacion).toLocaleDateString('es-ES')}
+                                                          </span>
                                                         </div>
-                                                      );
-                                                    })}
-                                                  </div>
-                                                ) : (
-                                                  <div className="reportes-empty">
-                                                    <p>📭 No hay reportes disponibles</p>
-                                                  </div>
-                                                )}
+                                                      </div>
+                                                      <div className="reporte-item-right">
+                                                        <span className="reporte-km">{kmReporte.toFixed(2)} km</span>
+                                                        <span className="reporte-tipo">{reporte.tipoIntervencion}</span>
+                                                      </div>
+                                                      <span className="reporte-arrow">→</span>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            ) : (
+                                              <div className="reportes-empty">
+                                                <p>📭 No hay reportes disponibles</p>
                                               </div>
                                             )}
                                           </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
-                    })()}
-                  </div>
-                </div>
-              )}
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

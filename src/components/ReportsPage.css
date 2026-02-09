@@ -6913,3 +6913,221 @@
   }
 }
 
+/* ========================================
+   Estilos para Tabla de Provincias
+   ======================================== */
+
+.provincias-table-container {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.provincias-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.provincias-table thead {
+  background: linear-gradient(135deg, var(--primary-orange) 0%, #ff9a3d 100%);
+  color: white;
+}
+
+.provincias-table thead th {
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.provincias-table tbody tr.provincia-row {
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.15s ease;
+  background: white;
+}
+
+.provincias-table tbody tr.provincia-row:hover {
+  background: #fff8f0;
+  cursor: pointer;
+}
+
+.provincias-table tbody tr.provincia-row td {
+  padding: 0.7rem 1rem;
+  vertical-align: middle;
+}
+
+.provincia-nombre-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.provincia-nombre-cell .expand-icon {
+  font-size: 0.6rem;
+  color: var(--primary-orange);
+  min-width: 12px;
+}
+
+.provincia-nombre-text {
+  font-size: 0.85rem;
+}
+
+.region-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.kilometraje-cell {
+  font-size: 0.9rem;
+  color: var(--primary-orange);
+}
+
+.kilometraje-cell strong {
+  font-weight: 800;
+}
+
+.stat-completados {
+  color: #00C49F;
+  font-weight: 700;
+}
+
+.stat-pendientes {
+  color: #FFBB28;
+  font-weight: 700;
+}
+
+.stat-progreso {
+  color: #FF8042;
+  font-weight: 700;
+}
+
+.arrow-cell {
+  text-align: right;
+  color: var(--primary-orange);
+  font-size: 1rem;
+  padding-right: 1.5rem;
+}
+
+/* Fila de municipios expandida */
+.provincias-table tbody tr.municipios-row {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.provincias-table tbody tr.municipios-row td {
+  padding: 0;
+}
+
+.municipios-expandidos {
+  padding: 0.8rem 1.5rem;
+  background: linear-gradient(135deg, #fff9f5 0%, #fff5ed 100%);
+  border-left: 3px solid var(--primary-orange);
+}
+
+.municipios-header-small {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(255, 122, 0, 0.2);
+}
+
+.municipio-item-table {
+  background: white;
+  border-radius: 4px;
+  margin-bottom: 0.3rem;
+  border-left: 2px solid #ffd4a3;
+  overflow: hidden;
+}
+
+.municipio-row-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.7rem;
+  transition: all 0.15s ease;
+}
+
+.municipio-row-content.clickable {
+  cursor: pointer;
+}
+
+.municipio-row-content:hover {
+  background: #fff8f0;
+}
+
+.municipio-nombre-section {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.municipio-nombre-section .expand-icon-small {
+  font-size: 0.5rem;
+  color: var(--primary-orange);
+  min-width: 10px;
+}
+
+.municipio-nombre-section .municipio-icon {
+  font-size: 0.8rem;
+}
+
+.municipio-nombre-section .municipio-nombre {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.municipio-stats-section {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.kilometraje-badge {
+  background: linear-gradient(135deg, var(--primary-orange) 0%, #ff9a3d 100%);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.stat-badge {
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.stat-badge.completados {
+  background: #d4f4dd;
+  color: #00C49F;
+}
+
+.stat-badge.pendientes {
+  background: #fff4d9;
+  color: #FFBB28;
+}
+
+.stat-badge.progreso {
+  background: #ffe4d9;
+  color: #FF8042;
+}
