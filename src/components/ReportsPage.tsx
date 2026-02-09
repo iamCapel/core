@@ -1797,16 +1797,6 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                             <span className="stat-label">Kilometraje Total</span>
                             <span className="stat-value-lg">{region.kilometraje.toFixed(2)} km</span>
                           </div>
-                          <div className="stat-item">
-                            <span className="stat-label">Reportes</span>
-                            <span className="stat-value">{region.total}</span>
-                          </div>
-                          <div className="stat-item">
-                            <span className="stat-label">Promedio</span>
-                            <span className="stat-value">
-                              {region.total > 0 ? (region.kilometraje / region.total).toFixed(2) : '0'} km
-                            </span>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -1839,10 +1829,6 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                               <span className="summary-value">{region.provincias.length}</span>
                             </div>
                             <div className="summary-stat">
-                              <span className="summary-label">Total Intervenciones</span>
-                              <span className="summary-value">{region.total}</span>
-                            </div>
-                            <div className="summary-stat">
                               <span className="summary-label">Kilometraje Total</span>
                               <span className="summary-value">{region.kilometraje.toFixed(2)} km</span>
                             </div>
@@ -1865,7 +1851,6 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                                         <span className="expand-icon">{isExpanded ? '▼' : '▶'}</span>
                                         <h5 className="provincia-nombre">{provincia.nombre}</h5>
                                       </div>
-                                      <div className="provincia-badge">{provincia.total} reportes</div>
                                     </div>
                                     <div className="provincia-stats">
                                       <div className="provincia-stat">
@@ -1927,7 +1912,6 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                                                 )}
                                                 <span className="municipio-icon">📍</span>
                                                 <span className="municipio-nombre">{municipio.nombre}</span>
-                                                <span className="municipio-total">{municipio.total} {municipio.total === 1 ? 'reporte' : 'reportes'}</span>
                                               </div>
                                               <div className="municipio-stats-grid">
                                                 <div className="municipio-stat">
