@@ -53,7 +53,8 @@ const RegionDetailModal: React.FC<RegionDetailModalProps> = ({
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const [reports, setReports] = useState<ReportData[]>([]);
 
-  // Función para calcular distancia entre coordenadas
+  // Función para calcular distancia entre coordenadas (ya no se usa para estadísticas)
+  // NOTA: El cálculo de kilómetros intervenidos ahora usa el campo manual 'longitud_intervencion'
   const calcularDistanciaKm = (coord1: string, coord2: string): number => {
     try {
       const [lat1Str, lon1Str] = coord1.split(',').map(s => s.trim());
@@ -97,13 +98,9 @@ const RegionDetailModal: React.FC<RegionDetailModalProps> = ({
               districtStats[distrito] = { totalKm: 0, reportCount: 0 };
             }
 
-            const puntoInicial = data.plantilla?.punto_inicial;
-            const puntoAlcanzado = data.plantilla?.punto_alcanzado;
-            
-            if (puntoInicial && puntoAlcanzado) {
-              const distanciaKm = calcularDistanciaKm(puntoInicial, puntoAlcanzado);
-              districtStats[distrito].totalKm += distanciaKm;
-            }
+            // Obtener kilometraje desde campo manual de la plantilla
+            const longitudIntervencion = parseFloat(data.plantilla?.longitud_intervencion || '0');
+            districtStats[distrito].totalKm += (longitudIntervencion || 0);
             
             districtStats[distrito].reportCount++;
           }
@@ -141,13 +138,9 @@ const RegionDetailModal: React.FC<RegionDetailModalProps> = ({
               sectorStats[sector] = { totalKm: 0, reportCount: 0 };
             }
 
-            const puntoInicial = data.plantilla?.punto_inicial;
-            const puntoAlcanzado = data.plantilla?.punto_alcanzado;
-            
-            if (puntoInicial && puntoAlcanzado) {
-              const distanciaKm = calcularDistanciaKm(puntoInicial, puntoAlcanzado);
-              sectorStats[sector].totalKm += distanciaKm;
-            }
+            // Obtener kilometraje desde campo manual de la plantilla
+            const longitudIntervencion = parseFloat(data.plantilla?.longitud_intervencion || '0');
+            sectorStats[sector].totalKm += (longitudIntervencion || 0);
             
             sectorStats[sector].reportCount++;
           }
@@ -183,13 +176,9 @@ const RegionDetailModal: React.FC<RegionDetailModalProps> = ({
               distrito === selectedDistrict && 
               sector === selectedSector) {
             
-            const puntoInicial = data.plantilla?.punto_inicial;
-            const puntoAlcanzado = data.plantilla?.punto_alcanzado;
-            let distanciaKm = 0;
-            
-            if (puntoInicial && puntoAlcanzado) {
-              distanciaKm = calcularDistanciaKm(puntoInicial, puntoAlcanzado);
-            }
+            // Obtener kilometraje desde campo manual de la plantilla
+            const longitudIntervencion = parseFloat(data.plantilla?.longitud_intervencion || '0');
+            const distanciaKm = longitudIntervencion || 0;
 
             reportArray.push({
               id: key,

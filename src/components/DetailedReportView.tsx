@@ -329,18 +329,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       if (!hierarchyMap[region][provincia]) hierarchyMap[region][provincia] = {};
       if (!hierarchyMap[region][provincia][distrito]) hierarchyMap[region][provincia][distrito] = [];
       
-      // Calcular kilometraje
-      let km = 0;
-      if (report.gpsData?.start && report.gpsData?.end) {
-        const R = 6371;
-        const lat1 = report.gpsData.start.latitude * Math.PI / 180;
-        const lat2 = report.gpsData.end.latitude * Math.PI / 180;
-        const dLat = (report.gpsData.end.latitude - report.gpsData.start.latitude) * Math.PI / 180;
-        const dLon = (report.gpsData.end.longitude - report.gpsData.start.longitude) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        km = R * c;
-      }
+      // Obtener kilometraje desde campo manual de la plantilla
+      const longitudIntervencion = parseFloat(report.metricData?.longitud_intervencion || '0');
+      const km = longitudIntervencion || 0;
       
       // Si es proyecto multi-día, expandir en múltiples entradas
       if (report.esProyectoMultiDia && report.diasTrabajo && report.diasTrabajo.length > 0) {
@@ -612,7 +603,11 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
 
   // Estadísticas calculadas
   const stats = useMemo(() => {
-    const totalKm = filteredReports.reduce((sum, r) => sum + (r.kilometraje || 0), 0);
+    // Obtener kilometraje desde campo manual de las plantillas
+    const totalKm = filteredReports.reduce((sum, r) => {
+      const km = parseFloat(r.metricData?.longitud_intervencion || '0') || 0;
+      return sum + km;
+    }, 0);
     const completados = filteredReports.filter(r => r.estado === 'completado' || r.estado === 'aprobado').length;
     const pendientes = filteredReports.filter(r => r.estado === 'pendiente').length;
     const enProgreso = filteredReports.filter(r => r.estado === 'en progreso').length;
@@ -1529,7 +1524,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                         {report.estado || 'Pendiente'}
                       </span>
                     </td>
-                    <td className="km-cell">{report.kilometraje?.toFixed(2) || 'N/A'} km</td>
+                    <td className="km-cell">
+                      {(parseFloat(report.metricData?.longitud_intervencion || '0') || report.kilometraje || 0).toFixed(2)} km
+                    </td>
                     <td className="user-cell">{report.createdBy}</td>
                     <td>
                       <div className="action-buttons">
@@ -1574,7 +1571,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                   };
                 }
                 statsByType[tipo].count++;
-                statsByType[tipo].totalKm += report.kilometraje || 0;
+                // Obtener kilometraje desde campo manual de la plantilla
+                const kmReport = parseFloat(report.metricData?.longitud_intervencion || '0') || 0;
+                statsByType[tipo].totalKm += kmReport;
                 statsByType[tipo].reports.push(report);
               });
 

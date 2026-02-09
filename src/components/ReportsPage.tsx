@@ -70,6 +70,8 @@ const REGIONES_BASE = [
 ];
 
 // Función para calcular distancia GPS (Haversine)
+// NOTA: Esta función se mantiene para compatibilidad, pero el cálculo de kilómetros
+// intervenidos ahora usa el campo manual 'longitud_intervencion' de las plantillas
 function calcularDistanciaKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1157,18 +1159,10 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
       // Obtener reportes de la región
       const reportesRegion = allReports.filter(r => r.region?.toLowerCase() === regionKey);
       
-      // Calcular kilometraje total de la región
+      // Calcular kilometraje total de la región desde campo manual
       const kmTotal = reportesRegion.reduce((sum, report) => {
-        if (report.gpsData?.start && report.gpsData?.end) {
-          const km = calcularDistanciaKm(
-            report.gpsData.start.latitude,
-            report.gpsData.start.longitude,
-            report.gpsData.end.latitude,
-            report.gpsData.end.longitude
-          );
-          return sum + km;
-        }
-        return sum;
+        const longitudIntervencion = parseFloat(report.metricData?.longitud_intervencion || '0');
+        return sum + (longitudIntervencion || 0);
       }, 0);
 
       // Agrupar por provincia y luego por municipio
@@ -1218,34 +1212,20 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
           currentMun.total++;
           currentMun.completados++;
           
-          // Calcular kilometraje solo para reportes completados/aprobados
-          if (report.gpsData?.start && report.gpsData?.end) {
-            const km = calcularDistanciaKm(
-              report.gpsData.start.latitude,
-              report.gpsData.start.longitude,
-              report.gpsData.end.latitude,
-              report.gpsData.end.longitude
-            );
-            currentProv.kilometraje += km;
-            currentMun.kilometraje += km;
-          }
+          // Obtener kilometraje desde campo manual de la plantilla
+          const longitudIntervencion = parseFloat(report.metricData?.longitud_intervencion || '0');
+          currentProv.kilometraje += (longitudIntervencion || 0);
+          currentMun.kilometraje += (longitudIntervencion || 0);
         } else if (report.estado === 'en progreso') {
           currentProv.total++;
           currentProv.enProgreso++;
           currentMun.total++;
           currentMun.enProgreso++;
           
-          // Calcular kilometraje también para reportes en progreso
-          if (report.gpsData?.start && report.gpsData?.end) {
-            const km = calcularDistanciaKm(
-              report.gpsData.start.latitude,
-              report.gpsData.start.longitude,
-              report.gpsData.end.latitude,
-              report.gpsData.end.longitude
-            );
-            currentProv.kilometraje += km;
-            currentMun.kilometraje += km;
-          }
+          // Obtener kilometraje desde campo manual de la plantilla
+          const longitudIntervencion = parseFloat(report.metricData?.longitud_intervencion || '0');
+          currentProv.kilometraje += (longitudIntervencion || 0);
+          currentMun.kilometraje += (longitudIntervencion || 0);
         }
         // Los reportes 'pendiente' se ignoran completamente en estadísticas
 
@@ -1388,14 +1368,9 @@ ${p.municipios.map(m => `    • ${m.nombre}: ${m.total} intervenciones (${m.kil
 REPORTES DETALLADOS (${reportesFiltrados.length}):
 ${reportesFiltrados.map((r, i) => {
   let kmReporte = 'N/A';
-  if (r.gpsData?.start && r.gpsData?.end) {
-    const km = calcularDistanciaKm(
-      r.gpsData.start.latitude,
-      r.gpsData.start.longitude,
-      r.gpsData.end.latitude,
-      r.gpsData.end.longitude
-    );
-    kmReporte = km.toFixed(2);
+  const longitudIntervencion = parseFloat(r.metricData?.longitud_intervencion || '0');
+  if (longitudIntervencion > 0) {
+    kmReporte = longitudIntervencion.toFixed(2);
   }
   
   return `
@@ -1466,14 +1441,9 @@ ${reportesFiltrados
 DATOS DETALLADOS DE REPORTES (${reportesFiltrados.length}):
 ${reportesFiltrados.map((r, i) => {
   let kmReporte = 'N/A';
-  if (r.gpsData?.start && r.gpsData?.end) {
-    const km = calcularDistanciaKm(
-      r.gpsData.start.latitude,
-      r.gpsData.start.longitude,
-      r.gpsData.end.latitude,
-      r.gpsData.end.longitude
-    );
-    kmReporte = km.toFixed(2);
+  const longitudIntervencion = parseFloat(r.metricData?.longitud_intervencion || '0');
+  if (longitudIntervencion > 0) {
+    kmReporte = longitudIntervencion.toFixed(2);
   }
   
   return `
@@ -1539,14 +1509,9 @@ ${Array.from(new Set(reportesMunicipio.map(r => r.distrito).filter(Boolean))).ma
 LISTA COMPLETA DE INTERVENCIONES (${reportesMunicipio.length}):
 ${reportesMunicipio.map((r, i) => {
   let kmReporte = 'N/A';
-  if (r.gpsData?.start && r.gpsData?.end) {
-    const km = calcularDistanciaKm(
-      r.gpsData.start.latitude,
-      r.gpsData.start.longitude,
-      r.gpsData.end.latitude,
-      r.gpsData.end.longitude
-    );
-    kmReporte = km.toFixed(2);
+  const longitudIntervencion = parseFloat(r.metricData?.longitud_intervencion || '0');
+  if (longitudIntervencion > 0) {
+    kmReporte = longitudIntervencion.toFixed(2);
   }
   
   return `
