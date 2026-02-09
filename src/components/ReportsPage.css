@@ -1034,23 +1034,23 @@
 
 /* Grid de regiones */
 .regions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
 }
 
 .region-card {
   background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid var(--region-color, #ff7a00);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-left: 3px solid var(--region-color, #ff7a00);
   position: relative;
   overflow: hidden;
 }
@@ -1072,15 +1072,15 @@
 }
 
 .region-card:hover {
-  transform: translateY(-5px) translateX(5px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  border-left-width: 6px;
+  transform: translateX(2px);
+  box-shadow: 0 2px 6px rgba(255, 122, 0, 0.15);
+  border-left-width: 3px;
 }
 
 .region-card.selected {
-  border-left-width: 6px;
-  box-shadow: 0 8px 24px var(--region-color);
-  transform: translateY(-3px);
+  border-left-width: 3px;
+  box-shadow: 0 3px 8px var(--region-color);
+  transform: translateX(0);
 }
 
 .region-card.selected::before {
@@ -1088,11 +1088,11 @@
 }
 
 .region-icon {
-  font-size: 3rem;
+  font-size: 1.2rem;
   line-height: 1;
-  min-width: 60px;
+  min-width: 24px;
   text-align: center;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .region-info {
@@ -1100,33 +1100,36 @@
 }
 
 .region-name {
-  font-size: 1.25rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #2c3e50;
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.3rem 0;
 }
 
 .region-stats {
   display: flex;
-  gap: 1rem;
+  gap: 0.6rem;
 }
 
 .region-stats .stat-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.1rem;
+  background: #f8f9fa;
+  padding: 0.25rem 0.4rem;
+  border-radius: 3px;
 }
 
 .region-stats .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.6rem;
   color: #95a5a6;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   font-weight: 600;
 }
 
 .region-stats .stat-value {
-  font-size: 1.25rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--region-color, #ff7a00);
 }
@@ -1135,22 +1138,25 @@
 .stat-item-km {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.1rem;
   flex: 1;
+  background: #f8f9fa;
+  padding: 0.25rem 0.4rem;
+  border-radius: 3px;
 }
 
 .stat-value-lg {
-  font-size: 1.75rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: var(--region-color, #ff7a00);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .region-arrow {
-  font-size: 1.5rem;
+  font-size: 0.9rem;
   color: #bdc3c7;
-  transition: all 0.3s ease;
-  opacity: 0;
+  transition: all 0.15s ease;
+  opacity: 0.5;
 }
 
 .region-card:hover .region-arrow {
@@ -1166,11 +1172,11 @@
 /* Panel de detalles de región */
 .region-details-panel {
   background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  margin-top: 2rem;
-  animation: slideInUp 0.3s ease;
+  border-radius: 4px;
+  padding: 0.8rem 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-top: 0.8rem;
+  animation: slideInUp 0.2s ease;
 }
 
 @keyframes slideInUp {
@@ -1188,13 +1194,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
   border-bottom: 1px solid #ecf0f1;
 }
 
 .panel-header h3 {
-  font-size: 1.15rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
@@ -1271,24 +1277,24 @@
 }
 
 .list-title {
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #2c3e50;
-  margin: 0 0 0.8rem 0;
+  margin: 0 0 0.5rem 0;
 }
 
 .provincia-card {
   background: #f8f9fa;
-  border-radius: 8px;
-  padding: 0.8rem 1rem;
-  margin-bottom: 0.6rem;
-  transition: all 0.2s ease;
-  border-left: 3px solid var(--primary-orange);
+  border-radius: 4px;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.35rem;
+  transition: all 0.15s ease;
+  border-left: 2px solid var(--primary-orange);
 }
 
 .provincia-card:hover {
-  transform: translateX(3px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateX(2px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   background: white;
 }
 
@@ -1296,11 +1302,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.4rem;
 }
 
 .provincia-nombre {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
@@ -1309,30 +1315,30 @@
 .provincia-badge {
   background: linear-gradient(135deg, var(--primary-orange) 0%, #ff9a3d 100%);
   color: white;
-  padding: 0.25rem 0.65rem;
-  border-radius: 12px;
-  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 8px;
+  font-size: 0.65rem;
   font-weight: 600;
 }
 
 .provincia-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+  gap: 0.3rem;
 }
 
 .provincia-stat {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem;
+  gap: 0.25rem;
+  padding: 0.25rem;
   background: white;
-  border-radius: 6px;
-  transition: all 0.15s ease;
+  border-radius: 3px;
+  transition: all 0.1s ease;
 }
 
 .provincia-stat:hover {
-  transform: scale(1.03);
+  transform: scale(1.02);
 }
 
 .provincia-stat.highlight {
@@ -1341,23 +1347,23 @@
 }
 
 .provincia-stat .stat-icon {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   line-height: 1;
 }
 
 .provincia-stat .stat-text {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #2c3e50;
 }
 
 .provincia-stat .stat-text strong {
   color: var(--primary-orange);
-  margin-right: 0.2rem;
+  margin-right: 0.15rem;
 }
 
 /* Provincias expandibles */
 .provincia-card-expandable {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.35rem;
 }
 
 .provincia-card.clickable {
@@ -1372,33 +1378,33 @@
 .provincia-header-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .expand-icon {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--primary-orange);
-  transition: transform 0.2s ease;
+  transition: transform 0.15s ease;
   font-weight: bold;
-  min-width: 12px;
+  min-width: 10px;
   display: inline-block;
 }
 
 /* Lista de municipios */
 .municipios-list {
-  margin-top: 0.5rem;
-  padding: 0.6rem 0.6rem 0.6rem 1.5rem;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.8rem;
   background: linear-gradient(135deg, #fff9f5 0%, #fff5ed 100%);
-  border-radius: 6px;
+  border-radius: 3px;
   border-left: 2px solid var(--primary-orange);
-  animation: slideDown 0.25s ease-out;
+  animation: slideDown 0.15s ease-out;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
     max-height: 0;
-    transform: translateY(-5px);
+    transform: translateY(-3px);
   }
   to {
     opacity: 1;
@@ -1411,48 +1417,48 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.6rem;
-  padding-bottom: 0.4rem;
+  margin-bottom: 0.3rem;
+  padding-bottom: 0.25rem;
   border-bottom: 1px solid rgba(255, 122, 0, 0.2);
 }
 
 .municipios-title {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .municipios-title::before {
   content: '📂';
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 }
 
 .municipios-count {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: #7f8c8d;
   background: white;
-  padding: 0.2rem 0.5rem;
-  border-radius: 10px;
+  padding: 0.15rem 0.4rem;
+  border-radius: 8px;
   font-weight: 600;
 }
 
 .municipio-item {
   background: white;
-  border-radius: 6px;
-  padding: 0.6rem 0.8rem;
-  margin-bottom: 0.4rem;
+  border-radius: 3px;
+  padding: 0.4rem 0.5rem;
+  margin-bottom: 0.25rem;
   border-left: 2px solid #ffd4a3;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .municipio-item:hover {
-  transform: translateX(3px);
-  box-shadow: 0 2px 6px rgba(255, 122, 0, 0.12);
+  transform: translateX(2px);
+  box-shadow: 0 1px 4px rgba(255, 122, 0, 0.1);
   border-left-color: var(--primary-orange);
 }
 
@@ -1463,65 +1469,65 @@
 .municipio-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid #f5f5f5;
 }
 
 .municipio-icon {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   line-height: 1;
 }
 
 .municipio-nombre {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #2c3e50;
   flex: 1;
 }
 
 .municipio-total {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: white;
   background: linear-gradient(135deg, #ffa500 0%, var(--primary-orange) 100%);
-  padding: 0.2rem 0.6rem;
-  border-radius: 10px;
+  padding: 0.15rem 0.4rem;
+  border-radius: 8px;
 }
 
 .municipio-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 0.25rem;
 }
 
 .municipio-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.4rem;
+  padding: 0.25rem;
   background: #f8f9fa;
-  border-radius: 5px;
-  transition: all 0.15s ease;
+  border-radius: 3px;
+  transition: all 0.1s ease;
 }
 
 .municipio-stat:hover {
   background: #fff5e6;
-  transform: scale(1.03);
+  transform: scale(1.02);
 }
 
 .municipio-stat-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: #7f8c8d;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 0.2rem;
+  letter-spacing: 0.2px;
+  margin-bottom: 0.15rem;
 }
 
 .municipio-stat-value {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
@@ -1544,7 +1550,7 @@
 
 
 .reports-content {
-  padding: 2.5rem;
+  padding: 1.2rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -1553,62 +1559,62 @@
 .detailed-content {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  padding: 2.5rem;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-lg);
-  border-top: 4px solid var(--primary-orange);
+  padding: 1rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-top: 3px solid var(--primary-orange);
   border: 1px solid rgba(255, 122, 0, 0.1);
   transition: var(--transition-base);
 }
 
 .overview-content:hover,
 .detailed-content:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(255, 122, 0, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.12);
 }
 
 .overview-content h2,
 .detailed-content h2 {
-  margin: 0 0 2rem 0;
+  margin: 0 0 0.8rem 0;
   background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-orange-light) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-align: center;
-  font-size: 1.8rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 
 .regions-grid {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
 }
 
 .region-card {
   background: white;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-md);
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   transition: var(--transition-base);
   border: 1px solid rgba(255, 122, 0, 0.1);
 }
 
 .region-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-3px);
+  box-shadow: 0 2px 6px rgba(255, 122, 0, 0.15);
+  transform: translateX(2px);
   border-color: var(--primary-orange-light);
 }
 
 .region-header {
   display: flex;
   align-items: center;
-  padding: 1.25rem;
+  padding: 0.6rem 0.8rem;
   cursor: pointer;
   transition: var(--transition-base);
-  border-left: 4px solid var(--primary-orange);
+  border-left: 3px solid var(--primary-orange);
   background: linear-gradient(90deg, rgba(255, 122, 0, 0.02) 0%, transparent 100%);
 }
 
@@ -1624,20 +1630,20 @@
 .region-info {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.6rem;
   flex: 1;
 }
 
 .region-icon {
-  font-size: 1.8rem;
+  font-size: 1rem;
   color: var(--primary-orange);
-  filter: drop-shadow(0 2px 4px rgba(255, 122, 0, 0.2));
+  filter: drop-shadow(0 1px 2px rgba(255, 122, 0, 0.2));
 }
 
 .region-name {
   font-weight: 700;
   color: var(--text-primary);
-  font-size: 1.1rem;
+  font-size: 0.85rem;
 }
 
 .region-total {
@@ -6696,12 +6702,12 @@
    ======================================== */
 
 .municipio-item-expandable {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
 }
 
 .municipio-item.clickable {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .municipio-item.clickable:hover {
@@ -6710,21 +6716,21 @@
 }
 
 .expand-icon-small {
-  font-size: 0.6rem;
+  font-size: 0.5rem;
   color: var(--primary-orange);
-  margin-right: 0.25rem;
-  transition: transform 0.2s ease;
+  margin-right: 0.2rem;
+  transition: transform 0.15s ease;
   display: inline-block;
 }
 
 /* Lista de reportes del municipio */
 .reportes-list-container {
   background: #f8f9fa;
-  border-radius: 6px;
-  margin-top: 0.3rem;
-  padding: 0.6rem;
+  border-radius: 3px;
+  margin-top: 0.2rem;
+  padding: 0.35rem;
   border-left: 2px solid var(--primary-orange);
-  animation: slideDown 0.25s ease;
+  animation: slideDown 0.15s ease;
 }
 
 @keyframes slideDown {
@@ -6744,86 +6750,86 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.2rem;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .reportes-list-header h6 {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: #2c3e50;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .reportes-count {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 600;
   color: white;
   background: var(--primary-orange);
-  padding: 0.15rem 0.4rem;
-  border-radius: 8px;
+  padding: 0.1rem 0.3rem;
+  border-radius: 6px;
 }
 
 .reportes-list {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.2rem;
 }
 
 .reporte-item-km {
   background: white;
-  border-radius: 4px;
-  padding: 0.5rem 0.7rem;
+  border-radius: 3px;
+  padding: 0.3rem 0.4rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.1s ease;
   border: 1px solid #e0e0e0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .reporte-item-km:hover {
   background: #fff8f0;
   border-color: var(--primary-orange);
-  transform: translateX(3px);
-  box-shadow: 0 2px 6px rgba(255, 122, 0, 0.12);
+  transform: translateX(2px);
+  box-shadow: 0 1px 4px rgba(255, 122, 0, 0.1);
 }
 
 .reporte-item-km:active {
-  transform: translateX(2px);
+  transform: translateX(1px);
 }
 
 .reporte-item-left {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex: 1;
 }
 
 .reporte-icon {
-  font-size: 1rem;
+  font-size: 0.8rem;
   line-height: 1;
 }
 
 .reporte-info {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 .reporte-numero {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #2c3e50;
 }
 
 .reporte-fecha {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: #7f8c8d;
   font-weight: 500;
 }
@@ -6832,21 +6838,21 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.15rem;
-  margin-right: 0.4rem;
+  gap: 0.1rem;
+  margin-right: 0.3rem;
 }
 
 .reporte-km {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--primary-orange);
 }
 
 .reporte-tipo {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: #7f8c8d;
   font-weight: 500;
-  max-width: 130px;
+  max-width: 100px;
   text-align: right;
   white-space: nowrap;
   overflow: hidden;
@@ -6854,24 +6860,24 @@
 }
 
 .reporte-arrow {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: var(--primary-orange);
-  transition: transform 0.15s ease;
+  transition: transform 0.1s ease;
 }
 
 .reporte-item-km:hover .reporte-arrow {
-  transform: translateX(2px);
+  transform: translateX(1px);
 }
 
 .reportes-empty {
   text-align: center;
-  padding: 1rem 0.5rem;
+  padding: 0.6rem 0.4rem;
   color: #7f8c8d;
 }
 
 .reportes-empty p {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 500;
 }
 
