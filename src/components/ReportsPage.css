@@ -6871,13 +6871,13 @@
 
 .reportes-empty {
   text-align: center;
-  padding: 0.6rem 0.4rem;
+  padding: 0.4rem;
   color: #7f8c8d;
+  font-size: 0.65rem;
 }
 
 .reportes-empty p {
   margin: 0;
-  font-size: 0.7rem;
   font-weight: 500;
 }
 

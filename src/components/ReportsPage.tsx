@@ -1952,10 +1952,6 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                                             {/* Lista de reportes cuando está expandido en modo kilometraje */}
                                             {statsMode === 'kilometraje' && isMunicipioExpanded && (
                                               <div className="reportes-list-container">
-                                                <div className="reportes-list-header">
-                                                  <h6>📋 Reportes en {municipio.nombre}</h6>
-                                                  <span className="reportes-count">{reportes.length} {reportes.length === 1 ? 'reporte' : 'reportes'}</span>
-                                                </div>
                                                 {reportes.length > 0 ? (
                                                   <div className="reportes-list">
                                                     {reportes.map((reporte, idx) => {
