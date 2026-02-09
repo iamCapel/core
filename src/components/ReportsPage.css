@@ -1188,13 +1188,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #ecf0f1;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #ecf0f1;
 }
 
 .panel-header h3 {
-  font-size: 1.5rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
@@ -1204,14 +1204,14 @@
   background: #ecf0f1;
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 1.25rem;
+  transition: all 0.2s ease;
+  font-size: 1.1rem;
   color: #7f8c8d;
 }
 
@@ -1223,13 +1223,13 @@
 
 .panel-content {
   color: #7f8c8d;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .no-data {
   text-align: center;
-  padding: 2rem;
+  padding: 1.5rem;
   color: #95a5a6;
   font-style: italic;
 }
@@ -1237,58 +1237,58 @@
 /* Resumen de provincias */
 .provincias-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid #ecf0f1;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #ecf0f1;
 }
 
 .summary-stat {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
   text-align: center;
 }
 
 .summary-label {
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   color: #95a5a6;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   font-weight: 600;
 }
 
 .summary-value {
-  font-size: 1.75rem;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--primary-orange);
 }
 
 /* Lista de provincias */
 .provincias-list {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 
 .list-title {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #2c3e50;
-  margin: 0 0 1.25rem 0;
+  margin: 0 0 0.8rem 0;
 }
 
 .provincia-card {
   background: #f8f9fa;
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  transition: all 0.3s ease;
-  border-left: 4px solid var(--primary-orange);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.6rem;
+  transition: all 0.2s ease;
+  border-left: 3px solid var(--primary-orange);
 }
 
 .provincia-card:hover {
-  transform: translateX(5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateX(3px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   background: white;
 }
 
@@ -1296,11 +1296,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.6rem;
 }
 
 .provincia-nombre {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
@@ -1309,30 +1309,30 @@
 .provincia-badge {
   background: linear-gradient(135deg, var(--primary-orange) 0%, #ff9a3d 100%);
   color: white;
-  padding: 0.35rem 0.85rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
 .provincia-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
 }
 
 .provincia-stat {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  gap: 0.4rem;
+  padding: 0.4rem;
   background: white;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: 6px;
+  transition: all 0.15s ease;
 }
 
 .provincia-stat:hover {
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .provincia-stat.highlight {
@@ -1341,23 +1341,23 @@
 }
 
 .provincia-stat .stat-icon {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   line-height: 1;
 }
 
 .provincia-stat .stat-text {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: #2c3e50;
 }
 
 .provincia-stat .stat-text strong {
   color: var(--primary-orange);
-  margin-right: 0.25rem;
+  margin-right: 0.2rem;
 }
 
 /* Provincias expandibles */
 .provincia-card-expandable {
-  margin-bottom: 1rem;
+  margin-bottom: 0.6rem;
 }
 
 .provincia-card.clickable {
@@ -1372,33 +1372,33 @@
 .provincia-header-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .expand-icon {
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   color: var(--primary-orange);
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
   font-weight: bold;
-  min-width: 16px;
+  min-width: 12px;
   display: inline-block;
 }
 
 /* Lista de municipios */
 .municipios-list {
-  margin-top: 0.75rem;
-  padding: 1rem 1rem 1rem 2.5rem;
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.6rem 0.6rem 1.5rem;
   background: linear-gradient(135deg, #fff9f5 0%, #fff5ed 100%);
-  border-radius: 8px;
-  border-left: 3px solid var(--primary-orange);
-  animation: slideDown 0.3s ease-out;
+  border-radius: 6px;
+  border-left: 2px solid var(--primary-orange);
+  animation: slideDown 0.25s ease-out;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
     max-height: 0;
-    transform: translateY(-10px);
+    transform: translateY(-5px);
   }
   to {
     opacity: 1;
@@ -1411,48 +1411,48 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid rgba(255, 122, 0, 0.2);
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 122, 0, 0.2);
 }
 
 .municipios-title {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #2c3e50;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .municipios-title::before {
   content: '📂';
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 .municipios-count {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #7f8c8d;
   background: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
   font-weight: 600;
 }
 
 .municipio-item {
   background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  border-left: 3px solid #ffd4a3;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.4rem;
+  border-left: 2px solid #ffd4a3;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .municipio-item:hover {
-  transform: translateX(5px);
-  box-shadow: 0 3px 8px rgba(255, 122, 0, 0.15);
+  transform: translateX(3px);
+  box-shadow: 0 2px 6px rgba(255, 122, 0, 0.12);
   border-left-color: var(--primary-orange);
 }
 
@@ -1463,65 +1463,65 @@
 .municipio-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .municipio-icon {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   line-height: 1;
 }
 
 .municipio-nombre {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #2c3e50;
   flex: 1;
 }
 
 .municipio-total {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: white;
   background: linear-gradient(135deg, #ffa500 0%, var(--primary-orange) 100%);
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
 }
 
 .municipio-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0.4rem;
 }
 
 .municipio-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.5rem;
+  padding: 0.4rem;
   background: #f8f9fa;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: 5px;
+  transition: all 0.15s ease;
 }
 
 .municipio-stat:hover {
   background: #fff5e6;
-  transform: scale(1.05);
+  transform: scale(1.03);
 }
 
 .municipio-stat-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #7f8c8d;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.3px;
+  margin-bottom: 0.2rem;
 }
 
 .municipio-stat-value {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
@@ -6696,12 +6696,12 @@
    ======================================== */
 
 .municipio-item-expandable {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
 }
 
 .municipio-item.clickable {
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .municipio-item.clickable:hover {
@@ -6710,28 +6710,28 @@
 }
 
 .expand-icon-small {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--primary-orange);
   margin-right: 0.25rem;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease;
   display: inline-block;
 }
 
 /* Lista de reportes del municipio */
 .reportes-list-container {
   background: #f8f9fa;
-  border-radius: 8px;
-  margin-top: 0.5rem;
-  padding: 1rem;
-  border-left: 3px solid var(--primary-orange);
-  animation: slideDown 0.3s ease;
+  border-radius: 6px;
+  margin-top: 0.3rem;
+  padding: 0.6rem;
+  border-left: 2px solid var(--primary-orange);
+  animation: slideDown 0.25s ease;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
     max-height: 0;
-    transform: translateY(-10px);
+    transform: translateY(-5px);
   }
   to {
     opacity: 1;
@@ -6744,86 +6744,86 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .reportes-list-header h6 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #2c3e50;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .reportes-count {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: white;
   background: var(--primary-orange);
-  padding: 0.25rem 0.5rem;
-  border-radius: 10px;
+  padding: 0.15rem 0.4rem;
+  border-radius: 8px;
 }
 
 .reportes-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .reporte-item-km {
   background: white;
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  padding: 0.5rem 0.7rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   border: 1px solid #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .reporte-item-km:hover {
   background: #fff8f0;
   border-color: var(--primary-orange);
-  transform: translateX(5px);
-  box-shadow: 0 3px 8px rgba(255, 122, 0, 0.15);
+  transform: translateX(3px);
+  box-shadow: 0 2px 6px rgba(255, 122, 0, 0.12);
 }
 
 .reporte-item-km:active {
-  transform: translateX(3px);
+  transform: translateX(2px);
 }
 
 .reporte-item-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex: 1;
 }
 
 .reporte-icon {
-  font-size: 1.2rem;
+  font-size: 1rem;
   line-height: 1;
 }
 
 .reporte-info {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .reporte-numero {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #2c3e50;
 }
 
 .reporte-fecha {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #7f8c8d;
   font-weight: 500;
 }
@@ -6832,21 +6832,21 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.25rem;
-  margin-right: 0.5rem;
+  gap: 0.15rem;
+  margin-right: 0.4rem;
 }
 
 .reporte-km {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--primary-orange);
 }
 
 .reporte-tipo {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #7f8c8d;
   font-weight: 500;
-  max-width: 150px;
+  max-width: 130px;
   text-align: right;
   white-space: nowrap;
   overflow: hidden;
@@ -6854,24 +6854,24 @@
 }
 
 .reporte-arrow {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--primary-orange);
-  transition: transform 0.2s ease;
+  transition: transform 0.15s ease;
 }
 
 .reporte-item-km:hover .reporte-arrow {
-  transform: translateX(3px);
+  transform: translateX(2px);
 }
 
 .reportes-empty {
   text-align: center;
-  padding: 2rem 1rem;
+  padding: 1rem 0.5rem;
   color: #7f8c8d;
 }
 
 .reportes-empty p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
