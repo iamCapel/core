@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verificar Fechas de Reportes</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #00ff00;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .error { color: #ff6b6b; }
+        .success { color: #51cf66; }
+        .info { color: #74c0fc; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Verificador de Fechas de Reportes</h1>
+    <div id="output">Cargando Firebase...</div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDW7ut1c7NscrsKHI0BX6Dgh8f2qy7W5DI",
+            authDomain: "mopc-panel.firebaseapp.com",
+            databaseURL: "https://mopc-panel-default-rtdb.firebaseio.com",
+            projectId: "mopc-panel",
+            storageBucket: "mopc-panel.firebasestorage.app",
+            messagingSenderId: "151918369086",
+            appId: "1:151918369086:web:65a37bba8a28a56d8ca55d",
+            measurementId: "G-WZ8VKTFV4Q"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const output = document.getElementById('output');
+
+        async function checkReportDates() {
+            try {
+                output.innerHTML = '<span class="info">🔍 Consultando reportes DCR-2026-000007 a DCR-2026-000010...</span>\n\n';
+                
+                const q = query(
+                    collection(db, 'reports'),
+                    where('numeroReporte', '>=', 'DCR-2026-000007'),
+                    where('numeroReporte', '<=', 'DCR-2026-000010'),
+                    orderBy('numeroReporte', 'asc')
+                );
+                
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) {
+                    output.innerHTML += '<span class="error">❌ No se encontraron reportes</span>\n';
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    output.innerHTML += `<span class="success">📄 Reporte: ${data.numeroReporte}</span>\n`;
+                    output.innerHTML += `   🆔 ID: ${doc.id}\n`;
+                    output.innerHTML += `   📅 fechaCreacion: ${data.fechaCreacion || 'NO EXISTE'}\n`;
+                    output.innerHTML += `   📅 fechaProyecto: ${data.fechaProyecto || 'NO EXISTE'}\n`;
+                    output.innerHTML += `   📅 fechaInicio: ${data.fechaInicio || 'NO EXISTE'}\n`;
+                    output.innerHTML += `   📅 fechaFinal: ${data.fechaFinal || 'NO EXISTE'}\n`;
+                    output.innerHTML += `   🔄 esProyectoMultiDia: ${data.esProyectoMultiDia || false}\n`;
+                    
+                    if (data.diasTrabajo && Array.isArray(data.diasTrabajo)) {
+                        output.innerHTML += `   📆 diasTrabajo (${data.diasTrabajo.length} días):\n`;
+                        data.diasTrabajo.forEach((dia, idx) => {
+                            output.innerHTML += `      ${idx + 1}. ${dia}\n`;
+                        });
+                    } else {
+                        output.innerHTML += `   📆 diasTrabajo: NO EXISTE\n`;
+                    }
+                    
+                    output.innerHTML += '\n';
+                });
+                
+                output.innerHTML += '<span class="success">✅ Consulta completada</span>\n';
+                
+            } catch (error) {
+                output.innerHTML += `<span class="error">❌ Error: ${error.message}</span>\n`;
+                console.error('Error completo:', error);
+            }
+        }
+
+        checkReportDates();
+    </script>
+</body>
+</html>

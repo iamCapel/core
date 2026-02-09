@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Actualizar Fechas de Reportes Multi-Días</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            color: #333;
+        }
+        h1 { 
+            color: #667eea; 
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        #output {
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.8;
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            max-height: 500px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .error { color: #ff6b6b; font-weight: bold; }
+        .success { color: #51cf66; font-weight: bold; }
+        .info { color: #74c0fc; }
+        .warning { color: #ffd93d; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .date-inputs {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .input-group {
+            flex: 1;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .button-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .report-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+        .report-item {
+            padding: 10px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Actualizar Fechas de Reportes Multi-Días</h1>
+        <p class="subtitle">Esta herramienta actualizará los reportes DCR-2026-000007 a DCR-2026-000010 con las fechas correctas</p>
+
+        <div class="date-inputs">
+            <div class="input-group">
+                <label for="startDate">📅 Fecha de Inicio Real</label>
+                <input type="date" id="startDate" value="2026-02-03">
+            </div>
+            <div class="input-group">
+                <label for="endDate">📅 Fecha Final Real</label>
+                <input type="date" id="endDate" value="2026-02-05">
+            </div>
+        </div>
+
+        <div class="report-list">
+            <strong>📋 Reportes que serán actualizados:</strong>
+            <div class="report-item">DCR-2026-000007, DCR-2026-000008, DCR-2026-000009, DCR-2026-000010</div>
+        </div>
+
+        <div class="button-group">
+            <button id="btnCheck" onclick="checkReports()">🔍 1. Verificar Reportes</button>
+            <button id="btnFix" onclick="fixReports()" disabled>🔧 2. Actualizar Fechas</button>
+            <button id="btnVerify" onclick="verifyFix()" disabled>✅ 3. Verificar Cambios</button>
+        </div>
+
+        <div id="output">Presiona "Verificar Reportes" para comenzar...</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, query, where, getDocs, doc, updateDoc, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDW7ut1c7NscrsKHI0BX6Dgh8f2qy7W5DI",
+            authDomain: "mopc-panel.firebaseapp.com",
+            databaseURL: "https://mopc-panel-default-rtdb.firebaseio.com",
+            projectId: "mopc-panel",
+            storageBucket: "mopc-panel.firebasestorage.app",
+            messagingSenderId: "151918369086",
+            appId: "1:151918369086:web:65a37bba8a28a56d8ca55d",
+            measurementId: "G-WZ8VKTFV4Q"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const output = document.getElementById('output');
+        let reportsToFix = [];
+
+        window.checkReports = async function() {
+            try {
+                output.innerHTML = '<span class="info">🔍 Consultando reportes en Firebase...</span>\n\n';
+                document.getElementById('btnCheck').disabled = true;
+                
+                const q = query(
+                    collection(db, 'reports'),
+                    where('numeroReporte', '>=', 'DCR-2026-000007'),
+                    where('numeroReporte', '<=', 'DCR-2026-000010'),
+                    orderBy('numeroReporte', 'asc')
+                );
+                
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) {
+                    output.innerHTML += '<span class="error">❌ No se encontraron reportes</span>\n';
+                    return;
+                }
+                
+                reportsToFix = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    reportsToFix.push({ id: doc.id, data: data });
+                    
+                    output.innerHTML += `<span class="success">📄 ${data.numeroReporte}</span>\n`;
+                    output.innerHTML += `   🆔 ID: ${doc.id}\n`;
+                    output.innerHTML += `   📅 fechaCreacion: ${data.fechaCreacion || 'NO EXISTE'}\n`;
+                    output.innerHTML += `   📅 fechaInicio: <span class="${data.fechaInicio ? 'success' : 'error'}">${data.fechaInicio || '❌ FALTA'}</span>\n`;
+                    output.innerHTML += `   📅 fechaFinal: <span class="${data.fechaFinal ? 'success' : 'error'}">${data.fechaFinal || '❌ FALTA'}</span>\n`;
+                    output.innerHTML += `   📆 diasTrabajo: <span class="${data.diasTrabajo ? 'success' : 'error'}">${data.diasTrabajo ? data.diasTrabajo.length + ' días' : '❌ FALTA'}</span>\n`;
+                    output.innerHTML += '\n';
+                });
+                
+                output.innerHTML += `<span class="success">✅ Encontrados ${reportsToFix.length} reportes</span>\n`;
+                output.innerHTML += '<span class="warning">⚠️ Ahora puedes actualizar las fechas</span>\n';
+                
+                document.getElementById('btnFix').disabled = false;
+                
+            } catch (error) {
+                output.innerHTML += `<span class="error">❌ Error: ${error.message}</span>\n`;
+                console.error('Error:', error);
+            }
+        };
+
+        window.fixReports = async function() {
+            try {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                if (!startDate || !endDate) {
+                    alert('Por favor ingresa ambas fechas');
+                    return;
+                }
+                
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                
+                if (end < start) {
+                    alert('La fecha final debe ser mayor o igual a la fecha de inicio');
+                    return;
+                }
+                
+                // Generar array de días
+                const diasTrabajo = [];
+                const current = new Date(start);
+                while (current <= end) {
+                    diasTrabajo.push(current.toISOString().split('T')[0]);
+                    current.setDate(current.getDate() + 1);
+                }
+                
+                output.innerHTML = `<span class="info">🔧 Actualizando ${reportsToFix.length} reportes...</span>\n`;
+                output.innerHTML += `<span class="info">📅 Fecha Inicio: ${startDate}</span>\n`;
+                output.innerHTML += `<span class="info">📅 Fecha Final: ${endDate}</span>\n`;
+                output.innerHTML += `<span class="info">📆 Días: ${diasTrabajo.join(', ')}</span>\n\n`;
+                
+                document.getElementById('btnFix').disabled = true;
+                
+                let updated = 0;
+                for (const report of reportsToFix) {
+                    try {
+                        const docRef = doc(db, 'reports', report.id);
+                        await updateDoc(docRef, {
+                            fechaInicio: startDate,
+                            fechaFinal: endDate,
+                            diasTrabajo: diasTrabajo,
+                            esProyectoMultiDia: true,
+                            fechaProyecto: startDate
+                        });
+                        
+                        output.innerHTML += `<span class="success">✅ ${report.data.numeroReporte} actualizado</span>\n`;
+                        updated++;
+                        
+                    } catch (error) {
+                        output.innerHTML += `<span class="error">❌ Error en ${report.data.numeroReporte}: ${error.message}</span>\n`;
+                    }
+                }
+                
+                output.innerHTML += `\n<span class="success">🎉 ${updated} reportes actualizados exitosamente!</span>\n`;
+                output.innerHTML += '<span class="warning">⚠️ Ahora verifica los cambios</span>\n';
+                
+                document.getElementById('btnVerify').disabled = false;
+                
+            } catch (error) {
+                output.innerHTML += `<span class="error">❌ Error: ${error.message}</span>\n`;
+                console.error('Error:', error);
+            }
+        };
+
+        window.verifyFix = async function() {
+            window.checkReports();
+        };
+    </script>
+</body>
+</html>

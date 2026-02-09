@@ -597,7 +597,7 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
                               <td>
                                 <span 
                                   className="reporte-link"
-                                  onClick={() => abrirDetalleReporte(obra.numeroReporte)}
+                                  onClick={() => handleOpenReport(obra.numeroReporte)}
                                 >
                                   {obra.numeroReporte}
                                 </span>
@@ -913,8 +913,8 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
                     <div className="field-value">{new Date(selectedReporteDetail.fechaCreacion).toLocaleString('es-ES')}</div>
                   </div>
                   <div className="reporte-field">
-                    <label>Fecha del Proyecto:</label>
-                    <div className="field-value">{new Date(selectedReporteDetail.fechaProyecto || selectedReporteDetail.fechaCreacion).toLocaleDateString('es-ES')}</div>
+                    <label>Fecha de Inicio del Proyecto:</label>
+                    <div className="field-value">{new Date(selectedReporteDetail.fechaInicio || selectedReporteDetail.fechaProyecto || selectedReporteDetail.fechaCreacion).toLocaleDateString('es-ES')}</div>
                   </div>
                   <div className="reporte-field">
                     <label>Estado:</label>
@@ -1207,30 +1207,22 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
           kilometraje: 0
         };
 
-        // Actualizar contadores de provincia y municipio
         // Los reportes con estado 'pendiente' NO se incluyen en estadísticas
         if (report.estado === 'completado' || report.estado === 'aprobado') {
-          currentProv.total++;
-          currentProv.completados++;
-          currentMun.total++;
-          currentMun.completados++;
+          // Si es multi-día, contar cada día como una intervención separada
+          const numDias = (report.esProyectoMultiDia && report.diasTrabajo) ? report.diasTrabajo.length : 1;
           
-          // Obtener kilometraje desde campo manual de la plantilla
-          const longitudIntervencion = parseFloat(report.metricData?.longitud_intervencion || '0');
-          currentProv.kilometraje += (longitudIntervencion || 0);
-          currentMun.kilometraje += (longitudIntervencion || 0);
-        } else if (report.estado === 'en progreso') {
-          currentProv.total++;
-          currentProv.enProgreso++;
-          currentMun.total++;
-          currentMun.enProgreso++;
+          currentProv.total += numDias;
+          currentProv.completados += numDias;
+          currentMun.total += numDias;
+          currentMun.completados += numDias;
           
           // Obtener kilometraje desde campo manual de la plantilla
           const longitudIntervencion = parseFloat(report.metricData?.longitud_intervencion || '0');
           currentProv.kilometraje += (longitudIntervencion || 0);
           currentMun.kilometraje += (longitudIntervencion || 0);
         }
-        // Los reportes 'pendiente' se ignoran completamente en estadísticas
+        // Los reportes 'pendiente', 'borrador', 'en_revision', 'rechazado' se ignoran en estadísticas
 
         currentProv.municipios.set(municipio, currentMun);
         provinciaMap.set(provincia, currentProv);
@@ -1309,6 +1301,9 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
 
   const toggleMunicipioExpansion = async (regionId: number, provinciaNombre: string, municipioNombre: string) => {
     const key = `${regionId}-${provinciaNombre}-${municipioNombre}`;
+    // Obtener nombre de región desde REGIONES_BASE
+    const regionData = REGIONES_BASE.find(r => r.id === regionId);
+    const regionNombre = regionData?.name || '';
     
     setExpandedMunicipios(prev => {
       const newSet = new Set(prev);
@@ -1318,7 +1313,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
         newSet.add(key);
         // Cargar reportes del municipio si aún no están cargados
         if (!municipioReportes[key]) {
-          loadMunicipioReportes(regionId, provinciaNombre, municipioNombre, key);
+          loadMunicipioReportes(key, regionNombre, provinciaNombre, municipioNombre);
         }
       }
       return newSet;
@@ -1337,21 +1332,50 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
 
       // Filtrar reportes del municipio
       const regionKey = regionNombre.toLowerCase();
-      const reportesMunicipio = allReports.filter(r => 
+      const reportesMunicipioBase = allReports.filter(r => 
         r.region?.toLowerCase() === regionKey &&
         r.provincia === provinciaNombre &&
         r.municipio === municipioNombre &&
-        (r.estado === 'completado' || r.estado === 'aprobado' || r.estado === 'en progreso')
+        (r.estado === 'completado' || r.estado === 'aprobado')
       );
 
+      // Expandir reportes multi-días en reportes individuales por día
+      const reportesExpandidos: any[] = [];
+      
+      reportesMunicipioBase.forEach(reporte => {
+        // Si es multi-día, crear un reporte por cada día
+        if (reporte.esProyectoMultiDia && reporte.diasTrabajo && reporte.diasTrabajo.length > 0) {
+          reporte.diasTrabajo.forEach((dia: string, index: number) => {
+            const dayData = reporte.reportesPorDia?.[dia] || {};
+            reportesExpandidos.push({
+              ...reporte,
+              numeroReporte: `${reporte.numeroReporte} (Día ${index + 1}/${reporte.diasTrabajo.length})`,
+              fechaInicio: dia,
+              fechaProyecto: dia,
+              metricData: dayData.metricData || reporte.metricData || {},
+              observaciones: dayData.observaciones || reporte.observaciones,
+              vehiculos: dayData.vehiculos || reporte.vehiculos || [],
+              _diaNumero: index + 1,
+              _totalDias: reporte.diasTrabajo.length,
+              _esExpansionMultiDia: true
+            });
+          });
+        } else {
+          // Reporte normal de un solo día
+          reportesExpandidos.push(reporte);
+        }
+      });
+
       // Ordenar por fecha descendente
-      reportesMunicipio.sort((a, b) => 
-        new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime()
-      );
+      reportesExpandidos.sort((a, b) => {
+        const fechaA = new Date(a.fechaInicio || a.fechaProyecto || a.fechaCreacion).getTime();
+        const fechaB = new Date(b.fechaInicio || b.fechaProyecto || b.fechaCreacion).getTime();
+        return fechaB - fechaA;
+      });
 
       setMunicipioReportes(prev => ({
         ...prev,
-        [key]: reportesMunicipio
+        [key]: reportesExpandidos
       }));
     } catch (error) {
       console.error('Error cargando reportes del municipio:', error);
@@ -1359,10 +1383,13 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
   };
 
   const handleOpenReport = (reportNumber: string) => {
+    console.log('📍 handleOpenReport llamado con:', reportNumber);
     // Cambiar a vista detallada con el reporte específico
     setCurrentView('detallado');
+    console.log('📍 Vista cambiada a detallado');
     // El componente DetailedReportView recibirá el número de reporte para mostrarlo
     setTimeout(() => {
+      console.log('📍 Enviando evento openReport con:', reportNumber);
       const event = new CustomEvent('openReport', { detail: { reportNumber } });
       window.dispatchEvent(event);
     }, 100);
@@ -1891,17 +1918,20 @@ Observaciones: ${r.observaciones || 'Ninguna'}
                                                     <div 
                                                       key={reporte.id || idx}
                                                       className="reporte-item-km"
+                                                      style={{ cursor: 'pointer' }}
                                                       onClick={(e) => {
                                                         e.stopPropagation();
+                                                        console.log('🔍 Click en reporte:', reporte.numeroReporte);
                                                         handleOpenReport(reporte.numeroReporte);
                                                       }}
+                                                      title="Click para ver detalles del reporte"
                                                     >
                                                       <div className="reporte-item-left">
                                                         <span className="reporte-icon">📄</span>
                                                         <div className="reporte-info">
-                                                          <span className="reporte-numero">{reporte.numeroReporte}</span>
+                                                          <span className="reporte-numero" style={{ color: '#667eea', fontWeight: 'bold' }}>{reporte.numeroReporte}</span>
                                                           <span className="reporte-fecha">
-                                                            {new Date(reporte.fechaCreacion).toLocaleDateString('es-ES')}
+                                                            {new Date(reporte.fechaInicio || reporte.fechaProyecto || reporte.fechaCreacion).toLocaleDateString('es-ES')}
                                                           </span>
                                                         </div>
                                                       </div>

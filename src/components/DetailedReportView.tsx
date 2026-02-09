@@ -378,7 +378,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         });
       } else {
         // Reporte de un solo día
-        const fechaMostrar = report.fechaProyecto || report.fechaCreacion;
+        const fechaMostrar = report.fechaInicio || report.fechaProyecto || report.fechaCreacion;
         const formattedReport = {
           id: report.id,
           reportNumber: report.numeroReporte,
@@ -476,17 +476,24 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   // Escuchar evento para abrir reportes desde otras vistas (como ReportsPage)
   useEffect(() => {
     const handleOpenReport = (event: any) => {
+      console.log('📡 DetailedReportView recibió evento openReport:', event.detail);
       const { reportNumber } = event.detail;
       if (reportNumber && allReportsFlat.length > 0) {
+        console.log('🔍 Buscando reporte:', reportNumber, 'en', allReportsFlat.length, 'reportes');
         const reportToOpen = allReportsFlat.find(r => r.numeroReporte === reportNumber || r.reportNumber === reportNumber);
         if (reportToOpen) {
+          console.log('✅ Reporte encontrado:', reportToOpen.numeroReporte || reportToOpen.reportNumber);
           // Crear evento sintético
           const syntheticEvent = {
             stopPropagation: () => {},
             preventDefault: () => {}
           } as React.MouseEvent<HTMLButtonElement>;
           viewReport(reportToOpen, syntheticEvent);
+        } else {
+          console.log('❌ Reporte no encontrado. Reportes disponibles:', allReportsFlat.map(r => r.numeroReporte || r.reportNumber));
         }
+      } else {
+        console.log('⚠️ No se puede abrir reporte:', { reportNumber, totalReports: allReportsFlat.length });
       }
     };
 
@@ -632,8 +639,8 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       return sum + km;
     }, 0);
     const completados = filteredReports.filter(r => r.estado === 'completado' || r.estado === 'aprobado').length;
-    const pendientes = filteredReports.filter(r => r.estado === 'pendiente').length;
-    const enProgreso = filteredReports.filter(r => r.estado === 'en progreso').length;
+    const pendientes = filteredReports.filter(r => r.estado === 'pendiente' || r.estado === 'borrador').length;
+    const enProgreso = filteredReports.filter(r => r.estado === 'en_revision').length;
 
     return {
       total: filteredReports.length,
@@ -1536,7 +1543,16 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               ) : (
                 filteredReports.map((report) => (
                   <tr key={report.id}>
-                    <td className="report-num-cell">#{report.reportNumber}</td>
+                    <td className="report-num-cell">
+                      <span 
+                        className="report-number-link"
+                        onClick={(e) => viewReport(report, e)}
+                        style={{ cursor: 'pointer', color: '#667eea', fontWeight: 'bold', textDecoration: 'underline' }}
+                        title="Click para ver detalles"
+                      >
+                        #{report.reportNumber}
+                      </span>
+                    </td>
                     <td>{report.date}</td>
                     <td>{report.region}</td>
                     <td>{report.province}</td>
