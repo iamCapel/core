@@ -6690,3 +6690,220 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================
+   Estilos para Municipios Expandibles con Reportes
+   ======================================== */
+
+.municipio-item-expandable {
+  margin-bottom: 0.75rem;
+}
+
+.municipio-item.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.municipio-item.clickable:hover {
+  background: #fff8f0;
+  border-left-color: var(--primary-orange);
+}
+
+.expand-icon-small {
+  font-size: 0.7rem;
+  color: var(--primary-orange);
+  margin-right: 0.25rem;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+/* Lista de reportes del municipio */
+.reportes-list-container {
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border-left: 3px solid var(--primary-orange);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    transform: translateY(0);
+  }
+}
+
+.reportes-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.reportes-list-header h6 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reportes-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  background: var(--primary-orange);
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+}
+
+.reportes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.reporte-item-km {
+  background: white;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.reporte-item-km:hover {
+  background: #fff8f0;
+  border-color: var(--primary-orange);
+  transform: translateX(5px);
+  box-shadow: 0 3px 8px rgba(255, 122, 0, 0.15);
+}
+
+.reporte-item-km:active {
+  transform: translateX(3px);
+}
+
+.reporte-item-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.reporte-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.reporte-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reporte-numero {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.reporte-fecha {
+  font-size: 0.7rem;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.reporte-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  margin-right: 0.5rem;
+}
+
+.reporte-km {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary-orange);
+}
+
+.reporte-tipo {
+  font-size: 0.7rem;
+  color: #7f8c8d;
+  font-weight: 500;
+  max-width: 150px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reporte-arrow {
+  font-size: 1rem;
+  color: var(--primary-orange);
+  transition: transform 0.2s ease;
+}
+
+.reporte-item-km:hover .reporte-arrow {
+  transform: translateX(3px);
+}
+
+.reportes-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #7f8c8d;
+}
+
+.reportes-empty p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Responsive para reportes expandibles */
+@media (max-width: 768px) {
+  .reporte-item-km {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .reporte-item-left,
+  .reporte-item-right {
+    width: 100%;
+  }
+
+  .reporte-item-right {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .reporte-tipo {
+    max-width: none;
+    text-align: left;
+  }
+
+  .reporte-arrow {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+

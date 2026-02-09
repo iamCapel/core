@@ -473,6 +473,29 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     }
   }, [initialReportNumber, allReportsFlat, selectedReport]);
 
+  // Escuchar evento para abrir reportes desde otras vistas (como ReportsPage)
+  useEffect(() => {
+    const handleOpenReport = (event: any) => {
+      const { reportNumber } = event.detail;
+      if (reportNumber && allReportsFlat.length > 0) {
+        const reportToOpen = allReportsFlat.find(r => r.numeroReporte === reportNumber || r.reportNumber === reportNumber);
+        if (reportToOpen) {
+          // Crear evento sintético
+          const syntheticEvent = {
+            stopPropagation: () => {},
+            preventDefault: () => {}
+          } as React.MouseEvent<HTMLButtonElement>;
+          viewReport(reportToOpen, syntheticEvent);
+        }
+      }
+    };
+
+    window.addEventListener('openReport', handleOpenReport);
+    return () => {
+      window.removeEventListener('openReport', handleOpenReport);
+    };
+  }, [allReportsFlat]);
+
   // Aplicar filtros avanzados
   const filteredReports = useMemo(() => {
     let filtered = [...allReportsFlat];
