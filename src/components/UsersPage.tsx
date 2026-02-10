@@ -86,38 +86,68 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
   // Estados para notificaciones
   const [pendingCount, setPendingCount] = useState(0);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
 
   // Función para actualizar el contador de pendientes
-  const updatePendingCount = () => {
-    const pendientes = pendingReportStorage.getPendingCount();
-    setPendingCount(pendientes);
+  const updatePendingCount = async () => {
+    try {
+      const reports = await getPendingReports();
+      setPendingReportsList(reports);
+      setPendingCount(reports.length);
+    } catch (error) {
+      console.error('Error actualizando contador de pendientes:', error);
+      setPendingCount(0);
+      setPendingReportsList([]);
+    }
   };
 
   // Función para obtener lista detallada de reportes pendientes
-  const getPendingReports = () => {
-    const pendingReports = pendingReportStorage.getAllPendingReports();
-    return pendingReports.map(report => ({
-      id: report.id,
-      reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
-      timestamp: report.timestamp,
-      estado: 'pendiente',
-      region: report.formData.region || 'N/A',
-      provincia: report.formData.provincia || 'N/A',
-      municipio: report.formData.municipio || 'N/A',
-      tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
-    }));
+  const getPendingReports = async () => {
+    try {
+      // Obtener reportes con estado 'pendiente' de Firebase
+      const allPending = await firebaseReportStorage.getReportsByEstado('pendiente');
+      
+      // Filtrar por usuario si es técnico
+      const userPending = (user?.role === 'Técnico' || user?.role === 'tecnico')
+        ? allPending.filter(report => 
+            report.usuarioId === user?.username || report.creadoPor === user?.username
+          )
+        : allPending;
+
+      return userPending.map(report => ({
+        id: report.id,
+        reportNumber: report.numeroReporte || `DCR-${report.id.slice(-6)}`,
+        timestamp: report.timestamp || report.fechaCreacion,
+        estado: report.estado,
+        region: report.region || 'N/A',
+        provincia: report.provincia || 'N/A',
+        municipio: report.municipio || 'N/A',
+        tipoIntervencion: report.tipoIntervencion || 'No especificado'
+      }));
+    } catch (error) {
+      console.error('Error obteniendo reportes pendientes:', error);
+      return [];
+    }
   };
 
   const handleContinuePendingReport = (reportId: string) => {
-    alert('Función de continuar reporte desde UsersPage - redirigir a formulario');
     setShowPendingModal(false);
+    alert('Para continuar este reporte, por favor regrese al Dashboard y haga clic en "Crear Reporte". El reporte pendiente se cargará automáticamente.');
+    // Opcional: Podríamos usar onBack() para regresar automáticamente al Dashboard
+    // onBack();
   };
 
-  const handleCancelPendingReport = (reportId: string) => {
-    pendingReportStorage.deletePendingReport(reportId);
-    updatePendingCount();
-    setShowPendingModal(false);
-    setTimeout(() => setShowPendingModal(true), 100);
+  const handleCancelPendingReport = async (reportId: string) => {
+    try {
+      // Eliminar de Firebase
+      await firebaseReportStorage.deleteReport(reportId);
+      console.log('✅ Reporte pendiente eliminado de Firebase');
+      // Actualizar la lista
+      await updatePendingCount();
+    } catch (error) {
+      console.error('❌ Error eliminando reporte pendiente:', error);
+      alert('Error al eliminar el reporte pendiente. Verifique su conexión a internet.');
+    }
   };
 
   // Cargar usuarios desde Firebase
@@ -2258,7 +2288,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
       <PendingReportsModal
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
-        reports={getPendingReports()}
+        reports={pendingReportsList}
         onContinueReport={handleContinuePendingReport}
         onCancelReport={handleCancelPendingReport}
       />

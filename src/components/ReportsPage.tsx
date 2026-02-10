@@ -1069,6 +1069,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
   const [provinciasData, setProvinciasData] = useState<Array<ProvinciaData & { region: string, regionIcon: string, regionColor: string }>>([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
   const [expandedProvincias, setExpandedProvincias] = useState<Set<string>>(new Set());
   const [expandedMunicipios, setExpandedMunicipios] = useState<Set<string>>(new Set());
   const [municipioReportes, setMunicipioReportes] = useState<Record<string, any[]>>({});
@@ -1089,35 +1090,78 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
   }, []);
 
   // Actualizar contador de pendientes
-  const updatePendingCount = () => {
-    const pendientes = pendingReportStorage.getPendingCount();
-    setPendingCount(pendientes);
+  const updatePendingCount = async () => {
+    try {
+      const reports = await getPendingReports();
+      setPendingReportsList(reports);
+      setPendingCount(reports.length);
+    } catch (error) {
+      console.error('Error actualizando contador de pendientes:', error);
+      setPendingCount(0);
+      setPendingReportsList([]);
+    }
   };
 
-  const getPendingReports = () => {
-    const pendingReports = pendingReportStorage.getAllPendingReports();
-    return pendingReports.map(report => ({
-      id: report.id,
-      reportNumber: `DCR-${report.id.split('_').pop()?.slice(-6) || '000000'}`,
-      timestamp: report.timestamp,
-      estado: 'pendiente',
-      region: report.formData.region || 'N/A',
-      provincia: report.formData.provincia || 'N/A',
-      municipio: report.formData.municipio || 'N/A',
-      tipoIntervencion: report.formData.tipoIntervencion || 'No especificado'
-    }));
+  const getPendingReports = async () => {
+    try {
+      // Obtener reportes con estado 'pendiente' de Firebase
+      const allPending = await firebaseReportStorage.getReportsByEstado('pendiente');
+      
+      // Filtrar por usuario si es técnico
+      const userPending = (user?.role === 'Técnico' || user?.role === 'tecnico')
+        ? allPending.filter(report => 
+            report.usuarioId === user?.username || report.creadoPor === user?.username
+          )
+        : allPending;
+
+      return userPending.map(report => ({
+        id: report.id,
+        reportNumber: report.numeroReporte || `DCR-${report.id.slice(-6)}`,
+        timestamp: report.timestamp || report.fechaCreacion,
+        estado: report.estado,
+        region: report.region || 'N/A',
+        provincia: report.provincia || 'N/A',
+        municipio: report.municipio || 'N/A',
+        tipoIntervencion: report.tipoIntervencion || 'No especificado'
+      }));
+    } catch (error) {
+      console.error('Error obteniendo reportes pendientes:', error);
+      return [];
+    }
   };
 
-  const handleContinuePendingReport = (reportId: string) => {
-    alert('Función de continuar reporte desde ReportsPage - redirigir a formulario');
-    setShowPendingModal(false);
+  const handleContinuePendingReport = async (reportId: string) => {
+    try {
+      console.log('📋 Continuando reporte pendiente desde ReportsPage:', reportId);
+      
+      // Cerrar el modal de notificaciones
+      setShowPendingModal(false);
+      
+      // Usar la prop onEditReport si está disponible
+      if (onEditReport) {
+        // Dashboard se encargará de cargar el reporte completo y mostrar el formulario
+        onEditReport(reportId);
+      } else {
+        console.warn('⚠️ onEditReport no está disponible en ReportsPage');
+        alert('No se puede editar el reporte desde esta vista. Por favor regrese al Dashboard.');
+      }
+    } catch (error) {
+      console.error('❌ Error al continuar reporte pendiente:', error);
+      alert('Error al cargar el reporte. Por favor intente nuevamente.');
+    }
   };
 
-  const handleCancelPendingReport = (reportId: string) => {
-    pendingReportStorage.deletePendingReport(reportId);
-    updatePendingCount();
-    setShowPendingModal(false);
-    setTimeout(() => setShowPendingModal(true), 100);
+  const handleCancelPendingReport = async (reportId: string) => {
+    try {
+      // Eliminar de Firebase
+      await firebaseReportStorage.deleteReport(reportId);
+      console.log('✅ Reporte pendiente eliminado de Firebase');
+      // Actualizar la lista
+      await updatePendingCount();
+    } catch (error) {
+      console.error('❌ Error eliminando reporte pendiente:', error);
+      alert('Error al eliminar el reporte pendiente. Verifique su conexión a internet.');
+    }
   };
 
   useEffect(() => {
@@ -2153,7 +2197,7 @@ Observaciones: ${r.observaciones || 'Ninguna'}
       <PendingReportsModal
         isOpen={showPendingModal}
         onClose={() => setShowPendingModal(false)}
-        reports={getPendingReports()}
+        reports={pendingReportsList}
         onContinueReport={handleContinuePendingReport}
         onCancelReport={handleCancelPendingReport}
       />

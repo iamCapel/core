@@ -1105,18 +1105,50 @@ const Dashboard: React.FC = () => {
       <ReportsPage 
         user={user} 
         onBack={handleBackToDashboard}
-        onEditReport={(reportId) => {
-          // Cargar el reporte desde Firebase
-          firebaseReportStorage.getReport(reportId).then((report) => {
+        onEditReport={async (reportId) => {
+          try {
+            console.log('📋 Cargando reporte para editar desde ReportsPage:', reportId);
+            
+            // Cargar el reporte desde Firebase
+            const report = await firebaseReportStorage.getReport(reportId);
+            
             if (report) {
-              setInterventionToEdit(report);
+              // 📸 CARGAR IMÁGENES del reporte
+              let imagesPerDay: Record<string, any> = {};
+              try {
+                console.log('📸 Cargando imágenes del reporte...');
+                const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
+                imagesPerDay = await firebaseImageStorage.getReportImages(reportId);
+                console.log('✅ Imágenes cargadas:', imagesPerDay);
+              } catch (imageError) {
+                console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
+              }
+              
+              // Preparar datos completos con imágenes
+              const dataToLoad = {
+                ...report,
+                imagesPerDay: imagesPerDay,
+                fechaInicio: report.fechaInicio || (report.fechaCreacion ? report.fechaCreacion.split('T')[0] : ''),
+                fechaFinal: report.fechaFinal || '',
+                fechaReporte: report.fechaCreacion ? report.fechaCreacion.split('T')[0] : '',
+                diasTrabajo: report.diasTrabajo || [],
+                reportesPorDia: report.reportesPorDia || {},
+                diaActual: report.diaActual || 0,
+                _isEditingPending: report.estado === 'pendiente'
+              };
+              
+              console.log('✅ Datos completos cargados para edición');
+              setInterventionToEdit(dataToLoad);
               setShowReportsPage(false);
               setShowReportForm(true);
+            } else {
+              console.error('❌ Reporte no encontrado');
+              alert('No se pudo cargar el reporte. Por favor intente nuevamente.');
             }
-          }).catch((error) => {
-            console.error('Error al cargar reporte para editar:', error);
+          } catch (error) {
+            console.error('❌ Error al cargar reporte para editar:', error);
             alert('Error al cargar el reporte. Por favor intente nuevamente.');
-          });
+          }
         }}
       />
     );
