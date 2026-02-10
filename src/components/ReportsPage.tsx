@@ -141,7 +141,7 @@ function formatearFechaCorta(fecha: string | undefined): string {
 }
 
 // Componente Vista de Vehículos
-const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
+const VehiculosView: React.FC<{ user: User; onOpenReport: (reportNumber: string) => void }> = ({ user, onOpenReport }) => {
   const [vehiculos, setVehiculos] = useState<any[]>([]);
   const [vehiculosFiltrados, setVehiculosFiltrados] = useState<any[]>([]);
   const [searchFicha, setSearchFicha] = useState('');
@@ -597,7 +597,7 @@ const VehiculosView: React.FC<{ user: User }> = ({ user }) => {
                               <td>
                                 <span 
                                   className="reporte-link"
-                                  onClick={() => handleOpenReport(obra.numeroReporte)}
+                                  onClick={() => onOpenReport(obra.numeroReporte)}
                                 >
                                   {obra.numeroReporte}
                                 </span>
@@ -1349,14 +1349,14 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
             const dayData = reporte.reportesPorDia?.[dia] || {};
             reportesExpandidos.push({
               ...reporte,
-              numeroReporte: `${reporte.numeroReporte} (Día ${index + 1}/${reporte.diasTrabajo.length})`,
+              numeroReporte: `${reporte.numeroReporte} (Día ${index + 1}/${reporte.diasTrabajo?.length || 0})`,
               fechaInicio: dia,
               fechaProyecto: dia,
               metricData: dayData.metricData || reporte.metricData || {},
               observaciones: dayData.observaciones || reporte.observaciones,
               vehiculos: dayData.vehiculos || reporte.vehiculos || [],
               _diaNumero: index + 1,
-              _totalDias: reporte.diasTrabajo.length,
+              _totalDias: reporte.diasTrabajo?.length || 0,
               _esExpansionMultiDia: true
             });
           });
@@ -1979,7 +1979,7 @@ Observaciones: ${r.observaciones || 'Ninguna'}
           )}
 
           {currentView === 'vehiculos' && (
-            <VehiculosView user={user} />
+            <VehiculosView user={user} onOpenReport={handleOpenReport} />
           )}
 
           {currentView === 'exportar' && (
