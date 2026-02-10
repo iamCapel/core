@@ -412,7 +412,10 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                   transition: 'all 0.3s ease',
                   animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
                 }}
-                onClick={() => setShowPendingModal(true)}
+                onClick={async () => {
+                  await updatePendingCount();
+                  setShowPendingModal(true);
+                }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = 'scale(1.1)';
                   e.currentTarget.style.filter = 'drop-shadow(0 3px 6px rgba(255, 152, 0, 0.6))';
@@ -581,7 +584,10 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
             src="/images/notification-bell-icon.svg" 
             alt="Notificaciones" 
             className="notification-icon"
-            onClick={() => setShowPendingModal(true)}
+            onClick={async () => {
+              await updatePendingCount();
+              setShowPendingModal(true);
+            }}
             style={{ 
               cursor: 'pointer',
               animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'

@@ -1300,8 +1300,9 @@ const Dashboard: React.FC = () => {
                     marginLeft: '8px',
                     animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
                   }}
-                  onClick={() => {
+                  onClick={async () => {
                     // Abrir modal con lista de reportes pendientes
+                    await updatePendingCount();
                     setShowPendingModal(true);
                   }}
                   onMouseOver={(e) => {
