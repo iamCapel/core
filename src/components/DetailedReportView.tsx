@@ -105,6 +105,7 @@ type ViewMode = 'hierarchy' | 'table' | 'stats';
 type FilterPeriod = 'todos' | 'hoy' | 'semana' | 'mes' | 'trimestre' | 'año' | 'personalizado';
 type SortField = 'reportNumber' | 'date' | 'tipo' | 'estado' | 'kilometraje';
 type SortOrder = 'asc' | 'desc';
+type StatsListType = 'total' | 'completados' | 'pendientes' | 'enProgreso' | 'kmTotal' | 'kmPromedio';
 
 const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user, initialReportNumber, onBack }) => {
   // Estados de vista
@@ -133,6 +134,10 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
   // Estados de ordenamiento
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
+  // Estados para listado de reportes por estadistica
+  const [statsListOpen, setStatsListOpen] = useState(false);
+  const [statsListType, setStatsListType] = useState<StatsListType | null>(null);
 
   // Cargar datos reales desde reportStorage
   const [regionsData, setRegionsData] = useState<Region[]>([]);
@@ -651,6 +656,61 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       promedioKm: filteredReports.length > 0 ? totalKm / filteredReports.length : 0
     };
   }, [filteredReports]);
+
+  const statsListTitle = useMemo(() => {
+    switch (statsListType) {
+      case 'total':
+        return 'Listado de informes (total)';
+      case 'completados':
+        return 'Listado de informes completados';
+      case 'pendientes':
+        return 'Listado de informes pendientes';
+      case 'enProgreso':
+        return 'Listado de informes en progreso';
+      case 'kmTotal':
+        return 'Listado de informes (km totales)';
+      case 'kmPromedio':
+        return 'Listado de informes (km promedio)';
+      default:
+        return '';
+    }
+  }, [statsListType]);
+
+  const statsListReports = useMemo(() => {
+    if (!statsListType) return [];
+
+    let base = filteredReports;
+    if (statsListType === 'completados') {
+      base = filteredReports.filter(r => r.estado === 'completado' || r.estado === 'aprobado');
+    }
+    if (statsListType === 'pendientes') {
+      base = filteredReports.filter(r => r.estado === 'pendiente' || r.estado === 'borrador');
+    }
+    if (statsListType === 'enProgreso') {
+      base = filteredReports.filter(r => r.estado === 'en_revision');
+    }
+
+    return [...base].sort((a, b) => {
+      const rawA = a.fechaProyecto || a.fechaCreacion || a.date || '';
+      const rawB = b.fechaProyecto || b.fechaCreacion || b.date || '';
+      const dateA = rawA ? new Date(rawA).getTime() : 0;
+      const dateB = rawB ? new Date(rawB).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [filteredReports, statsListType]);
+
+  const openStatsList = (type: StatsListType) => {
+    setStatsListType(type);
+    setStatsListOpen(true);
+  };
+
+  const getReportStartDate = (report: Report): string => {
+    const rawDate = report.fechaProyecto || report.fechaCreacion;
+    if (rawDate) {
+      return new Date(rawDate).toLocaleDateString('es-ES');
+    }
+    return report.date || 'N/A';
+  };
 
   // Funciones de utilidad
   const limpiarFiltros = () => {
@@ -1348,42 +1408,108 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
 
       {/* Estadísticas resumidas */}
       <div className="stats-summary-compact">
-        <div className="stat-box-compact">
+        <div
+          className="stat-box-compact"
+          role="button"
+          tabIndex={0}
+          onClick={() => openStatsList('total')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openStatsList('total');
+            }
+          }}
+        >
           <div className="stat-icon-compact">📊</div>
           <div className="stat-text-compact">
             <div className="stat-value-compact">{stats.total}</div>
             <div className="stat-label-compact">Total Informes</div>
           </div>
         </div>
-        <div className="stat-box-compact">
+        <div
+          className="stat-box-compact"
+          role="button"
+          tabIndex={0}
+          onClick={() => openStatsList('completados')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openStatsList('completados');
+            }
+          }}
+        >
           <div className="stat-icon-compact">✅</div>
           <div className="stat-text-compact">
             <div className="stat-value-compact">{stats.completados}</div>
             <div className="stat-label-compact">Completados</div>
           </div>
         </div>
-        <div className="stat-box-compact">
+        <div
+          className="stat-box-compact"
+          role="button"
+          tabIndex={0}
+          onClick={() => openStatsList('pendientes')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openStatsList('pendientes');
+            }
+          }}
+        >
           <div className="stat-icon-compact">⏳</div>
           <div className="stat-text-compact">
             <div className="stat-value-compact">{stats.pendientes}</div>
             <div className="stat-label-compact">Pendientes</div>
           </div>
         </div>
-        <div className="stat-box-compact">
+        <div
+          className="stat-box-compact"
+          role="button"
+          tabIndex={0}
+          onClick={() => openStatsList('enProgreso')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openStatsList('enProgreso');
+            }
+          }}
+        >
           <div className="stat-icon-compact">🔄</div>
           <div className="stat-text-compact">
             <div className="stat-value-compact">{stats.enProgreso}</div>
             <div className="stat-label-compact">En Progreso</div>
           </div>
         </div>
-        <div className="stat-box-compact">
+        <div
+          className="stat-box-compact"
+          role="button"
+          tabIndex={0}
+          onClick={() => openStatsList('kmTotal')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openStatsList('kmTotal');
+            }
+          }}
+        >
           <div className="stat-icon-compact">📏</div>
           <div className="stat-text-compact">
             <div className="stat-value-compact">{stats.totalKm.toFixed(1)}</div>
             <div className="stat-label-compact">Km Totales</div>
           </div>
         </div>
-        <div className="stat-box-compact">
+        <div
+          className="stat-box-compact"
+          role="button"
+          tabIndex={0}
+          onClick={() => openStatsList('kmPromedio')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openStatsList('kmPromedio');
+            }
+          }}
+        >
           <div className="stat-icon-compact">📐</div>
           <div className="stat-text-compact">
             <div className="stat-value-compact">{stats.promedioKm.toFixed(2)}</div>
@@ -1391,6 +1517,47 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           </div>
         </div>
       </div>
+
+      {statsListOpen && statsListType && (
+        <div className="stats-list-panel">
+          <div className="stats-list-header">
+            <div className="stats-list-title">
+              <h4>{statsListTitle}</h4>
+              <span className="stats-list-count">{statsListReports.length} reporte(s)</span>
+            </div>
+            <button className="stats-list-close" onClick={() => setStatsListOpen(false)} title="Cerrar">
+              ✕
+            </button>
+          </div>
+          <div className="stats-list-body">
+            {statsListReports.length === 0 ? (
+              <div className="stats-list-empty">No hay reportes para este criterio.</div>
+            ) : (
+              statsListReports.map((report) => (
+                <div key={report.id} className="stats-list-item">
+                  <div className="stats-list-main">
+                    <button
+                      type="button"
+                      className="stats-list-report stats-list-link"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        viewReport(report, e);
+                      }}
+                      title="Ver detalle del reporte"
+                    >
+                      #{report.numeroReporte || report.reportNumber}
+                    </button>
+                    <span className="stats-list-user">👤 {report.creadoPor || report.createdBy || 'N/A'}</span>
+                  </div>
+                  <div className="stats-list-date">
+                    📅 {getReportStartDate(report)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Barra de acciones y exportación */}
       <div className="actions-toolbar">
