@@ -1179,6 +1179,13 @@ const Dashboard: React.FC = () => {
           setShowDetailedReportView(false);
           setSelectedReportNumber(undefined);
         }}
+        onEditReport={(report: any) => {
+          // Cerrar la vista de detalles y abrir el formulario de edición
+          setShowDetailedReportView(false);
+          setSelectedReportNumber(undefined);
+          setInterventionToEdit(report);
+          setShowReportForm(true);
+        }}
         initialReportNumber={selectedReportNumber}
       />
     );
