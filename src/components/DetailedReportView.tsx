@@ -383,7 +383,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         });
       } else {
         // Reporte de un solo día
-        const fechaMostrar = report.fechaInicio || report.fechaProyecto || report.fechaCreacion;
+        // ✅ Priorizar fechaProyecto para mostrar la fecha real del día específico
+        // (importante para reportes multi-día guardados individualmente)
+        const fechaMostrar = report.fechaProyecto || report.fechaInicio || report.fechaCreacion;
         const formattedReport = {
           id: report.id,
           reportNumber: report.numeroReporte,
