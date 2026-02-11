@@ -289,7 +289,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         if (isTecnico) {
           // Técnicos ven TODOS sus reportes (completados Y pendientes)
           allReports = allReports.filter(report => 
-            report.creadoPor === user.username || report.usuarioId === user.username
+            report.usuarioId === user.username
           );
         }
         
@@ -308,7 +308,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         // Filtrar por rol si es técnico
         if (isTecnico) {
           allReports = allReports.filter(report => 
-            report.creadoPor === user.username || report.usuarioId === user.username
+            report.usuarioId === user.username
           );
         }
         

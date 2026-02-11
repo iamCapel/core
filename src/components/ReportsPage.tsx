@@ -207,7 +207,7 @@ const VehiculosView: React.FC<{ user: User; onOpenReport: (reportNumber: string)
       if (isTecnico) {
         // Técnicos ven TODOS sus reportes (incluidos sus propios pendientes)
         reportesFiltrados = reportes.filter(r => 
-          r.creadoPor === user.username || r.usuarioId === user.username
+          r.usuarioId === user.username
         );
       }
       
@@ -1110,7 +1110,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
       // Filtrar por usuario si es técnico
       const userPending = (user?.role === 'Técnico' || user?.role === 'tecnico')
         ? allPending.filter(report => 
-            report.usuarioId === user?.username || report.creadoPor === user?.username
+            report.usuarioId === user?.username
           )
         : allPending;
 
@@ -1180,7 +1180,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
       
       // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
       if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-        allReports = allReports.filter(report => report.creadoPor === user.username);
+        allReports = allReports.filter(report => report.usuarioId === user.username);
       }
     } catch (error) {
       console.error('Error cargando reportes de Firebase:', error);
@@ -1190,7 +1190,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
       
       // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
       if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-        allReports = allReports.filter(report => report.creadoPor === user.username);
+        allReports = allReports.filter(report => report.usuarioId === user.username);
       }
     }
 
@@ -1371,7 +1371,7 @@ const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport })
       
       // Filtrar por usuario si es técnico
       if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-        allReports = allReports.filter(report => report.creadoPor === user.username);
+        allReports = allReports.filter(report => report.usuarioId === user.username);
       }
 
       // Filtrar reportes del municipio

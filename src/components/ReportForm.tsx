@@ -909,6 +909,69 @@ const ReportForm: React.FC<ReportFormProps> = ({
     }
   };
 
+  // 📸 Función para manejar la carga de fotos
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, photoIndex: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Validar que sea una imagen
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor seleccione solo archivos de imagen');
+      return;
+    }
+    
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no debe superar los 5MB');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      
+      // Determinar la clave del día actual
+      const currentDayKey = diasTrabajo.length > 0 
+        ? diasTrabajo[diaActual] 
+        : (fechaReporte || new Date().toISOString().split('T')[0]);
+      
+      // Actualizar el estado de imagesPerDay
+      setImagesPerDay(prev => {
+        const dayImages = prev[currentDayKey] || [];
+        const updatedDayImages = [...dayImages];
+        updatedDayImages[photoIndex] = base64String;
+        
+        return {
+          ...prev,
+          [currentDayKey]: updatedDayImages
+        };
+      });
+      
+      console.log(`✅ Foto ${photoIndex + 1} cargada para el día ${currentDayKey}`);
+    };
+    
+    reader.readAsDataURL(file);
+  };
+
+  // 📸 Función para eliminar una foto
+  const handleRemovePhoto = (photoIndex: number) => {
+    const currentDayKey = diasTrabajo.length > 0 
+      ? diasTrabajo[diaActual] 
+      : (fechaReporte || new Date().toISOString().split('T')[0]);
+    
+    setImagesPerDay(prev => {
+      const dayImages = prev[currentDayKey] || [];
+      const updatedDayImages = dayImages.filter((_: any, idx: number) => idx !== photoIndex);
+      
+      return {
+        ...prev,
+        [currentDayKey]: updatedDayImages.length > 0 ? updatedDayImages : undefined
+      };
+    });
+    
+    console.log(`🗑️ Foto ${photoIndex + 1} eliminada del día ${currentDayKey}`);
+  };
+
   const limpiarFormulario = () => {
     setRegion('');
     setProvincia('');
@@ -933,6 +996,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
     setModeloVehiculoActual('');
     setFichaVehiculoActual('');
     setPlantillaValues({});
+    setImagesPerDay({}); // 📸 Limpiar fotos cargadas
   };
 
   const guardarIntervencion = () => {
@@ -2263,6 +2327,284 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 <div className="separator-line"></div>
               </div>
 
+              {/* 📸 SECCIÓN DE CARGA DE FOTOS (2 fotos máximo por día) */}
+              <div style={{ gridColumn: '1 / -1', marginBottom: '30px' }}>
+                <div style={{
+                  backgroundColor: '#f8f9fa',
+                  border: '2px solid var(--secondary-orange)',
+                  borderRadius: '12px',
+                  padding: '25px'
+                }}>
+                  <h3 style={{
+                    color: 'var(--primary-orange)',
+                    margin: '0 0 20px 0',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    📸 Evidencia Fotográfica
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: 'normal',
+                      color: '#666',
+                      backgroundColor: '#fff3cd',
+                      padding: '4px 12px',
+                      borderRadius: '20px'
+                    }}>
+                      Máximo 2 fotos por día
+                    </span>
+                  </h3>
+                  
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: '20px'
+                  }}>
+                    {/* Foto 1 */}
+                    <div style={{
+                      backgroundColor: 'white',
+                      border: '2px dashed var(--primary-orange)',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      textAlign: 'center',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}>
+                      {(() => {
+                        const currentDayKey = diasTrabajo.length > 0 
+                          ? diasTrabajo[diaActual] 
+                          : (fechaReporte || new Date().toISOString().split('T')[0]);
+                        const foto1 = imagesPerDay[currentDayKey]?.[0];
+                        
+                        return foto1 ? (
+                          <div style={{ position: 'relative' }}>
+                            <img 
+                              src={foto1} 
+                              alt="Foto 1" 
+                              style={{
+                                width: '100%',
+                                height: '250px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                marginBottom: '10px'
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                              <label style={{
+                                padding: '8px 16px',
+                                backgroundColor: 'var(--primary-orange)',
+                                color: 'white',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                display: 'inline-block'
+                              }}>
+                                🔄 Cambiar
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handlePhotoUpload(e, 0)}
+                                  style={{ display: 'none' }}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePhoto(0)}
+                                style={{
+                                  padding: '8px 16px',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                🗑️ Eliminar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '15px',
+                            cursor: 'pointer',
+                            padding: '40px 20px'
+                          }}>
+                            <div style={{
+                              width: '80px',
+                              height: '80px',
+                              backgroundColor: 'var(--pale-orange)',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '36px'
+                            }}>
+                              📷
+                            </div>
+                            <div>
+                              <div style={{
+                                color: 'var(--primary-orange)',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                marginBottom: '5px'
+                              }}>
+                                Cargar Foto 1
+                              </div>
+                              <div style={{
+                                color: '#666',
+                                fontSize: '13px'
+                              }}>
+                                Click para seleccionar archivo
+                              </div>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handlePhotoUpload(e, 0)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Foto 2 */}
+                    <div style={{
+                      backgroundColor: 'white',
+                      border: '2px dashed var(--primary-orange)',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      textAlign: 'center',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}>
+                      {(() => {
+                        const currentDayKey = diasTrabajo.length > 0 
+                          ? diasTrabajo[diaActual] 
+                          : (fechaReporte || new Date().toISOString().split('T')[0]);
+                        const foto2 = imagesPerDay[currentDayKey]?.[1];
+                        
+                        return foto2 ? (
+                          <div style={{ position: 'relative' }}>
+                            <img 
+                              src={foto2} 
+                              alt="Foto 2" 
+                              style={{
+                                width: '100%',
+                                height: '250px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                marginBottom: '10px'
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                              <label style={{
+                                padding: '8px 16px',
+                                backgroundColor: 'var(--primary-orange)',
+                                color: 'white',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                display: 'inline-block'
+                              }}>
+                                🔄 Cambiar
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handlePhotoUpload(e, 1)}
+                                  style={{ display: 'none' }}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePhoto(1)}
+                                style={{
+                                  padding: '8px 16px',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '13px',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                🗑️ Eliminar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '15px',
+                            cursor: 'pointer',
+                            padding: '40px 20px'
+                          }}>
+                            <div style={{
+                              width: '80px',
+                              height: '80px',
+                              backgroundColor: 'var(--pale-orange)',
+                              borderRadius: '50%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '36px'
+                            }}>
+                              📷
+                            </div>
+                            <div>
+                              <div style={{
+                                color: 'var(--primary-orange)',
+                                fontSize: '16px',
+                                fontWeight: '600',
+                                marginBottom: '5px'
+                              }}>
+                                Cargar Foto 2
+                              </div>
+                              <div style={{
+                                color: '#666',
+                                fontSize: '13px'
+                              }}>
+                                Click para seleccionar archivo
+                              </div>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handlePhotoUpload(e, 1)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    marginTop: '15px',
+                    padding: '10px',
+                    backgroundColor: '#e7f3ff',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    color: '#004085'
+                  }}>
+                    💡 <strong>Nota:</strong> Las fotos se asociarán al día que estás editando actualmente.
+                    Formato JPG, PNG o WebP. Tamaño máximo: 5MB por foto.
+                  </div>
+                </div>
+              </div>
+
               {/* Campo de observaciones */}
               <div className="template-field-card" style={{ gridColumn: '1 / -1' }}>
                 <div className="field-header">
@@ -2291,9 +2633,12 @@ const ReportForm: React.FC<ReportFormProps> = ({
               </div>
 
               {/* 📸 VISTA PREVIA DE FOTOS (Solo visualización de fotos de app móvil) */}
-              {/* Log de diagnóstico */}
-              {console.log('🔍 RENDER - Estado actual de imagesPerDay:', imagesPerDay)}
-              {console.log('🔍 RENDER - Cantidad de fotos:', imagesPerDay ? Object.values(imagesPerDay).flat().length : 0)}
+              {/* Diagnóstico de fotos en consola */}
+              {(() => {
+                console.log('🔍 RENDER - Estado actual de imagesPerDay:', imagesPerDay);
+                console.log('🔍 RENDER - Cantidad de fotos:', imagesPerDay ? Object.values(imagesPerDay).flat().length : 0);
+                return null;
+              })()}
               
               {imagesPerDay && Object.keys(imagesPerDay).length > 0 ? (
                 <div style={{ gridColumn: '1 / -1', marginTop: '30px' }}>

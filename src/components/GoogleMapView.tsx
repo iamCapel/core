@@ -398,7 +398,7 @@ const GoogleMapView: React.FC<GoogleMapViewProps> = ({ user, onBack }) => {
     
     // Filtrar reportes para usuarios técnicos - solo ven sus propios reportes
     if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-      reports = reports.filter(report => report.creadoPor === user.username);
+      reports = reports.filter(report => report.usuarioId === user.username);
     }
     
     const interventionsData = reports.map((report, index) => ({

@@ -39,7 +39,7 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
   const loadUserReports = useCallback(() => {
     // Obtener todos los reportes del usuario
     const allReports = reportStorage.getAllReports();
-    const userReports = allReports.filter(report => report.creadoPor === username);
+    const userReports = allReports.filter(report => report.usuarioId === username);
 
     // Agrupar por fecha
     const reportsByDateMap = new Map<string, any[]>();
@@ -101,7 +101,7 @@ const MyReportsCalendar: React.FC<MyReportsCalendarProps> = ({ username, onClose
       
       // Filtrar solo los del usuario actual
       const userPending = allPending.filter(report => 
-        report.usuarioId === username || report.creadoPor === username
+        report.usuarioId === username
       );
       console.log('✅ Reportes pendientes del usuario:', userPending.length);
       

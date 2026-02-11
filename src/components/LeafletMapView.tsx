@@ -294,7 +294,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       // Filtrar reportes para usuarios técnicos
       let filteredReports = reports;
       if (user?.role === 'Técnico' || user?.role === 'tecnico') {
-        filteredReports = reports.filter(report => report.creadoPor === user.username);
+        filteredReports = reports.filter(report => report.usuarioId === user.username);
       }
 
       // Procesar datos según el modo
