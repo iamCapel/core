@@ -1085,52 +1085,59 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                         gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                         gap: '15px'
                       }}>
-                        {images.map((image: any, idx: number) => (
-                          <div key={idx} className="image-item" style={{
-                            border: '3px solid #667eea',
-                            borderRadius: '10px',
-                            overflow: 'hidden',
-                            cursor: 'pointer',
-                            transition: 'transform 0.2s',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                          }}
-                          onClick={() => openPhotoInNewTab(image.url)}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                          >
-                            <img 
-                              src={image.url} 
-                              alt={`Foto ${idx + 1} - ${dayLabel}`} 
-                              loading="lazy"
-                              style={{
-                                width: '100%',
-                                height: '180px',
-                                objectFit: 'cover',
-                                display: 'block'
-                              }}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="180"%3E%3Crect fill="%23e9ecef" width="200" height="180"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="14"%3ENo disponible%3C/text%3E%3C/svg%3E';
-                              }}
-                            />
-                            <div style={{
-                              padding: '10px',
-                              fontSize: '11px',
-                              color: '#666',
-                              textAlign: 'center',
-                              backgroundColor: '#f8f9fa',
-                              borderTop: '1px solid #dee2e6'
-                            }}>
-                              <div style={{ fontWeight: '600', marginBottom: '4px' }}>Foto {idx + 1}</div>
-                              <div>{new Date(image.timestamp).toLocaleString('es-ES', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}</div>
+                        {images
+                          .filter((image: any) => image && image.url)
+                          .map((image: any, idx: number) => (
+                            <div key={idx} className="image-item" style={{
+                              border: '3px solid #667eea',
+                              borderRadius: '10px',
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              transition: 'transform 0.2s',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                            }}
+                            onClick={() => openPhotoInNewTab(image.url)}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                              <img 
+                                src={image.url} 
+                                alt={`Foto ${idx + 1} - ${dayLabel}`} 
+                                loading="lazy"
+                                style={{
+                                  width: '100%',
+                                  height: '180px',
+                                  objectFit: 'cover',
+                                  display: 'block'
+                                }}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="180"%3E%3Crect fill="%23e9ecef" width="200" height="180"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="14"%3ENo disponible%3C/text%3E%3C/svg%3E';
+                                }}
+                              />
+                              <div style={{
+                                padding: '10px',
+                                fontSize: '11px',
+                                color: '#666',
+                                textAlign: 'center',
+                                backgroundColor: '#f8f9fa',
+                                borderTop: '1px solid #dee2e6'
+                              }}>
+                                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Foto {idx + 1}</div>
+                                <div>{new Date(image.timestamp).toLocaleString('es-ES', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}</div>
+                              </div>
                             </div>
+                          ))}
+                        {images.filter((image: any) => !image || !image.url).length > 0 && (
+                          <div style={{ color: 'red', fontSize: '13px', marginTop: '10px' }}>
+                            ⚠️ Algunas fotos no se pueden mostrar porque faltan datos o la URL.
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   );
@@ -1140,12 +1147,43 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
               <div className="report-section">
                 <h3 className="section-title">📸 EVIDENCIA FOTOGRÁFICA ({selectedReport.images.length} fotos)</h3>
                 <div className="images-grid">
-                  {selectedReport.images.map((img, idx) => (
-                    <div key={idx} className="image-item">
-                      <img src={img} alt={`Imagen ${idx + 1}`} loading="lazy" />
-                      <span className="image-label">Imagen {idx + 1}</span>
+                  {selectedReport.images
+                    .filter((img) => !!img)
+                    .map((img, idx) => (
+                      <div key={idx} className="image-item" style={{
+                        border: '3px solid #667eea',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      }}
+                      onClick={() => openPhotoInNewTab(img)}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <img 
+                          src={img} 
+                          alt={`Imagen ${idx + 1}`} 
+                          loading="lazy"
+                          style={{
+                            width: '100%',
+                            height: '180px',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="180"%3E%3Crect fill="%23e9ecef" width="200" height="180"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="14"%3ENo disponible%3C/text%3E%3C/svg%3E';
+                          }}
+                        />
+                        <span className="image-label">Imagen {idx + 1}</span>
+                      </div>
+                    ))}
+                  {selectedReport.images.filter((img) => !img).length > 0 && (
+                    <div style={{ color: 'red', fontSize: '13px', marginTop: '10px' }}>
+                      ⚠️ Algunas fotos no se pueden mostrar porque faltan datos o la URL.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             ) : null}
