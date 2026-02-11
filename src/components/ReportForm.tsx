@@ -1074,12 +1074,13 @@ const ReportForm: React.FC<ReportFormProps> = ({
                 vehiculos: reporteDia.vehiculos || [],
                 imagesPerDay: imagesPerDay && Object.keys(imagesPerDay).length > 0 ? imagesPerDay : undefined,
                 estado: 'completado' as const,
+                // ✅ FECHA ESPECÍFICA del día - ESTO ES LO MÁS IMPORTANTE
                 fechaProyecto: dia,
-                esProyectoMultiDia: true,
-                // 📅 Guardar fechas de inicio y fin seleccionadas en el formulario
+                // Metadatos del proyecto (NO usar para expandir)
+                esProyectoMultiDia: false, // ✅ FALSE porque este ya es UN DÍA individual
                 fechaInicio: fechaInicio,
-                fechaFinal: fechaFinal,
-                diasTrabajo: diasTrabajo
+                fechaFinal: fechaFinal
+                // ✅ NO incluir diasTrabajo - este reporte ya es de un día específico
               };
               
               // Guardar como COMPLETADO en Firebase

@@ -338,8 +338,15 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       const longitudIntervencion = parseFloat(report.metricData?.longitud_intervencion || '0');
       const km = longitudIntervencion || 0;
       
-      // Si es proyecto multi-día, expandir en múltiples entradas
-      if (report.esProyectoMultiDia && report.diasTrabajo && report.diasTrabajo.length > 0) {
+      // Si es proyecto multi-día CON reportesPorDia (formato antiguo), expandir en múltiples entradas
+      // NOTA: Los reportes guardados individualmente ya tienen fechaProyecto, NO deben expandirse
+      const debeExpandirse = report.esProyectoMultiDia && 
+                             report.diasTrabajo && 
+                             report.diasTrabajo.length > 0 && 
+                             report.reportesPorDia && 
+                             Object.keys(report.reportesPorDia).length > 0;
+      
+      if (debeExpandirse) {
         report.diasTrabajo.forEach((dia: string, index: number) => {
           const dayData = report.reportesPorDia?.[dia] || {};
           
