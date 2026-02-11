@@ -1162,30 +1162,51 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                   console.log('🔍 EDITAR - images (legacy):', selectedReport?.images);
                   
                   // 🔄 MIGRACIÓN: Convertir formato legacy a imagesPerDay si es necesario
-                  let reportToEdit = selectedReport;
+                  let imagesPerDayToUse = selectedReport?.imagesPerDay || {};
                   if (selectedReport && selectedReport.images && Array.isArray(selectedReport.images) && selectedReport.images.length > 0) {
                     if (!selectedReport.imagesPerDay || Object.keys(selectedReport.imagesPerDay).length === 0) {
                       console.log('🔄 MIGRACIÓN: Convirtiendo images (legacy) → imagesPerDay');
-                      const convertedImages = {
+                      imagesPerDayToUse = {
                         'general': selectedReport.images.map((url: string, index: number) => ({
                           url: url,
                           timestamp: new Date().toISOString()
                         }))
                       };
-                      reportToEdit = {
-                        ...selectedReport,
-                        imagesPerDay: convertedImages
-                      };
-                      console.log('✅ MIGRACIÓN: Fotos convertidas:', reportToEdit.imagesPerDay);
-                      console.log('✅ MIGRACIÓN: Total fotos:', convertedImages.general.length);
+                      console.log('✅ MIGRACIÓN: Fotos convertidas:', imagesPerDayToUse);
                     }
                   }
                   
+                  // 🔄 MAPEAR propiedades al formato que ReportForm espera
+                  const reportToEdit = {
+                    id: selectedReport.id,
+                    _pendingReportId: selectedReport.id, // Para que se actualice en lugar de crear nuevo
+                    region: selectedReport.region,
+                    provincia: selectedReport.province, // province → provincia
+                    distrito: selectedReport.district, // district → distrito
+                    municipio: selectedReport.municipio,
+                    sector: selectedReport.sector,
+                    tipoIntervencion: selectedReport.tipoIntervencion,
+                    subTipoCanal: selectedReport.subTipoCanal,
+                    observaciones: selectedReport.observations || '', // observations → observaciones
+                    metricData: selectedReport.metricData || {},
+                    gpsData: selectedReport.gpsData || {},
+                    vehiculos: selectedReport.vehiculos || [],
+                    fechaReporte: selectedReport.fechaProyecto || selectedReport.fechaCreacion?.split('T')[0] || '',
+                    fechaInicio: selectedReport.fechaProyecto || '',
+                    fechaFinal: '',
+                    estado: selectedReport.estado,
+                    imagesPerDay: imagesPerDayToUse,
+                    numeroReporte: selectedReport.numeroReporte,
+                    creadoPor: selectedReport.creadoPor,
+                    _isEditingPending: selectedReport.estado === 'pendiente'
+                  };
+                  
                   const totalFotos = reportToEdit?.imagesPerDay ? Object.values(reportToEdit.imagesPerDay).flat().length : 0;
                   console.log('🔍 EDITAR - Cantidad de fotos FINAL:', totalFotos);
+                  console.log('✅ EDITAR - Objeto mapeado para ReportForm:', reportToEdit);
                   
                   if (onEditReport) {
-                    onEditReport(reportToEdit);
+                    onEditReport(reportToEdit as any);
                   } else {
                     alert('No se ha configurado la función de edición');
                   }
