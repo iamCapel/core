@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { pendingReportStorage } from '../services/pendingReportStorage';
 import { userStorage } from '../services/userStorage';
 import * as firebaseUserStorage from '../services/firebaseUserStorage';
+import firebaseReportStorage from '../services/firebaseReportStorage';
 import { sendWelcomeEmail } from '../services/emailService';
+import { UserRole } from '../types/userRoles';
 import './UsersPage.css';
 import PendingReportsModal from './PendingReportsModal';
 
 interface User {
   username: string;
   name: string;
+  role?: UserRole;
 }
 
 interface UsersPageProps {
@@ -108,13 +111,13 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
       const allPending = await firebaseReportStorage.getReportsByEstado('pendiente');
       
       // Filtrar por usuario si es técnico
-      const userPending = (user?.role === 'Técnico' || user?.role === 'tecnico')
-        ? allPending.filter(report => 
+      const userPending = (user?.role === UserRole.TECNICO)
+        ? allPending.filter((report: any) => 
             report.usuarioId === user?.username || report.creadoPor === user?.username
           )
         : allPending;
 
-      return userPending.map(report => ({
+      return userPending.map((report: any) => ({
         id: report.id,
         reportNumber: report.numeroReporte || `DCR-${report.id.slice(-6)}`,
         timestamp: report.timestamp || report.fechaCreacion,

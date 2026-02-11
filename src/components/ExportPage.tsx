@@ -62,7 +62,7 @@ const ExportPage: React.FC<ExportPageProps> = ({ user, onBack }) => {
       const allPending = await firebaseReportStorage.getReportsByEstado('pendiente');
       
       // Filtrar por usuario si es técnico
-      const userPending = (user?.role === 'Técnico' || user?.role === 'tecnico')
+      const userPending = (user?.role === UserRole.TECNICO)
         ? allPending.filter(report => 
             report.usuarioId === user?.username || report.creadoPor === user?.username
           )
