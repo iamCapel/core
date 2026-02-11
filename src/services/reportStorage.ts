@@ -287,8 +287,8 @@ class ReportStorage {
         savedReport = {
           id: encryptedId, // Usar ID encriptado del número de reporte
           numeroReporte: reportNumber,
-          timestamp: now,
-          fechaCreacion: now,
+          timestamp: report.timestamp || now, // ✅ Usar timestamp del reporte si existe
+          fechaCreacion: report.fechaCreacion || now, // ✅ Usar fechaCreacion del reporte si existe
           creadoPor: report.creadoPor || 'Sistema',
           usuarioId: report.usuarioId || report.creadoPor || 'sistema',
           region: report.region || '',
@@ -308,7 +308,14 @@ class ReportStorage {
           estado: report.estado || 'completado',
           version: 1,
           etiquetas: report.etiquetas,
-          categorias: report.categorias
+          categorias: report.categorias,
+          // ✅ CAMPOS MULTI-DÍA - ¡ESTOS FALTABAN!
+          fechaProyecto: report.fechaProyecto,
+          fechaInicio: report.fechaInicio,
+          fechaFinal: report.fechaFinal,
+          esProyectoMultiDia: report.esProyectoMultiDia,
+          diasTrabajo: report.diasTrabajo,
+          imagesPerDay: report.imagesPerDay
         };
 
         // Generar archivos PDF, Excel y Word automáticamente (DESACTIVADO TEMPORALMENTE)
