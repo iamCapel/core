@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Reportes de Capel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #F59E0B; }
+        .report-card {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+        }
+        .report-card.pendiente {
+            border-left-color: #F59E0B;
+        }
+        .fecha { color: #F59E0B; font-weight: bold; }
+        .tipo { color: #17a2b8; }
+        .estado-completado { color: #28a745; font-weight: bold; }
+        .estado-pendiente { color: #F59E0B; font-weight: bold; }
+        button {
+            background: #F59E0B;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #d97706; }
+        .loading { color: #F59E0B; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #0f3460; color: #F59E0B; }
+        .summary { background: #0f3460; padding: 20px; border-radius: 10px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Verificar Reportes de capel</h1>
+    
+    <button onclick="cargarReportes()">🔄 Cargar Reportes de Firebase</button>
+    <button onclick="cargarReportesFebrero()">📅 Solo Febrero 2026</button>
+    
+    <div id="summary" class="summary" style="display:none;"></div>
+    <div id="output"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Configuración de Firebase (la misma del proyecto)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCPD0d6v-DIlXdpPxUbCqvKoZWvjXp0Fzc",
+            authDomain: "mopc-sistemas.firebaseapp.com",
+            projectId: "mopc-sistemas",
+            storageBucket: "mopc-sistemas.firebasestorage.app",
+            messagingSenderId: "1032157255922",
+            appId: "1:1032157255922:web:d0e4e4c8f8f8f8f8f8f8f8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.cargarReportes = async function() {
+            const output = document.getElementById('output');
+            const summary = document.getElementById('summary');
+            output.innerHTML = '<p class="loading">⏳ Cargando reportes...</p>';
+            
+            try {
+                const q = query(
+                    collection(db, "reports"),
+                    where("usuarioId", "==", "capel")
+                );
+                
+                const snapshot = await getDocs(q);
+                const reportes = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                
+                // Ordenar por fecha
+                reportes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                mostrarReportes(reportes);
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                console.error(error);
+            }
+        };
+
+        window.cargarReportesFebrero = async function() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p class="loading">⏳ Cargando reportes de febrero 2026...</p>';
+            
+            try {
+                const q = query(
+                    collection(db, "reports"),
+                    where("usuarioId", "==", "capel")
+                );
+                
+                const snapshot = await getDocs(q);
+                let reportes = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                
+                // Filtrar solo febrero 2026
+                reportes = reportes.filter(r => {
+                    const fecha = r.fechaProyecto || r.timestamp;
+                    return fecha && fecha.startsWith('2026-02');
+                });
+                
+                // Ordenar por fecha
+                reportes.sort((a, b) => {
+                    const fechaA = a.fechaProyecto || a.timestamp;
+                    const fechaB = b.fechaProyecto || b.timestamp;
+                    return new Date(fechaA) - new Date(fechaB);
+                });
+                
+                mostrarReportes(reportes, true);
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+                console.error(error);
+            }
+        };
+
+        function mostrarReportes(reportes, soloFebrero = false) {
+            const output = document.getElementById('output');
+            const summary = document.getElementById('summary');
+            
+            if (reportes.length === 0) {
+                output.innerHTML = '<p>No se encontraron reportes.</p>';
+                summary.style.display = 'none';
+                return;
+            }
+            
+            // Contar por estado
+            const completados = reportes.filter(r => r.estado === 'completado').length;
+            const pendientes = reportes.filter(r => r.estado === 'pendiente').length;
+            
+            // Fechas únicas
+            const fechasUnicas = [...new Set(reportes.map(r => (r.fechaProyecto || r.timestamp || '').split('T')[0]))];
+            
+            summary.style.display = 'block';
+            summary.innerHTML = `
+                <h2>📊 Resumen</h2>
+                <p><strong>Total reportes:</strong> ${reportes.length}</p>
+                <p><strong class="estado-completado">✅ Completados:</strong> ${completados}</p>
+                <p><strong class="estado-pendiente">🟠 Pendientes:</strong> ${pendientes}</p>
+                <p><strong>📅 Fechas con reportes:</strong> ${fechasUnicas.join(', ')}</p>
+            `;
+            
+            let html = '<table><tr><th>Fecha</th><th>Tipo</th><th>Estado</th><th>Provincia</th><th>Fotos</th><th>ID</th></tr>';
+            
+            for (const r of reportes) {
+                const fecha = (r.fechaProyecto || r.timestamp || 'Sin fecha').split('T')[0];
+                const estadoClass = r.estado === 'completado' ? 'estado-completado' : 'estado-pendiente';
+                const estadoIcon = r.estado === 'completado' ? '✅' : '🟠';
+                
+                // Contar fotos
+                let numFotos = 0;
+                if (r.imagesPerDay) {
+                    Object.values(r.imagesPerDay).forEach(arr => {
+                        if (Array.isArray(arr)) numFotos += arr.length;
+                    });
+                }
+                
+                html += `<tr>
+                    <td class="fecha">${fecha}</td>
+                    <td class="tipo">${r.tipoIntervencion || '-'}</td>
+                    <td class="${estadoClass}">${estadoIcon} ${r.estado}</td>
+                    <td>${r.provincia || '-'}</td>
+                    <td>${numFotos > 0 ? '📷 ' + numFotos : '-'}</td>
+                    <td style="font-size:10px;color:#666">${r.id?.substring(0,12)}...</td>
+                </tr>`;
+            }
+            
+            html += '</table>';
+            output.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
