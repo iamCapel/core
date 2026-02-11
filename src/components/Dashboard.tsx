@@ -5,6 +5,7 @@ import ExportPage from './ExportPage';
 import UsersPage from './UsersPage';
 import GoogleMapView from './GoogleMapView';
 import LeafletMapView from './LeafletMapView';
+import DetailedReportView from './DetailedReportView';
 import PendingReportsModal from './PendingReportsModal';
 import MyReportsCalendar from './MyReportsCalendar';
 import { UserRole, applyUserTheme, getRoleBadge } from '../types/userRoles';
@@ -536,6 +537,10 @@ const Dashboard: React.FC = () => {
   const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
   
+  // Estado para DetailedReportView
+  const [showDetailedReportView, setShowDetailedReportView] = useState(false);
+  const [selectedReportNumber, setSelectedReportNumber] = useState<string | undefined>(undefined);
+  
   // Estado para el menú desplegable del usuario
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -618,67 +623,30 @@ const Dashboard: React.FC = () => {
   // Función para continuar un reporte pendiente
   const handleContinuePendingReport = async (reportId: string) => {
     try {
-      console.log('📋 Cargando reporte pendiente desde Firebase:', reportId);
+      console.log('📋 Abriendo detalle del reporte pendiente:', reportId);
       
-      // Cargar desde la colección principal de reportes (no desde pendingReports)
+      // Cargar desde la colección principal de reportes
       const pendingReport = await firebaseReportStorage.getReport(reportId);
       
       console.log('📦 Datos del reporte desde Firebase:', pendingReport);
       
-      // 📸 CARGAR IMÁGENES del reporte
-      let imagesPerDay: Record<string, any> = {};
-      try {
-        console.log('📸 Cargando imágenes del reporte...');
-        const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
-        imagesPerDay = await firebaseImageStorage.getReportImages(reportId);
-        console.log('✅ Imágenes cargadas:', imagesPerDay);
-      } catch (imageError) {
-        console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
-      }
-      
-      if (pendingReport && pendingReport.estado === 'pendiente') {
-        // Convertir el reporte completo a formato de edición
-        const dataToLoad = {
-          id: pendingReport.id,
-          region: pendingReport.region,
-          provincia: pendingReport.provincia,
-          distrito: pendingReport.distrito,
-          municipio: pendingReport.municipio,
-          sector: pendingReport.sector,
-          tipoIntervencion: pendingReport.tipoIntervencion,
-          subTipoCanal: pendingReport.subTipoCanal,
-          observaciones: pendingReport.observaciones,
-          metricData: pendingReport.metricData || {},
-          gpsData: pendingReport.gpsData || {},
-          vehiculos: pendingReport.vehiculos || [],
-          fechaInicio: pendingReport.fechaInicio || (pendingReport.fechaCreacion ? pendingReport.fechaCreacion.split('T')[0] : ''),
-          fechaFinal: pendingReport.fechaFinal || '',
-          fechaReporte: pendingReport.fechaCreacion ? pendingReport.fechaCreacion.split('T')[0] : '',
-          estado: pendingReport.estado,
-          // Restaurar datos multi-día si existen
-          diasTrabajo: pendingReport.diasTrabajo || [],
-          reportesPorDia: pendingReport.reportesPorDia || {},
-          diaActual: pendingReport.diaActual || 0,
-          // 📸 Restaurar imágenes cargadas
-          imagesPerDay: imagesPerDay,
-          _isEditingPending: true // Marca para identificar que se está editando un pendiente
-        };
+      if (pendingReport) {
+        // Obtener el número de reporte para pasarlo a DetailedReportView
+        const reportNumber = pendingReport.numeroReporte || pendingReport.id;
+        console.log('📋 Número de reporte:', reportNumber);
         
-        console.log('✅ Datos a cargar en el formulario:', dataToLoad);
-        console.log('🔑 Claves disponibles:', Object.keys(dataToLoad));
-        console.log('📦 Objeto completo:', JSON.stringify(dataToLoad, null, 2));
-        
-        setInterventionToEdit(dataToLoad);
+        // Cerrar modales y abrir DetailedReportView
+        setSelectedReportNumber(reportNumber);
         setShowPendingModal(false);
-        setShowMyReportsModal(false); // Cerrar el modal de "Mis Reportes"
-        setShowReportForm(true);
+        setShowMyReportsModal(false);
+        setShowDetailedReportView(true);
       } else {
-        console.error('❌ No se encontró el reporte pendiente en Firebase:', reportId);
-        alert('No se pudo cargar el reporte pendiente');
+        console.error('❌ No se encontró el reporte en Firebase:', reportId);
+        alert('No se pudo cargar el reporte');
       }
     } catch (error) {
-      console.error('❌ Error al cargar el reporte pendiente desde Firebase:', error);
-      alert('Error al cargar el reporte pendiente');
+      console.error('❌ Error al cargar el reporte desde Firebase:', error);
+      alert('Error al cargar el reporte');
     }
   };
 
@@ -1196,6 +1164,24 @@ const Dashboard: React.FC = () => {
   // Si se debe mostrar Leaflet Maps
   if (showLeafletMapView && user) {
     return <LeafletMapView user={user} onBack={handleBackToDashboard} />;
+  }
+
+  // Si se debe mostrar DetailedReportView (vista de detalles del reporte)
+  if (showDetailedReportView && user) {
+    return (
+      <DetailedReportView 
+        user={user} 
+        onClose={() => {
+          setShowDetailedReportView(false);
+          setSelectedReportNumber(undefined);
+        }}
+        onBack={() => {
+          setShowDetailedReportView(false);
+          setSelectedReportNumber(undefined);
+        }}
+        initialReportNumber={selectedReportNumber}
+      />
+    );
   }
 
   // pantalla de login si no hay usuario
