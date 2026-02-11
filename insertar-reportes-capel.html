@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insertar Reportes de Capel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 { color: #F59E0B; }
+        button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #218838; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #c82333; }
+        .log { 
+            background: #0f3460; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        .warn { color: #F59E0B; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; color: #F59E0B; }
+        input, select, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border-radius: 5px; 
+            border: 1px solid #333;
+            background: #16213e;
+            color: white;
+            font-size: 14px;
+        }
+        .report-preview {
+            background: #16213e;
+            border: 2px solid #F59E0B;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Insertar Reportes de Capel - Febrero 2026</h1>
+    
+    <p class="warn">⚠️ Este script insertará los 3 reportes de los días 3, 4 y 5 de febrero 2026 directamente en Firebase.</p>
+    
+    <div class="form-group">
+        <label>Región:</label>
+        <input type="text" id="region" value="Cibao Norte" />
+    </div>
+    
+    <div class="form-group">
+        <label>Provincia:</label>
+        <input type="text" id="provincia" value="Santiago" />
+    </div>
+    
+    <div class="form-group">
+        <label>Municipio:</label>
+        <input type="text" id="municipio" value="" placeholder="Ej: Santiago de los Caballeros" />
+    </div>
+    
+    <div class="form-group">
+        <label>Distrito:</label>
+        <input type="text" id="distrito" value="" placeholder="Ej: Distrito Municipal" />
+    </div>
+    
+    <div class="form-group">
+        <label>Sector:</label>
+        <input type="text" id="sector" value="" placeholder="Ej: Sector Norte" />
+    </div>
+    
+    <div class="form-group">
+        <label>Tipo de Intervención:</label>
+        <select id="tipoIntervencion">
+            <option value="Limpieza de Cunetas">Limpieza de Cunetas</option>
+            <option value="Limpieza de Alcantarillas">Limpieza de Alcantarillas</option>
+            <option value="Canalización:Canal Primario">Canalización - Canal Primario</option>
+            <option value="Canalización:Canal Secundario">Canalización - Canal Secundario</option>
+            <option value="Canalización:Canal Terciario">Canalización - Canal Terciario</option>
+            <option value="Reparación de Baches">Reparación de Baches</option>
+            <option value="Señalización">Señalización</option>
+        </select>
+    </div>
+
+    <button onclick="insertarReportes()">✅ INSERTAR 3 REPORTES (Feb 3, 4, 5)</button>
+    <button class="danger" onclick="verificarReportes()">🔍 Verificar Reportes Existentes</button>
+    
+    <div id="log" class="log"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCPD0d6v-DIlXdpPxUbCqvKoZWvjXp0Fzc",
+            authDomain: "mopc-sistemas.firebaseapp.com",
+            projectId: "mopc-sistemas",
+            storageBucket: "mopc-sistemas.firebasestorage.app",
+            messagingSenderId: "1032157255922",
+            appId: "1:1032157255922:web:d0e4e4c8f8f8f8f8f8f8f8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        function log(msg, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<span class="${type}">[${time}] ${msg}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function generarId() {
+            // Generar ID similar al del sistema
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 15);
+            return `DCR-${timestamp}-${random}`;
+        }
+
+        function generarNumeroReporte() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            return `DCR-${year}${month}${day}-${random}`;
+        }
+
+        window.verificarReportes = async function() {
+            document.getElementById('log').innerHTML = '';
+            log('🔍 Verificando reportes existentes de capel...', 'info');
+            
+            try {
+                const q = query(
+                    collection(db, "reports"),
+                    where("usuarioId", "==", "capel")
+                );
+                
+                const snapshot = await getDocs(q);
+                log(`📊 Total reportes de capel: ${snapshot.size}`, 'success');
+                
+                // Filtrar febrero 2026
+                const reportesFebrero = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const fecha = data.fechaProyecto || data.timestamp || '';
+                    if (fecha.includes('2026-02-03') || fecha.includes('2026-02-04') || fecha.includes('2026-02-05')) {
+                        reportesFebrero.push({id: doc.id, ...data});
+                    }
+                });
+                
+                log(`📅 Reportes del 3-5 Feb 2026: ${reportesFebrero.length}`, reportesFebrero.length > 0 ? 'success' : 'warn');
+                
+                reportesFebrero.forEach(r => {
+                    const fecha = (r.fechaProyecto || r.timestamp || '').split('T')[0];
+                    log(`  → ${fecha}: ${r.tipoIntervencion} (${r.estado})`, 'info');
+                });
+                
+                if (reportesFebrero.length === 0) {
+                    log('⚠️ No hay reportes para esas fechas. Puedes insertarlos.', 'warn');
+                } else {
+                    log('✅ Ya existen reportes para esas fechas.', 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        };
+
+        window.insertarReportes = async function() {
+            document.getElementById('log').innerHTML = '';
+            
+            const region = document.getElementById('region').value.trim();
+            const provincia = document.getElementById('provincia').value.trim();
+            const municipio = document.getElementById('municipio').value.trim();
+            const distrito = document.getElementById('distrito').value.trim();
+            const sector = document.getElementById('sector').value.trim();
+            const tipoIntervencion = document.getElementById('tipoIntervencion').value;
+            
+            if (!region || !provincia) {
+                log('❌ Región y Provincia son requeridos', 'error');
+                return;
+            }
+            
+            log('🚀 Iniciando inserción de reportes...', 'info');
+            
+            const dias = ['2026-02-03', '2026-02-04', '2026-02-05'];
+            let insertados = 0;
+            
+            for (const dia of dias) {
+                try {
+                    const id = generarId();
+                    const numeroReporte = generarNumeroReporte();
+                    
+                    const reportData = {
+                        id: id,
+                        numeroReporte: numeroReporte,
+                        timestamp: new Date(dia).toISOString(),
+                        fechaCreacion: new Date(dia).toISOString(),
+                        fechaModificacion: new Date().toISOString(),
+                        creadoPor: 'capel',
+                        usuarioId: 'capel',
+                        region: region,
+                        provincia: provincia,
+                        municipio: municipio || provincia,
+                        distrito: distrito || 'Centro',
+                        sector: sector || 'Principal',
+                        tipoIntervencion: tipoIntervencion,
+                        observaciones: `Reporte insertado manualmente para ${dia}`,
+                        metricData: {},
+                        gpsData: {},
+                        vehiculos: [
+                            { tipo: 'Camión', modelo: 'Volquete', ficha: 'V-001' },
+                            { tipo: 'Retroexcavadora', modelo: 'CAT 420', ficha: 'R-001' }
+                        ],
+                        estado: 'completado',
+                        fechaProyecto: dia,
+                        esProyectoMultiDia: false,
+                        fechaInicio: '2026-02-03',
+                        fechaFinal: '2026-02-05',
+                        version: 1
+                    };
+                    
+                    log(`📝 Insertando reporte para ${dia}...`, 'info');
+                    
+                    const reportRef = doc(db, "reports", id);
+                    await setDoc(reportRef, reportData);
+                    
+                    log(`✅ Reporte ${numeroReporte} guardado para ${dia}`, 'success');
+                    insertados++;
+                    
+                } catch (error) {
+                    log(`❌ Error en ${dia}: ${error.message}`, 'error');
+                }
+            }
+            
+            log(`\n🎉 COMPLETADO: ${insertados}/3 reportes insertados`, insertados === 3 ? 'success' : 'warn');
+            
+            if (insertados === 3) {
+                log('✅ Todos los reportes fueron guardados exitosamente.', 'success');
+                log('📊 Ve a la app para verificarlos en la sección de Reportes.', 'info');
+            }
+        };
+
+        // Verificar al cargar
+        log('✅ Firebase conectado. Listo para usar.', 'success');
+        log('💡 Primero verifica si ya existen los reportes, luego inserta si es necesario.', 'info');
+    </script>
+</body>
+</html>
