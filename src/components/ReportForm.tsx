@@ -1015,7 +1015,29 @@ const ReportForm: React.FC<ReportFormProps> = ({
         return;
       }
       
-      // Guardar día actual antes de proceder
+      // ✅ CREAR COPIA LOCAL del día actual ANTES de actualizar el estado
+      // Esto evita el problema de que setReportesPorDia es asíncrono
+      const diaActualKey = diasTrabajo[diaActual];
+      const diaActualData = {
+        fecha: diaActualKey,
+        tipoIntervencion,
+        subTipoCanal,
+        observaciones,
+        vehiculos: [...vehiculos],
+        plantillaValues: {...plantillaValues},
+        autoGpsFields: {...autoGpsFields},
+        completado: true
+      };
+      
+      // Crear copia completa de reportesPorDia incluyendo el día actual
+      const reportesPorDiaCompletos = {
+        ...reportesPorDia,
+        [diaActualKey]: diaActualData
+      };
+      
+      console.log('📦 Reportes por día COMPLETOS (incluyendo día actual):', reportesPorDiaCompletos);
+      
+      // Guardar día actual en el estado también (para consistencia)
       guardarDiaActual();
       
       // Guardar todos los reportes del proyecto multi-día como COMPLETADOS
@@ -1025,10 +1047,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
         try {
           let reportesGuardados = 0;
           console.log('📊 Días a procesar:', diasTrabajo);
-          console.log('📦 Reportes por día:', reportesPorDia);
           
           for (const dia of diasTrabajo) {
-            const reporteDia = reportesPorDia[dia];
+            // ✅ USAR la copia local que incluye el día actual
+            const reporteDia = reportesPorDiaCompletos[dia];
             console.log(`🔍 Procesando día ${dia}:`, reporteDia);
             
             if (reporteDia && reporteDia.tipoIntervencion) {
