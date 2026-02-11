@@ -89,6 +89,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
   // Estado para animación de guardado
   const [showSaveAnimation, setShowSaveAnimation] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [saveErrorMessage, setSaveErrorMessage] = useState('');
   const [showPendingAnimation, setShowPendingAnimation] = useState(false);
   const [currentPendingReportId, setCurrentPendingReportId] = useState<string | null>(null);
   const [showPendingModal, setShowPendingModal] = useState(false);
@@ -1042,8 +1044,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
       
       // Guardar todos los reportes del proyecto multi-día como COMPLETADOS
       setShowSaveAnimation(true);
+      setSaveStatus('saving'); // Mostrar animación de "guardando..."
       
-      setTimeout(async () => {
+      // Ejecutar guardado inmediatamente (sin setTimeout previo)
+      (async () => {
         try {
           let reportesGuardados = 0;
           console.log('📊 Días a procesar:', diasTrabajo);
@@ -1092,18 +1096,26 @@ const ReportForm: React.FC<ReportFormProps> = ({
             }
           }
           
+          console.log(`📊 Total de reportes guardados: ${reportesGuardados}`);
+          
+          // ✅ Solo mostrar éxito DESPUÉS de que todo se guarde correctamente
+          setSaveStatus('success');
           setTimeout(() => {
             setShowSaveAnimation(false);
-            alert(`✅ ${reportesGuardados} reportes guardados exitosamente`);
+            setSaveStatus('idle');
             limpiarFormulario();
           }, 2000);
           
         } catch (error) {
           console.error('❌ Error al guardar reportes:', error);
-          setShowSaveAnimation(false);
-          alert('Error al guardar los reportes. Intente nuevamente.');
+          setSaveStatus('error');
+          setSaveErrorMessage(error instanceof Error ? error.message : 'Error desconocido');
+          setTimeout(() => {
+            setShowSaveAnimation(false);
+            setSaveStatus('idle');
+          }, 3000);
         }
-      }, 500);
+      })();
       
       return;
     }
@@ -1132,9 +1144,10 @@ const ReportForm: React.FC<ReportFormProps> = ({
 
     // Mostrar animación de guardado
     setShowSaveAnimation(true);
+    setSaveStatus('saving');
 
-    // Simular proceso de guardado con delay
-    setTimeout(async () => {
+    // Ejecutar guardado inmediatamente
+    (async () => {
       const sectorFinal = sector === 'otros' ? sectorPersonalizado : sector;
       const distritoFinal = distrito === 'otros' ? distritoPersonalizado : distrito;
       
@@ -1181,18 +1194,23 @@ const ReportForm: React.FC<ReportFormProps> = ({
         await firebaseReportStorage.saveReport(savedReport);
         console.log('✅ Reporte guardado exitosamente en Firebase');
 
-        // Ocultar animación y mostrar mensaje después de 2 segundos
+        // ✅ Solo mostrar éxito DESPUÉS de que todo se guarde correctamente
+        setSaveStatus('success');
         setTimeout(() => {
           setShowSaveAnimation(false);
-          alert('✅ 1 reporte guardado exitosamente');
+          setSaveStatus('idle');
           limpiarFormulario();
         }, 2000);
       } catch (error) {
         console.error('❌ Error al guardar reporte:', error);
-        setShowSaveAnimation(false);
-        alert('Error al guardar el reporte. Verifique su conexión a internet e intente nuevamente.');
+        setSaveStatus('error');
+        setSaveErrorMessage(error instanceof Error ? error.message : 'Error de conexión');
+        setTimeout(() => {
+          setShowSaveAnimation(false);
+          setSaveStatus('idle');
+        }, 3000);
       }
-    }, 500);
+    })();
   };
 
   // Función para guardar plantilla como predeterminada
@@ -3083,7 +3101,7 @@ const ReportForm: React.FC<ReportFormProps> = ({
         </form>
       </div>
       
-      {/* Animación de guardado exitoso */}
+      {/* Animación de guardado - con estados: guardando, éxito, error */}
       {showSaveAnimation && (
         <div style={{
           position: 'fixed',
@@ -3104,57 +3122,132 @@ const ReportForm: React.FC<ReportFormProps> = ({
             padding: '40px 60px',
             textAlign: 'center',
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
-            animation: 'scaleIn 0.5s ease-out'
+            animation: 'scaleIn 0.5s ease-out',
+            minWidth: '300px'
           }}>
-            {/* Icono de check animado */}
-            <div style={{
-              width: '100px',
-              height: '100px',
-              margin: '0 auto 20px',
-              borderRadius: '50%',
-              backgroundColor: '#28a745',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              animation: 'checkBounce 0.6s ease-out'
-            }}>
-              <svg 
-                width="60" 
-                height="60" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="white" 
-                strokeWidth="3" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-                style={{
-                  animation: 'checkDraw 0.5s ease-out 0.3s forwards',
-                  strokeDasharray: 50,
-                  strokeDashoffset: 50
-                }}
-              >
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
+            {/* Estado: Guardando */}
+            {saveStatus === 'saving' && (
+              <>
+                <div style={{
+                  width: '100px',
+                  height: '100px',
+                  margin: '0 auto 20px',
+                  borderRadius: '50%',
+                  border: '6px solid #f3f3f3',
+                  borderTop: '6px solid #F59E0B',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <h2 style={{
+                  color: '#F59E0B',
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  margin: '0 0 10px 0'
+                }}>
+                  Guardando...
+                </h2>
+                <p style={{ color: '#666', fontSize: '16px', margin: 0 }}>
+                  Por favor espere mientras se guardan los reportes
+                </p>
+              </>
+            )}
             
-            <h2 style={{
-              color: '#28a745',
-              fontSize: '28px',
-              fontWeight: '700',
-              margin: '0 0 10px 0',
-              animation: 'fadeInUp 0.5s ease-out 0.2s both'
-            }}>
-              ¡Guardado Exitoso!
-            </h2>
+            {/* Estado: Éxito */}
+            {saveStatus === 'success' && (
+              <>
+                <div style={{
+                  width: '100px',
+                  height: '100px',
+                  margin: '0 auto 20px',
+                  borderRadius: '50%',
+                  backgroundColor: '#28a745',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  animation: 'checkBounce 0.6s ease-out'
+                }}>
+                  <svg 
+                    width="60" 
+                    height="60" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="white" 
+                    strokeWidth="3" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    style={{
+                      animation: 'checkDraw 0.5s ease-out 0.3s forwards',
+                      strokeDasharray: 50,
+                      strokeDashoffset: 50
+                    }}
+                  >
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+                <h2 style={{
+                  color: '#28a745',
+                  fontSize: '28px',
+                  fontWeight: '700',
+                  margin: '0 0 10px 0',
+                  animation: 'fadeInUp 0.5s ease-out 0.2s both'
+                }}>
+                  ¡Guardado Exitoso!
+                </h2>
+                <p style={{
+                  color: '#666',
+                  fontSize: '16px',
+                  margin: 0,
+                  animation: 'fadeInUp 0.5s ease-out 0.3s both'
+                }}>
+                  El reporte ha sido guardado correctamente
+                </p>
+              </>
+            )}
             
-            <p style={{
-              color: '#666',
-              fontSize: '16px',
-              margin: 0,
-              animation: 'fadeInUp 0.5s ease-out 0.3s both'
-            }}>
-              El reporte ha sido guardado correctamente
-            </p>
+            {/* Estado: Error */}
+            {saveStatus === 'error' && (
+              <>
+                <div style={{
+                  width: '100px',
+                  height: '100px',
+                  margin: '0 auto 20px',
+                  borderRadius: '50%',
+                  backgroundColor: '#dc3545',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  animation: 'shake 0.5s ease-out'
+                }}>
+                  <svg 
+                    width="60" 
+                    height="60" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="white" 
+                    strokeWidth="3" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </div>
+                <h2 style={{
+                  color: '#dc3545',
+                  fontSize: '28px',
+                  fontWeight: '700',
+                  margin: '0 0 10px 0'
+                }}>
+                  Error al Guardar
+                </h2>
+                <p style={{
+                  color: '#666',
+                  fontSize: '16px',
+                  margin: 0
+                }}>
+                  {saveErrorMessage || 'Ocurrió un error. Intente nuevamente.'}
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -3195,6 +3288,19 @@ const ReportForm: React.FC<ReportFormProps> = ({
             opacity: 1;
             transform: translateY(0);
           }
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-10px); }
+          40% { transform: translateX(10px); }
+          60% { transform: translateX(-10px); }
+          80% { transform: translateX(10px); }
         }
       `}</style>
 
