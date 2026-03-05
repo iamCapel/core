@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { reportStorage } from '../services/reportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
+import userLocationService from '../services/userLocationService';
 import DetailedReportView from './DetailedReportView';
 
 // Configurar iconos de Leaflet
@@ -84,6 +85,9 @@ interface OperadorMarker {
     tipoIntervencion: string;
     distancia: number;
   }>;
+  isRealTime?: boolean; // Indica si la ubicación es en tiempo real
+  lastUpdate?: string; // Última actualización de ubicación
+  accuracy?: number; // Precisión del GPS
 }
 
 interface LeafletMapViewProps {
@@ -482,6 +486,84 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     
     setLoading(false);
   };
+
+  // Suscripción a ubicaciones en tiempo real para el modo operadores
+  useEffect(() => {
+    if (mapViewMode !== 'operadores') {
+      return;
+    }
+
+    console.log('🌍 Suscribiéndose a ubicaciones en tiempo real...');
+    
+    const unsubscribe = userLocationService.subscribeToAllUserLocations(async (locations) => {
+      console.log('📍 Ubicaciones recibidas:', locations.length);
+      
+      if (locations.length === 0) {
+        return;
+      }
+
+      try {
+        // Obtener todos los reportes para complementar la información de los operadores
+        const reports = await firebaseReportStorage.getAllReports();
+        
+        // Filtrar reportes para usuarios técnicos si es necesario
+        let filteredReports = reports;
+        if (user?.role === 'Técnico' || user?.role === 'tecnico') {
+          filteredReports = reports.filter(report => report.usuarioId === user.username);
+        }
+
+        // Crear mapa de operadores con ubicaciones en tiempo real
+        const operadoresMap: Record<string, OperadorMarker> = {};
+
+        locations.forEach(location => {
+          const username = location.username;
+          
+          // Buscar reportes del usuario para obtener más información
+          const userReports = filteredReports.filter(
+            report => report.creadoPor === username || report.usuarioId === username
+          );
+
+          // Encontrar la última actividad
+          const ultimaActividad = userReports.length > 0 
+            ? userReports[userReports.length - 1].tipoIntervencion 
+            : undefined;
+
+          // Crear lista de reportes cercanos (últimos 10)
+          const reportesCercanos = userReports
+            .slice(-10)
+            .reverse()
+            .map(report => ({
+              numeroReporte: report.numeroReporte,
+              tipoIntervencion: report.tipoIntervencion,
+              distancia: 0
+            }));
+
+          operadoresMap[username] = {
+            id: username,
+            username: username,
+            nombre: username,
+            latitud: location.latitude,
+            longitud: location.longitude,
+            ultimaActividad,
+            reportesCercanos,
+            isRealTime: true,
+            lastUpdate: location.lastUpdate,
+            accuracy: location.accuracy
+          };
+        });
+
+        setOperadoresMarkers(Object.values(operadoresMap));
+      } catch (error) {
+        console.error('Error procesando ubicaciones en tiempo real:', error);
+      }
+    });
+
+    // Cleanup: desuscribirse al desmontar o cambiar de modo
+    return () => {
+      console.log('🌍 Desuscribiéndose de ubicaciones en tiempo real');
+      unsubscribe();
+    };
+  }, [mapViewMode, user]);
 
   const filteredInterventions = interventions.filter(intervention => 
     selectedTypes.includes(intervention.tipoIntervencion)
@@ -1124,21 +1206,58 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 <Popup closeOnClick={false}>
                   <div style={{ fontFamily: 'Arial, sans-serif', minWidth: '260px', maxWidth: '300px' }}>
                     <div style={{ 
-                      background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)', 
+                      background: operador.isRealTime 
+                        ? 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)' 
+                        : 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)', 
                       color: 'white', 
                       padding: '12px', 
                       margin: '-13px -20px 12px -20px',
                       borderRadius: '8px 8px 0 0'
                     }}>
-                      <h3 style={{ margin: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        👷 {operador.nombre}
-                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 style={{ margin: 0, fontSize: '16px', flex: 1 }}>
+                          👷 {operador.nombre}
+                        </h3>
+                        {operador.isRealTime && (
+                          <span style={{ 
+                            fontSize: '10px', 
+                            background: 'rgba(255,255,255,0.3)', 
+                            padding: '4px 8px', 
+                            borderRadius: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            🔴 EN VIVO
+                          </span>
+                        )}
+                      </div>
                       <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.9 }}>
                         Técnico de Campo
                       </p>
                     </div>
                     
                     <div style={{ fontSize: '13px' }}>
+                      {operador.isRealTime && operador.lastUpdate && (
+                        <div style={{ 
+                          background: '#e8f8f5', 
+                          padding: '8px', 
+                          borderRadius: '6px', 
+                          marginBottom: '10px',
+                          border: '1px solid #2ecc71'
+                        }}>
+                          <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: '600', color: '#27ae60' }}>
+                            🌍 UBICACIÓN EN TIEMPO REAL
+                          </p>
+                          <p style={{ margin: '0', fontSize: '11px', color: '#555' }}>
+                            <strong>Última actualización:</strong> {new Date(operador.lastUpdate).toLocaleString('es-DO')}
+                          </p>
+                          {operador.accuracy && (
+                            <p style={{ margin: '2px 0 0', fontSize: '10px', color: '#666' }}>
+                              Precisión: ±{Math.round(operador.accuracy)}m
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
                       {operador.ultimaActividad && (
                         <p style={{ margin: '0 0 8px' }}>
                           <strong>🔧 Última actividad:</strong> {operador.ultimaActividad}
