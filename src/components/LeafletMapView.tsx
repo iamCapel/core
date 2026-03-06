@@ -87,7 +87,12 @@ interface OperadorMarker {
   }>;
   isRealTime?: boolean; // Indica si la ubicación es en tiempo real
   lastUpdate?: string; // Última actualización de ubicación
-  accuracy?: number; // Precisión del GPS
+  accuracy?: number; // Precisión del GPS en metros
+  deviceId?: string; // ID del dispositivo
+  altitude?: number; // Altitud en metros
+  speed?: number; // Velocidad en m/s
+  heading?: number; // Dirección en grados
+  status?: 'online' | 'recent' | 'offline'; // Estado de conexión
 }
 
 interface LeafletMapViewProps {
@@ -493,12 +498,13 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       return;
     }
 
-    console.log('🌍 Suscribiéndose a ubicaciones en tiempo real...');
+    console.log('🌍 Suscribiéndose a ubicaciones en vivo desde CORE-APK...');
     
-    const unsubscribe = userLocationService.subscribeToAllUserLocations(async (locations) => {
-      console.log('📍 Ubicaciones recibidas:', locations.length);
+    const unsubscribe = userLocationService.subscribeToLiveLocations(async (locations) => {
+      console.log('📍 Ubicaciones en vivo recibidas:', locations.length);
       
       if (locations.length === 0) {
+        setOperadoresMarkers([]);
         return;
       }
 
@@ -538,6 +544,20 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
               distancia: 0
             }));
 
+          // Calcular estado de conexión basado en timestamp
+          const locationTime = new Date(location.timestamp);
+          const now = new Date();
+          const diffSeconds = (now.getTime() - locationTime.getTime()) / 1000;
+          
+          let status: 'online' | 'recent' | 'offline';
+          if (diffSeconds < 30) {
+            status = 'online'; // Últimos 30 segundos
+          } else if (diffSeconds < 300) {
+            status = 'recent'; // Últimos 5 minutos
+          } else {
+            status = 'offline'; // Más de 5 minutos
+          }
+
           operadoresMap[username] = {
             id: username,
             username: username,
@@ -547,12 +567,18 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             ultimaActividad,
             reportesCercanos,
             isRealTime: true,
-            lastUpdate: location.lastUpdate,
-            accuracy: location.accuracy
+            lastUpdate: location.timestamp,
+            accuracy: location.accuracy,
+            deviceId: location.deviceId,
+            altitude: location.altitude,
+            speed: location.speed,
+            heading: location.heading,
+            status: status
           };
         });
 
         setOperadoresMarkers(Object.values(operadoresMap));
+        console.log('✅ Operadores actualizados:', Object.values(operadoresMap).length);
       } catch (error) {
         console.error('Error procesando ubicaciones en tiempo real:', error);
       }
@@ -894,12 +920,17 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
               }}
             >
               <span style={{ fontSize: '28px' }}>👷</span>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: '600', color: mapViewMode === 'operadores' ? '#2196F3' : '#2c3e50', fontSize: '14px' }}>
                   Operadores
                 </div>
-                <div style={{ fontSize: '11px', color: '#6c757d' }}>
-                  {operadoresMarkers.length} técnicos
+                <div style={{ fontSize: '11px', color: '#6c757d', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span>{operadoresMarkers.length} técnicos</span>
+                  {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
+                    <span style={{ color: '#2ecc71' }}>
+                      🟢 {operadoresMarkers.filter(op => op.status === 'online').length} en línea
+                    </span>
+                  )}
                 </div>
               </div>
               {mapViewMode === 'operadores' && (
@@ -946,10 +977,31 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                   </p>
                 )}
                 {mapViewMode === 'operadores' && (
-                  <p style={{ margin: 0 }}>
-                    <strong>👷 Operadores:</strong> Muestra la última ubicación conocida de los técnicos 
-                    basada en sus reportes más recientes.
-                  </p>
+                  <div>
+                    <p style={{ margin: '0 0 8px' }}>
+                      <strong>👷 Operadores:</strong> Muestra la ubicación GPS en tiempo real de los técnicos 
+                      con la aplicación CORE-APK instalada. Actualización automática cada 5 segundos.
+                    </p>
+                    {operadoresMarkers.length > 0 && (
+                      <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px' }}>
+                        {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
+                          <span style={{ color: '#2ecc71', fontWeight: '600' }}>
+                            🟢 {operadoresMarkers.filter(op => op.status === 'online').length} En línea
+                          </span>
+                        )}
+                        {operadoresMarkers.filter(op => op.status === 'recent').length > 0 && (
+                          <span style={{ color: '#f39c12', fontWeight: '600' }}>
+                            🟡 {operadoresMarkers.filter(op => op.status === 'recent').length} Activo
+                          </span>
+                        )}
+                        {operadoresMarkers.filter(op => op.status === 'offline').length > 0 && (
+                          <span style={{ color: '#95a5a6', fontWeight: '600' }}>
+                            ⚫ {operadoresMarkers.filter(op => op.status === 'offline').length} Desconectado
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </>
             )}
@@ -1204,11 +1256,13 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 icon={createOperadorIcon()}
               >
                 <Popup closeOnClick={false}>
-                  <div style={{ fontFamily: 'Arial, sans-serif', minWidth: '260px', maxWidth: '300px' }}>
+                  <div style={{ fontFamily: 'Arial, sans-serif', minWidth: '280px', maxWidth: '320px' }}>
                     <div style={{ 
-                      background: operador.isRealTime 
+                      background: operador.status === 'online' 
                         ? 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)' 
-                        : 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)', 
+                        : operador.status === 'recent'
+                        ? 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)'
+                        : 'linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%)', 
                       color: 'white', 
                       padding: '12px', 
                       margin: '-13px -20px 12px -20px',
@@ -1218,7 +1272,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                         <h3 style={{ margin: 0, fontSize: '16px', flex: 1 }}>
                           👷 {operador.nombre}
                         </h3>
-                        {operador.isRealTime && (
+                        {operador.status === 'online' && (
                           <span style={{ 
                             fontSize: '10px', 
                             background: 'rgba(255,255,255,0.3)', 
@@ -1226,37 +1280,94 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                             borderRadius: '12px',
                             fontWeight: 'bold'
                           }}>
-                            🔴 EN VIVO
+                            🟢 EN LÍNEA
+                          </span>
+                        )}
+                        {operador.status === 'recent' && (
+                          <span style={{ 
+                            fontSize: '10px', 
+                            background: 'rgba(255,255,255,0.3)', 
+                            padding: '4px 8px', 
+                            borderRadius: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            🟡 ACTIVO
+                          </span>
+                        )}
+                        {operador.status === 'offline' && (
+                          <span style={{ 
+                            fontSize: '10px', 
+                            background: 'rgba(255,255,255,0.3)', 
+                            padding: '4px 8px', 
+                            borderRadius: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            🔴 DESCONECTADO
                           </span>
                         )}
                       </div>
                       <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.9 }}>
-                        Técnico de Campo
+                        Técnico de Campo - CORE-APK
                       </p>
                     </div>
                     
                     <div style={{ fontSize: '13px' }}>
+                      {/* Información GPS en Tiempo Real */}
                       {operador.isRealTime && operador.lastUpdate && (
                         <div style={{ 
-                          background: '#e8f8f5', 
-                          padding: '8px', 
+                          background: operador.status === 'online' ? '#e8f8f5' : '#fef5e7', 
+                          padding: '10px', 
                           borderRadius: '6px', 
                           marginBottom: '10px',
-                          border: '1px solid #2ecc71'
+                          border: `1px solid ${operador.status === 'online' ? '#2ecc71' : '#f39c12'}`
                         }}>
-                          <p style={{ margin: '0 0 4px', fontSize: '11px', fontWeight: '600', color: '#27ae60' }}>
-                            🌍 UBICACIÓN EN TIEMPO REAL
+                          <p style={{ margin: '0 0 6px', fontSize: '11px', fontWeight: '600', color: operador.status === 'online' ? '#27ae60' : '#e67e22' }}>
+                            🌍 UBICACIÓN GPS EN TIEMPO REAL
                           </p>
-                          <p style={{ margin: '0', fontSize: '11px', color: '#555' }}>
-                            <strong>Última actualización:</strong> {new Date(operador.lastUpdate).toLocaleString('es-DO')}
+                          <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#555' }}>
+                            <strong>📅 Última actualización:</strong><br/>
+                            {new Date(operador.lastUpdate).toLocaleString('es-DO')}
                           </p>
-                          {operador.accuracy && (
-                            <p style={{ margin: '2px 0 0', fontSize: '10px', color: '#666' }}>
-                              Precisión: ±{Math.round(operador.accuracy)}m
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '6px' }}>
+                            {operador.accuracy !== undefined && (
+                              <div style={{ fontSize: '10px', color: '#666' }}>
+                                <strong>🎯 Precisión:</strong><br/>
+                                ±{Math.round(operador.accuracy)}m
+                              </div>
+                            )}
+                            {operador.altitude !== undefined && (
+                              <div style={{ fontSize: '10px', color: '#666' }}>
+                                <strong>⛰️ Altitud:</strong><br/>
+                                {Math.round(operador.altitude)}m
+                              </div>
+                            )}
+                            {operador.speed !== undefined && operador.speed > 0 && (
+                              <div style={{ fontSize: '10px', color: '#666' }}>
+                                <strong>🚗 Velocidad:</strong><br/>
+                                {(operador.speed * 3.6).toFixed(1)} km/h
+                              </div>
+                            )}
+                            {operador.heading !== undefined && (
+                              <div style={{ fontSize: '10px', color: '#666' }}>
+                                <strong>🧭 Dirección:</strong><br/>
+                                {Math.round(operador.heading)}°
+                              </div>
+                            )}
+                          </div>
+                          {operador.deviceId && (
+                            <p style={{ margin: '6px 0 0', fontSize: '9px', color: '#999' }}>
+                              📱 ID: {operador.deviceId.substring(0, 20)}...
                             </p>
                           )}
                         </div>
                       )}
+                      
+                      {/* Coordenadas */}
+                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: '#555' }}>
+                        <strong>📍 Coordenadas:</strong><br/>
+                        Lat: {operador.latitud.toFixed(6)}<br/>
+                        Lng: {operador.longitud.toFixed(6)}
+                      </p>
                       
                       {operador.ultimaActividad && (
                         <p style={{ margin: '0 0 8px' }}>
@@ -1297,6 +1408,11 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                             </span>
                           </div>
                         ))}
+                        {operador.reportesCercanos.length === 0 && (
+                          <p style={{ margin: '0', fontSize: '11px', color: '#999', fontStyle: 'italic' }}>
+                            Sin reportes recientes
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

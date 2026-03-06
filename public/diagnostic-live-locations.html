@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico - Ubicaciones en Vivo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .status.online { background: #2ecc71; color: white; }
+        .status.recent { background: #f39c12; color: white; }
+        .status.offline { background: #95a5a6; color: white; }
+        .status.error { background: #e74c3c; color: white; }
+        
+        .location-item {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .location-item:hover {
+            background: #f0f0f0;
+        }
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .data-item {
+            font-size: 13px;
+        }
+        .data-item strong {
+            color: #555;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .logs {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 3px 0;
+            padding: 2px 0;
+        }
+        .log-info { color: #4fc3f7; }
+        .log-success { color: #66bb6a; }
+        .log-warning { color: #ffca28; }
+        .log-error { color: #ef5350; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 Diagnóstico de Ubicaciones en Vivo</h1>
+        <p>Herramienta de depuración para verificar datos de Firebase</p>
+    </div>
+
+    <div class="card">
+        <h2>Estado de Conexión</h2>
+        <div id="connection-status">
+            <span class="status offline">⏳ Conectando a Firebase...</span>
+        </div>
+        <div style="margin-top: 15px;">
+            <button onclick="refreshData()">🔄 Actualizar Datos</button>
+            <button onclick="clearLogs()">🗑️ Limpiar Logs</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📊 Resumen de Datos</h2>
+        <div id="summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <div style="font-size: 32px; font-weight: bold; color: #667eea;">-</div>
+                <div style="color: #666; font-size: 14px;">Total de registros</div>
+            </div>
+            <div>
+                <div style="font-size: 32px; font-weight: bold; color: #2ecc71;">-</div>
+                <div style="color: #666; font-size: 14px;">Ubicaciones recientes</div>
+            </div>
+            <div>
+                <div style="font-size: 32px; font-weight: bold; color: #f39c12;">-</div>
+                <div style="color: #666; font-size: 14px;">Usuarios únicos</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📍 Ubicaciones Detectadas</h2>
+        <div id="locations-list">
+            <p style="color: #999;">Esperando datos...</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📝 Logs del Sistema</h2>
+        <div class="logs" id="logs-container">
+            <div class="log-entry log-info">Iniciando diagnóstico...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBULoCr78BEnY8ovO1AdXvrn1JYfDqud6c",
+            authDomain: "coredatabase-206ac.firebaseapp.com",
+            projectId: "coredatabase-206ac",
+            storageBucket: "coredatabase-206ac.firebasestorage.app",
+            messagingSenderId: "204486232524",
+            appId: "1:204486232524:web:d705e374692a8290fb3569",
+            measurementId: "G-WWS6LZ5WR1"
+        };
+
+        // Inicializar Firebase
+        let app, database, locationsRef;
+        let allLocations = [];
+
+        function log(message, type = 'info') {
+            const logsContainer = document.getElementById('logs-container');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logsContainer.appendChild(entry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function updateConnectionStatus(status, type = 'online') {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.innerHTML = `<span class="status ${type}">${status}</span>`;
+        }
+
+        function updateSummary(total, recent, unique) {
+            const summaryEl = document.getElementById('summary');
+            summaryEl.innerHTML = `
+                <div>
+                    <div style="font-size: 32px; font-weight: bold; color: #667eea;">${total}</div>
+                    <div style="color: #666; font-size: 14px;">Total de registros</div>
+                </div>
+                <div>
+                    <div style="font-size: 32px; font-weight: bold; color: #2ecc71;">${recent}</div>
+                    <div style="color: #666; font-size: 14px;">Ubicaciones recientes</div>
+                </div>
+                <div>
+                    <div style="font-size: 32px; font-weight: bold; color: #f39c12;">${unique}</div>
+                    <div style="color: #666; font-size: 14px;">Usuarios únicos</div>
+                </div>
+            `;
+        }
+
+        function getLocationStatus(timestamp) {
+            const locationTime = new Date(timestamp);
+            const now = new Date();
+            const diffSeconds = (now.getTime() - locationTime.getTime()) / 1000;
+            
+            if (diffSeconds < 30) return 'online';
+            if (diffSeconds < 300) return 'recent';
+            return 'offline';
+        }
+
+        function renderLocations(locations) {
+            const listEl = document.getElementById('locations-list');
+            
+            if (locations.length === 0) {
+                listEl.innerHTML = '<p style="color: #999;">No se encontraron ubicaciones en Firebase.</p>';
+                return;
+            }
+
+            listEl.innerHTML = locations.map((loc, idx) => {
+                const status = getLocationStatus(loc.timestamp);
+                const statusText = status === 'online' ? '🟢 EN LÍNEA' : 
+                                 status === 'recent' ? '🟡 ACTIVO' : '🔴 DESCONECTADO';
+                const locationTime = new Date(loc.timestamp);
+                const now = new Date();
+                const diffSeconds = Math.round((now.getTime() - locationTime.getTime()) / 1000);
+                
+                return `
+                    <div class="location-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0;">👷 ${loc.username || 'Usuario desconocido'}</h3>
+                            <span class="status ${status}">${statusText}</span>
+                        </div>
+                        <div class="data-grid">
+                            <div class="data-item"><strong>📍 Latitud:</strong> ${loc.latitude?.toFixed(6) || 'N/A'}</div>
+                            <div class="data-item"><strong>📍 Longitud:</strong> ${loc.longitude?.toFixed(6) || 'N/A'}</div>
+                            <div class="data-item"><strong>🎯 Precisión:</strong> ±${loc.accuracy || 0}m</div>
+                            <div class="data-item"><strong>⛰️ Altitud:</strong> ${loc.altitude ? Math.round(loc.altitude) + 'm' : 'N/A'}</div>
+                            <div class="data-item"><strong>🚗 Velocidad:</strong> ${loc.speed ? (loc.speed * 3.6).toFixed(1) + ' km/h' : 'N/A'}</div>
+                            <div class="data-item"><strong>🧭 Dirección:</strong> ${loc.heading ? Math.round(loc.heading) + '°' : 'N/A'}</div>
+                            <div class="data-item"><strong>📱 Device ID:</strong> ${loc.deviceId ? loc.deviceId.substring(0, 15) + '...' : 'N/A'}</div>
+                            <div class="data-item"><strong>⏰ Antigüedad:</strong> ${diffSeconds}s</div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                            <strong>🕐 Timestamp:</strong> ${locationTime.toLocaleString('es-DO')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function processLocations(data) {
+            allLocations = [];
+            
+            if (!data) {
+                log('No hay datos en /live_locations', 'warning');
+                updateSummary(0, 0, 0);
+                renderLocations([]);
+                return;
+            }
+
+            const keys = Object.keys(data);
+            log(`Procesando ${keys.length} registros de Firebase`, 'info');
+
+            keys.forEach(key => {
+                const loc = data[key];
+                if (loc && loc.latitude && loc.longitude) {
+                    allLocations.push(loc);
+                } else {
+                    log(`Registro incompleto encontrado (clave: ${key})`, 'warning');
+                }
+            });
+
+            const now = new Date();
+            const recentLocations = allLocations.filter(loc => {
+                const diffSeconds = (now.getTime() - new Date(loc.timestamp).getTime()) / 1000;
+                return diffSeconds < 300; // Últimos 5 minutos
+            });
+
+            const uniqueUsers = new Set(allLocations.map(loc => loc.username)).size;
+
+            log(`✅ ${allLocations.length} ubicaciones encontradas`, 'success');
+            log(`✅ ${recentLocations.length} ubicaciones recientes (< 5 min)`, 'success');
+            log(`✅ ${uniqueUsers} usuarios únicos`, 'success');
+
+            updateSummary(allLocations.length, recentLocations.length, uniqueUsers);
+            renderLocations(allLocations.sort((a, b) => 
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            ));
+        }
+
+        function initializeFirebase() {
+            try {
+                log('Inicializando Firebase...', 'info');
+                app = initializeApp(firebaseConfig);
+                database = getFirestore(app);
+                locationsRef = collection(database, 'live_locations');
+
+                log('✅ Firebase inicializado correctamente', 'success');
+                updateConnectionStatus('✅ Conectado a Firestore', 'online');
+
+                // Suscribirse a cambios en tiempo real
+                onSnapshot(locationsRef, (snapshot) => {
+                    log(`📡 Datos recibidos de Firestore (${snapshot.size} documentos)`, 'info');
+                    
+                    const data: any = {};
+                    snapshot.forEach((doc) => {
+                        data[doc.id] = doc.data();
+                    });
+                    
+                    processLocations(data);
+                }, (error) => {
+                    log(`❌ Error: ${error.message}`, 'error');
+                    updateConnectionStatus('❌ Error de conexión', 'error');
+                });
+
+            } catch (error: any) {
+                log(`❌ Error al inicializar Firebase: ${error.message}`, 'error');
+                updateConnectionStatus('❌ Error de inicialización', 'error');
+            }
+        }
+
+        window.refreshData = function() {
+            log('🔄 Solicitando actualización manual...', 'info');
+            // Firebase actualizará automáticamente con onValue
+        };
+
+        window.clearLogs = function() {
+            document.getElementById('logs-container').innerHTML = '';
+            log('Logs limpiados', 'info');
+        };
+
+        // Iniciar al cargar la página
+        initializeFirebase();
+
+        // Auto-actualizar cada 30 segundos
+        setInterval(() => {
+            log('⏰ Auto-actualización (cada 30s)', 'info');
+        }, 30000);
+    </script>
+</body>
+</html>
