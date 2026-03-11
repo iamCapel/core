@@ -6,6 +6,7 @@ import { reportStorage } from '../services/reportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import userLocationService from '../services/userLocationService';
 import DetailedReportView from './DetailedReportView';
+import { UserRole } from '../types/userRoles';
 
 // Configurar iconos de Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -903,7 +904,8 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
               )}
             </button>
 
-            {/* Opción Operadores */}
+            {/* Opción Operadores - Solo visible para administradores */}
+            {user?.role === UserRole.ADMIN && (
             <button
               onClick={() => setMapViewMode('operadores')}
               style={{
@@ -937,6 +939,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 <span style={{ marginLeft: 'auto', color: '#2196F3', fontWeight: 'bold' }}>✓</span>
               )}
             </button>
+            )}
           </div>
 
           {/* Información de la vista actual */}
