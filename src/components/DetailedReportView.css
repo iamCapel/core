@@ -517,7 +517,8 @@
 }
 
 .report-edit-btn,
-.report-delete-btn {
+.report-delete-btn,
+.report-export-btn {
   padding: var(--spacing-xs) var(--spacing-md);
   border: none;
   border-radius: 8px;
@@ -553,8 +554,33 @@
   box-shadow: var(--shadow-md);
 }
 
-.report-edit-btn:active,
 .report-delete-btn:active {
+  transform: translateY(0);
+}
+
+.report-export-btn {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: none;
+  border-radius: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.report-export-btn:hover {
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.report-export-btn:active {
   transform: translateY(0);
 }
 
@@ -882,7 +908,8 @@
   }
 
   .report-edit-btn,
-  .report-delete-btn {
+  .report-delete-btn,
+  .report-export-btn {
     flex: 1;
     justify-content: center;
   }

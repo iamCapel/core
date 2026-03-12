@@ -10,7 +10,7 @@
  * 3. Usar las funciones según los ejemplos abajo
  */
 
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 import app from '../config/firebase';
 
 const storage = getStorage(app);
@@ -229,7 +229,6 @@ class FirebaseImageStorage {
     options: Partial<ImageCompressionOptions> = {}
   ): Promise<Blob> {
     const {
-      maxSizeMB = 0.5,
       maxWidthOrHeight = 1920,
       quality = 0.8
     } = options;
@@ -353,15 +352,16 @@ class FirebaseImageStorage {
    * console.log('Imágenes del día 0:', images['dia-0']);
    * ```
    */
-  async getReportImages(
-    reportId: string
-  ): Promise<Record<string, ImageUploadResult[]>> {
+  async getReportImages(reportId: string): Promise<Record<string, ImageUploadResult[]>> {
     try {
-      const { ref: storageRef, listAll } = await import('firebase/storage');
-      const reportPath = `reportes/${reportId}`;
-      const reportRef = storageRef(storage, reportPath);
-      
       console.log('📥 Cargando imágenes del reporte:', reportId);
+      
+      // Temporalmente deshabilitado para evitar errores CORS
+      console.warn('⚠️ Carga de imágenes deshabilitada temporalmente por CORS');
+      return {};
+      
+      const reportPath = `reportes/${reportId}`;
+      const reportRef = ref(storage, reportPath);
       
       // Listar todas las carpetas (días)
       const result = await listAll(reportRef);

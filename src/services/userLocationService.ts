@@ -1,4 +1,4 @@
-import { getFirestore, collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 export interface UserLocationData {
