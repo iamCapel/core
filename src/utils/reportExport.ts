@@ -358,8 +358,413 @@ async function generateExcelContent(fullReport: FullReportData, displayData: Rep
 }
 
 async function generateWordContent(fullReport: FullReportData, displayData: ReportData) {
-  const doc = new Document({ sections: [] });
+  // Build a Word document with the same style used in the old ExportPage,
+  // but now also handle multi‑day reports according to the reference image.
+  const fieldLabels: Record<string, { label: string; unit: string }> = {
+    'longitud_intervencion': { label: 'Longitud de intervención', unit: 'km' },
+    'limpieza_superficie': { label: 'Limpieza de superficie', unit: 'm³' },
+    'perfilado_superficie': { label: 'Perfilado de superficie', unit: 'm³' },
+    'compactado_superficie': { label: 'Compactado de superficie', unit: 'm³' },
+    'conformacion_cunetas': { label: 'Conformación de cunetas', unit: 'ml' },
+    'extraccion_bote_material': { label: 'Extracción y bote de material inservible', unit: 'm³' },
+    'escarificacion_superficies': { label: 'Escarificación de superficies', unit: 'm³' },
+    'conformacion_plataforma': { label: 'Conformación de plataforma', unit: 'm³' },
+    'zafra_material': { label: 'Zafra de material', unit: 'm³' },
+    'motonivelacion_superficie': { label: 'Motonivelación de superficie', unit: 'm³' },
+    'suministro_extension_material': { label: 'Suministro y extensión de material', unit: 'm³' },
+    'suministro_colocacion_grava': { label: 'Suministro y colocación de grava', unit: 'm³' },
+    'nivelacion_compactacion_grava': { label: 'Nivelación y compactación de grava', unit: 'm³' },
+    'reparacion_alcantarillas': { label: 'Reparación de alcantarillas existentes', unit: 'und' },
+    'construccion_alcantarillas': { label: 'Construcción de alcantarillas', unit: 'und' },
+    'limpieza_alcantarillas': { label: 'Limpieza de alcantarillas', unit: 'und' },
+    'limpieza_cauces': { label: 'Limpieza de cauces y cañadas', unit: 'ml' },
+    'obras_drenaje': { label: 'Obras de drenaje', unit: 'ml' },
+    'construccion_terraplenes': { label: 'Construcción de terraplenes', unit: 'm³' },
+    'relleno_compactacion': { label: 'Relleno y compactación de material', unit: 'm³' },
+    'conformacion_taludes': { label: 'Conformación de taludes', unit: 'm³' }
+  };
+
+  // Load logo image bytes if possible
+  let logoImage: Uint8Array | undefined;
+  try {
+    const response = await fetch('/mopc-logo.png');
+    const arrayBuffer = await response.arrayBuffer();
+    logoImage = new Uint8Array(arrayBuffer);
+  } catch (error) {
+    console.log('Logo no cargado en Word');
+  }
+
+  const children: any[] = [];
+
+  if (logoImage) {
+    children.push(
+      new Paragraph({
+        children: [
+          new ImageRun({
+            data: logoImage,
+            transformation: { width: 150, height: 82.5 },
+            type: 'png'
+          })
+        ],
+        spacing: { after: 300 }
+      })
+    );
+  }
+
+  // Main header and subtitle
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'DIRECCIÓN DE COORDINACIÓN REGIONAL',
+          bold: true,
+          size: 28,
+          color: 'FF7A00'
+        })
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 }
+    })
+  );
+
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: fullReport.tipoIntervencion || 'INTERVENCIÓN VIAL',
+          bold: true,
+          size: 24,
+          color: 'FF7A00'
+        })
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 300 }
+    })
+  );
+
+  // If multi‑day, show date range text under the subtitle
+  if (fullReport.esProyectoMultiDia) {
+    const start = fullReport.fechaInicio || '';
+    const end = fullReport.fechaFinal || '';
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `INFORME DE LOS TRABAJOS EJECUTADOS CORRESPONDIENTE A LA FECHA ${start} AL ${end}`,
+            bold: true,
+            size: 22
+          })
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 300 }
+      })
+    );
+  }
+
+  // Report information table (number, created by, etc.)
+  children.push(
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({ children: [new TextRun({ text: 'N° REPORTE:', bold: true, size: 22 })] })],
+              width: { size: 40, type: WidthType.PERCENTAGE },
+              shading: { fill: 'FFE5CC' }
+            }),
+            new TableCell({
+              children: [new Paragraph({ children: [new TextRun({ text: fullReport.numeroReporte, bold: true, size: 22, color: 'FF7A00' })] })],
+              width: { size: 60, type: WidthType.PERCENTAGE }
+            })
+          ]
+        }),
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({ children: [new TextRun({ text: 'CREADO POR:', bold: true, size: 22 })] })],
+              shading: { fill: 'FFE5CC' }
+            }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.creadoPor || 'Sistema', size: 22 })] })] })
+          ]
+        }),
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({ children: [new TextRun({ text: 'FECHA:', bold: true, size: 22 })] })],
+              shading: { fill: 'FFE5CC' }
+            }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: new Date(fullReport.fechaCreacion).toLocaleDateString('es-PY'), size: 22 })] })] })
+          ]
+        }),
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({ children: [new TextRun({ text: 'ESTADO:', bold: true, size: 22 })] })],
+              shading: { fill: 'FFE5CC' }
+            }),
+            new TableCell({
+              children: [new Paragraph({
+                children: [new TextRun({ text: fullReport.estado.toUpperCase(), bold: true, size: 22, color: 'FFFFFF' })],
+                alignment: AlignmentType.CENTER
+              })],
+              shading: {
+                fill: fullReport.estado === 'completado' ? '228B22' :
+                      fullReport.estado === 'pendiente' ? 'FF8C00' : '808080'
+              }
+            })
+          ]
+        })
+      ]
+    })
+  );
+
+  children.push(new Paragraph({ text: '', spacing: { after: 300 } }));
+
+  // UBICACIÓN GEOGRÁFICA section
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: '  UBICACIÓN GEOGRÁFICA',
+          bold: true,
+          size: 24,
+          color: 'FFFFFF'
+        })
+      ],
+      shading: { fill: 'FF7A00' },
+      spacing: { before: 200, after: 100 }
+    })
+  );
+
+  children.push(
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Región:', bold: true, size: 22 })] })], width: { size: 30, type: WidthType.PERCENTAGE } }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.region || 'N/A', size: 22 })] })], width: { size: 70, type: WidthType.PERCENTAGE } })
+          ]
+        }),
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Provincia:', bold: true, size: 22 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.provincia || 'N/A', size: 22 })] })] })
+          ]
+        }),
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Municipio:', bold: true, size: 22 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.municipio || 'N/A', size: 22 })] })] })
+          ]
+        }),
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Distrito:', bold: true, size: 22 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.distrito || 'N/A', size: 22 })] })] })
+          ]
+        }),
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Sector:', bold: true, size: 22 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.sector || 'N/A', size: 22 })] })] })
+          ]
+        })
+      ]
+    })
+  );
+
+  children.push(new Paragraph({ text: '', spacing: { after: 300 } }));
+
+  // DATOS DE LA INTERVENCIÓN section
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: '  DATOS DE LA INTERVENCIÓN',
+          bold: true,
+          size: 24,
+          color: 'FFFFFF'
+        })
+      ],
+      shading: { fill: 'FF7A00' },
+      spacing: { before: 200, after: 100 }
+    })
+  );
+
+  const interventionRows = [
+    new TableRow({
+      children: [
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Tipo de Intervención:', bold: true, size: 22 })] })], width: { size: 40, type: WidthType.PERCENTAGE } }),
+        new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.tipoIntervencion || 'N/A', size: 22 })] })], width: { size: 60, type: WidthType.PERCENTAGE } })
+      ]
+    })
+  ];
+
+  if (fullReport.subTipoCanal) {
+    interventionRows.push(
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Subtipo:', bold: true, size: 22 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fullReport.subTipoCanal, size: 22 })] })] })
+        ]
+      })
+    );
+  }
+
+  children.push(
+    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: interventionRows })
+  );
+
+  children.push(new Paragraph({ text: '', spacing: { after: 300 } }));
+
+  // DATOS MÉTRICOS
+  if (fullReport.metricData && Object.keys(fullReport.metricData).length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'DATOS MÉTRICOS DE LA INTERVENCIÓN',
+            bold: true,
+            size: 22,
+            color: 'FFFFFF'
+          })
+        ],
+        shading: { fill: 'FF7A00' },
+        spacing: { before: 300, after: 100 }
+      })
+    );
+    
+    const metricRows = Object.entries(fullReport.metricData!).map(([key, value]) => {
+      const fieldInfo = fieldLabels[key] || { 
+        label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
+        unit: '' 
+      };
+      const valueText = fieldInfo.unit ? `${value} ${fieldInfo.unit}` : String(value);
+      
+      return new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: fieldInfo.label + ':', bold: true, size: 18 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: valueText, size: 18 })] })] })
+        ]
+      });
+    });
+    
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: metricRows
+    }));
+  }
+  
+  // COORDENADAS GPS
+  if (fullReport.gpsData && (fullReport.gpsData.punto_inicial || fullReport.gpsData.punto_alcanzado)) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'COORDENADAS GPS',
+            bold: true,
+            size: 22,
+            color: 'FFFFFF'
+          })
+        ],
+        shading: { fill: 'FF7A00' },
+        spacing: { before: 300, after: 100 }
+      })
+    );
+    
+    const gpsRows: TableRow[] = [];
+    if (fullReport.gpsData.punto_inicial) {
+      gpsRows.push(
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Punto Inicial:', bold: true, size: 18 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Lat: ${fullReport.gpsData.punto_inicial.lat}, Lon: ${fullReport.gpsData.punto_inicial.lon}`, size: 18 })] })] })
+          ]
+        })
+      );
+    }
+    if (fullReport.gpsData.punto_alcanzado) {
+      gpsRows.push(
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Punto Alcanzado:', bold: true, size: 18 })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Lat: ${fullReport.gpsData.punto_alcanzado.lat}, Lon: ${fullReport.gpsData.punto_alcanzado.lon}`, size: 18 })] })] })
+          ]
+        })
+      );
+    }
+    
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: gpsRows
+    }));
+  }
+  
+  // OBSERVACIONES
+  if (fullReport.observaciones) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'OBSERVACIONES',
+            bold: true,
+            size: 22,
+            color: 'FFFFFF'
+          })
+        ],
+        shading: { fill: 'FF7A00' },
+        spacing: { before: 300, after: 100 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: fullReport.observaciones, size: 18 })
+        ],
+        spacing: { after: 200 }
+      })
+    );
+  }
+
+  // If multi‑day, append detailed list of daily activities
+  if (fullReport.esProyectoMultiDia && fullReport.reportesPorDia) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'DETALLE ANEXO DE LOS TRABAJOS EJECUTADOS:',
+            bold: true,
+            size: 22
+          })
+        ],
+        spacing: { before: 300, after: 100 }
+      })
+    );
+
+    const dayEntries = Object.entries(fullReport.reportesPorDia as Record<string, any>).sort(([a], [b]) => a.localeCompare(b));
+    dayEntries.forEach(([date, dayData], idx) => {
+      const obs = (dayData as any).observaciones || '';
+      const tipo = (dayData as any).tipoIntervencion || '';
+      const text = `Día ${idx + 1} (${date}): ${obs || tipo}`;
+      children.push(
+        new Paragraph({
+          text,
+          bullet: { level: 0 },
+          spacing: { after: 50 }
+        })
+      );
+    });
+  }
+
+  // final document assembly
+  const doc = new Document({
+    sections: [{
+      properties: { page: { size: { orientation: PageOrientation.PORTRAIT } } },
+      children
+    }] 
+  });
+
   const blob = await Packer.toBlob(doc);
-  saveAs(blob, `${displayData.reportNumber}.docx`);
+  saveAs(blob, `${fullReport.numeroReporte}_reporte.docx`);
 }
 
