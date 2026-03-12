@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
+import ExportButton from './ExportButton';
 import './DetailedReportView.css';
 
 // Mapeo de etiquetas de campos con sus unidades (igual que en el PDF)
@@ -173,6 +174,17 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     }
   };
 
+  // Maneja la exportación según formato seleccionado (excel, pdf, word)
+  const handleExport = (format: string) => {
+    if (!selectedReport) {
+      alert('No hay un reporte seleccionado para exportar');
+      return;
+    }
+    console.log('🌐 Pedido de exportación:', format, selectedReport.numeroReporte);
+    // TODO: integrar lógica real de generación (exportPage helpers)
+    alert(`Exportar reporte ${selectedReport.numeroReporte} como ${format} (funcionalidad en desarrollo)`);
+  };
+
   // Función para cargar historial de un vehículo
   const loadVehicleHistory = async (vehiculo: {tipo: string, modelo: string, ficha: string}) => {
     setSelectedVehicle(vehiculo);
@@ -247,7 +259,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       
       setVehicleHistory(history);
     } catch (error) {
-      console.error('Error al cargar historial de vehículo:', error);
+        console.error('Error al cargar historial de vehículo:', error);
       setVehicleHistory([]);
     }
   };
@@ -1200,6 +1212,10 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           </div>
           <div className="report-viewer-footer">
             <div className="footer-actions-left">
+              <ExportButton
+                selectedReport={selectedReport}
+                onExport={(format) => handleExport(format)}
+              />
               <button 
                 className="report-edit-btn"
                 onClick={() => {
