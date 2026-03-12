@@ -411,7 +411,7 @@ async function generateWordContent(fullReport: FullReportData, displayData: Repo
     );
   }
 
-  // Main header and subtitle
+  // Main header and document title
   children.push(
     new Paragraph({
       children: [
@@ -423,10 +423,27 @@ async function generateWordContent(fullReport: FullReportData, displayData: Repo
         })
       ],
       alignment: AlignmentType.CENTER,
+      spacing: { after: 100 }
+    })
+  );
+
+  // Add the formal form title just below the header
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: 'FORMULARIO DE INFORME DE TRABAJOS REALIZADOS',
+          bold: true,
+          size: 20,
+          color: '000000'
+        })
+      ],
+      alignment: AlignmentType.CENTER,
       spacing: { after: 200 }
     })
   );
 
+  // Subtitle: type of intervention
   children.push(
     new Paragraph({
       children: [
@@ -460,6 +477,20 @@ async function generateWordContent(fullReport: FullReportData, displayData: Repo
       })
     );
   }
+
+  // Provincia / distrito info immediately after the date line
+  children.push(
+    new Paragraph({
+      text: `Provincia: ${fullReport.provincia || 'N/A'}`,
+      spacing: { after: 100 }
+    })
+  );
+  children.push(
+    new Paragraph({
+      text: `Distrito Municipal: ${fullReport.distrito || 'N/A'}   Tipo de intervenciones: ${fullReport.tipoIntervencion || 'N/A'}`,
+      spacing: { after: 200 }
+    })
+  );
 
   // Report information table (number, created by, etc.)
   children.push(
