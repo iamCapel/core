@@ -502,6 +502,9 @@
   gap: 8px;
 }
 
+/* font import for export button */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&display=swap');
+
 .report-viewer-header h2 {
   margin: 0;
   color: var(--primary-orange-dark);
@@ -517,8 +520,7 @@
 }
 
 .report-edit-btn,
-.report-delete-btn,
-.report-export-btn {
+.report-delete-btn {
   padding: var(--spacing-xs) var(--spacing-md);
   border: none;
   border-radius: 8px;
@@ -558,31 +560,9 @@
   transform: translateY(0);
 }
 
-.report-export-btn {
-  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-  color: white;
-  padding: var(--spacing-xs) var(--spacing-md);
-  border: none;
-  border-radius: 8px;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: var(--transition-fast);
-  box-shadow: var(--shadow-sm);
-}
+/* base button removed in favour of fancy component below */
 
-.report-export-btn:hover {
-  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.report-export-btn:active {
-  transform: translateY(0);
-}
+/* replaced by btn-export styles defined further down */
 
 .close-report-btn {
   background: none;
@@ -597,6 +577,151 @@
   justify-content: center;
   border-radius: 50%;
   transition: var(--transition-fast);
+}
+
+/* new export button styles (copied and adapted from provided snippet) */
+.btn-export {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 10px;
+  padding: 15px 32px; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white; font-family: 'Outfit', sans-serif;
+  font-size: 17px; font-weight: 700; letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.5),
+              0 8px 28px rgba(29,78,216,0.55);
+  transition: transform .18s, box-shadow .18s;
+}
+.btn-export:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.7),
+              0 14px 36px rgba(29,78,216,0.65),
+              0 0 60px rgba(59,130,246,0.2);
+}
+.btn-export:active { transform: scale(0.97); }
+
+.shimmer {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.2) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: shimmer 2.5s ease infinite;
+}
+
+.btn-icon { font-size: 21px; display: inline-block; animation: bob 2.2s ease infinite; }
+
+.caret {
+  font-size: 11px; opacity: .75; margin-left: 2px;
+  display: inline-block;
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+}
+.caret.flipped { transform: rotate(180deg); }
+
+/* ── SPINNER ── */
+.spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,.3);
+  border-top-color: white;
+  animation: spin .65s linear infinite;
+}
+
+/* ── MENÚ ── */
+.menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 16px;
+  padding: 7px;
+  min-width: 220px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12),
+              0 20px 60px rgba(0,0,0,0.18),
+              0 0 0 1px rgba(0,0,0,0.05);
+  z-index: 99;
+  animation: menuIn .28s cubic-bezier(.34,1.56,.64,1);
+  display: none;
+}
+.menu.open { display: block; }
+
+.opt {
+  display: flex; align-items: center; gap: 13px;
+  width: 100%; padding: 12px 14px;
+  border: none; background: transparent; border-radius: 11px;
+  cursor: pointer; text-align: left;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px; font-weight: 700;
+  transition: background .13s, transform .13s;
+  opacity: 0;
+  animation: rowIn .3s ease forwards;
+}
+.opt:nth-child(1) { animation-delay: .04s; }
+.opt:nth-child(2) { animation-delay: .10s; }
+.opt:nth-child(3) { animation-delay: .16s; }
+.opt:hover { background: #f1f5f9; transform: translateX(5px); }
+.opt:hover .opt-ico { transform: scale(1.14) rotate(-6deg); }
+
+.opt-ico {
+  border-radius: 9px; overflow: hidden; flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: transform .18s;
+}
+.opt-ext {
+  margin-left: auto;
+  font-size: 11px; font-weight: 500; color: #94a3b8;
+}
+
+.divider { height: 1px; background: #f1f5f9; margin: 2px 8px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 30px; left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a; color: white;
+  padding: 13px 24px; border-radius: 40px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+  animation: toastIn .38s cubic-bezier(.34,1.56,.64,1);
+  z-index: 200;
+  display: none;
+}
+.toast.show { display: flex; }
+
+.check {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #22c55e; color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900;
+  animation: checkPop .4s cubic-bezier(.34,1.56,.64,1) .1s both;
+}
+
+/* ── KEYFRAMES ── */
+@keyframes shimmer {
+  0%      { transform: translateX(-100%); }
+  60%,100%{ transform: translateX(220%); }
+}
+@keyframes bob {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-4px); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes menuIn {
+  from { opacity:0; transform: translateX(-50%) translateY(10px) scale(.95); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0)    scale(1); }
+}
+@keyframes rowIn {
+  from { opacity:0; transform: translateX(-10px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+@keyframes toastIn {
+  from { opacity:0; transform: translateX(-50%) translateY(16px); }
+  to   { opacity:1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes checkPop {
+  from { transform: scale(0) rotate(-20deg); }
+  to   { transform: scale(1) rotate(0deg); }
 }
 
 .close-report-btn:hover {
@@ -810,25 +935,7 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Export button styling */
-.report-export-btn {
-  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-  color: white;
-  border: none;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: var(--font-size-md);
-  transition: var(--transition-normal);
-  box-shadow: var(--shadow-sm);
-}
-
-.report-export-btn:hover {
-  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
+/* legacy export button styling removed; new component uses .btn-export */
 
 .export-dropdown {
   /* styles applied inline in component but include fallback */
@@ -998,8 +1105,7 @@
   }
 
   .report-edit-btn,
-  .report-delete-btn,
-  .report-export-btn {
+  .report-delete-btn {
     flex: 1;
     justify-content: center;
   }
