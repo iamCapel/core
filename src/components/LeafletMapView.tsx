@@ -288,11 +288,12 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('actividades');
   const [loading, setLoading] = useState(false);
   const [busquedaFicha, setBusquedaFicha] = useState<string>('');
+  const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
 
   // Cargar datos según el modo de vista
   useEffect(() => {
     loadMapData();
-  }, [user, mapViewMode]);
+  }, [user, mapViewMode, refreshTimestamp]);
 
   const loadMapData = async () => {
     setLoading(true);
@@ -590,7 +591,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       console.log('🌍 Desuscribiéndose de ubicaciones en tiempo real');
       unsubscribe();
     };
-  }, [mapViewMode, user]);
+  }, [mapViewMode, user, refreshTimestamp]);
 
   const filteredInterventions = interventions.filter(intervention => 
     selectedTypes.includes(intervention.tipoIntervencion)
@@ -943,72 +944,92 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           </div>
 
           {/* Información de la vista actual */}
-          <div style={{ 
-            marginTop: '20px', 
-            padding: '12px', 
-            backgroundColor: '#f8f9fa', 
-            borderRadius: '8px',
-            fontSize: '12px',
-            color: '#6c757d'
-          }}>
-            {loading ? (
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ fontSize: '20px' }}>⏳</span>
-                <p style={{ margin: '8px 0 0' }}>Cargando datos...</p>
-              </div>
-            ) : (
-              <>
-                {mapViewMode === 'vehiculos' && (
-                  <div>
-                    <p style={{ margin: '0 0 8px' }}>
-                      <strong>🚜 Vehículos:</strong> Muestra las obras que tienen vehículos registrados. 
-                      Haz clic en un marcador para ver la lista de fichas.
-                    </p>
-                    {busquedaFicha && (
-                      <p style={{ margin: 0, color: '#FF7700', fontWeight: '600' }}>
-                        🔍 Filtrando por ficha: "{busquedaFicha}" - {reportesConVehiculos.filter(r => 
-                          r.vehiculos.some(v => v.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()))
-                        ).length} obras encontradas
+          {(mapViewMode !== 'operadores' || operadoresMarkers.length > 0) && (
+            <div style={{ 
+              marginTop: '20px', 
+              padding: '12px', 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: '#6c757d'
+            }}>
+              {loading ? (
+                <div style={{ textAlign: 'center' }}>
+                  <span style={{ fontSize: '20px' }}>⏳</span>
+                  <p style={{ margin: '8px 0 0' }}>Cargando datos...</p>
+                </div>
+              ) : (
+                <>
+                  {mapViewMode === 'vehiculos' && (
+                    <div>
+                      <p style={{ margin: '0 0 8px' }}>
+                        <strong>🚜 Vehículos:</strong> Muestra las obras que tienen vehículos registrados. 
+                        Haz clic en un marcador para ver la lista de fichas.
                       </p>
-                    )}
-                  </div>
-                )}
-                {mapViewMode === 'actividades' && (
-                  <p style={{ margin: 0 }}>
-                    <strong>⛏️ Actividades:</strong> Muestra las intervenciones registradas. 
-                    Haz clic en un icono para ver el detalle del reporte.
-                  </p>
-                )}
-                {mapViewMode === 'operadores' && (
-                  <div>
-                    <p style={{ margin: '0 0 8px' }}>
-                      <strong>👷 Operadores:</strong> Muestra la ubicación GPS en tiempo real de los técnicos 
-                      con la aplicación CORE-APK instalada. Actualización automática cada 5 segundos.
+                      {busquedaFicha && (
+                        <p style={{ margin: 0, color: '#FF7700', fontWeight: '600' }}>
+                          🔍 Filtrando por ficha: "{busquedaFicha}" - {reportesConVehiculos.filter(r => 
+                            r.vehiculos.some(v => v.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()))
+                          ).length} obras encontradas
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {mapViewMode === 'actividades' && (
+                    <p style={{ margin: 0 }}>
+                      <strong>⛏️ Actividades:</strong> Muestra las intervenciones registradas. 
+                      Haz clic en un icono para ver el detalle del reporte.
                     </p>
-                    {operadoresMarkers.length > 0 && (
-                      <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px' }}>
-                        {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
-                          <span style={{ color: '#2ecc71', fontWeight: '600' }}>
-                            🟢 {operadoresMarkers.filter(op => op.status === 'online').length} En línea
-                          </span>
-                        )}
-                        {operadoresMarkers.filter(op => op.status === 'recent').length > 0 && (
-                          <span style={{ color: '#f39c12', fontWeight: '600' }}>
-                            🟡 {operadoresMarkers.filter(op => op.status === 'recent').length} Activo
-                          </span>
-                        )}
-                        {operadoresMarkers.filter(op => op.status === 'offline').length > 0 && (
-                          <span style={{ color: '#95a5a6', fontWeight: '600' }}>
-                            ⚫ {operadoresMarkers.filter(op => op.status === 'offline').length} Desconectado
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+                  )}
+                  {mapViewMode === 'operadores' && operadoresMarkers.length > 0 && (
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px' }}>
+                      {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
+                        <span style={{ color: '#2ecc71', fontWeight: '600' }}>
+                          🟢 {operadoresMarkers.filter(op => op.status === 'online').length} En línea
+                        </span>
+                      )}
+                      {operadoresMarkers.filter(op => op.status === 'recent').length > 0 && (
+                        <span style={{ color: '#f39c12', fontWeight: '600' }}>
+                          🟡 {operadoresMarkers.filter(op => op.status === 'recent').length} Activo
+                        </span>
+                      )}
+                      {operadoresMarkers.filter(op => op.status === 'offline').length > 0 && (
+                        <span style={{ color: '#95a5a6', fontWeight: '600' }}>
+                          ⚫ {operadoresMarkers.filter(op => op.status === 'offline').length} Desconectado
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {mapViewMode === 'operadores' && (
+            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                onClick={() => setRefreshTimestamp(Date.now())}
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '12px',
+                  backgroundColor: '#2196F3',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1976D2')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#2196F3')}
+              >
+                🔄 Actualizar
+              </button>
+              <span style={{ fontSize: '11px', color: '#6c757d' }}>
+                Última actualización: {new Date(refreshTimestamp).toLocaleTimeString()}
+              </span>
+            </div>
+          )}
+
         </div>
 
         {/* Mapa */}
