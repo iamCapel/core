@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import ExportButton from './ExportButton';
+import { exportReportsAsPdf } from '../utils/reportExport';
 import './DetailedReportView.css';
 
 // Mapeo de etiquetas de campos con sus unidades (igual que en el PDF)
@@ -46,11 +47,6 @@ interface Report {
   subTipoCanal?: string;
   // Datos métricos (plantilla)
   metricData: Record<string, string>;
-  // Coordenadas GPS
-  gpsData?: {
-    punto_inicial?: { lat: number; lon: number };
-    punto_alcanzado?: { lat: number; lon: number };
-  };
   // Imágenes organizadas por día
   imagesPerDay?: Record<string, Array<{ url: string; timestamp: string }>>;
   // Imágenes (legacy - array simple)
@@ -379,7 +375,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             tipoIntervencion: report.tipoIntervencion,
             subTipoCanal: report.subTipoCanal,
             metricData: dayData.metricData || report.metricData || {},
-            gpsData: dayData.gpsData || report.gpsData,
+            // gpsData intentionally omitted per requirements
             observations: dayData.observaciones || report.observaciones,
             fechaCreacion: report.fechaCreacion,
             fechaProyecto: dia,
@@ -419,7 +415,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           tipoIntervencion: report.tipoIntervencion,
           subTipoCanal: report.subTipoCanal,
           metricData: report.metricData || {},
-          gpsData: report.gpsData,
+          // gpsData intentionally omitted per requirements
           observations: report.observaciones,
           fechaCreacion: report.fechaCreacion,
           fechaProyecto: fechaMostrar,
@@ -759,6 +755,22 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     window.print();
   };
 
+
+  const handleDownloadPdf = async () => {
+    if (!filteredReports || filteredReports.length === 0) {
+      alert('No hay reportes para descargar en este período.');
+      return;
+    }
+
+    try {
+      await exportReportsAsPdf(filteredReports as any);
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert('No se pudo generar el PDF. Por favor intente de nuevo.');
+    }
+  };
+
+
   const toggleRegion = (regionName: string) => {
     const newExpanded = new Set(expandedRegions);
     if (newExpanded.has(regionName)) {
@@ -1047,29 +1059,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             )}
 
             {/* Coordenadas GPS */}
-            {selectedReport.gpsData && (
-              <div className="report-section">
-                <h3 className="section-title">🗺️ COORDENADAS GPS</h3>
-                <div className="report-grid">
-                  {selectedReport.gpsData.punto_inicial && (
-                    <div className="report-field">
-                      <label>Punto Inicial:</label>
-                      <div className="field-value">
-                        Lat: {selectedReport.gpsData.punto_inicial.lat.toFixed(6)}°, Lon: {selectedReport.gpsData.punto_inicial.lon.toFixed(6)}°
-                      </div>
-                    </div>
-                  )}
-                  {selectedReport.gpsData.punto_alcanzado && (
-                    <div className="report-field">
-                      <label>Punto Alcanzado:</label>
-                      <div className="field-value">
-                        Lat: {selectedReport.gpsData.punto_alcanzado.lat.toFixed(6)}°, Lon: {selectedReport.gpsData.punto_alcanzado.lon.toFixed(6)}°
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+
 
             {/* Imágenes - Priorizar imagesPerDay sobre images */}
             {selectedReport.imagesPerDay && Object.keys(selectedReport.imagesPerDay).length > 0 ? (
@@ -1252,7 +1242,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     subTipoCanal: selectedReport.subTipoCanal,
                     observaciones: selectedReport.observations || '', // observations → observaciones
                     metricData: selectedReport.metricData || {},
-                    gpsData: selectedReport.gpsData || {},
                     vehiculos: selectedReport.vehiculos || [],
                     fechaReporte: selectedReport.fechaProyecto || selectedReport.fechaCreacion?.split('T')[0] || '',
                     fechaInicio: selectedReport.fechaProyecto || '',
@@ -1650,8 +1639,18 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         </div>
         <div className="export-buttons">
           <button className="btn-export" onClick={handlePrint}>
-            🖨️ Imprimir
+            🖨️ Imprimir vista actual
           </button>
+          {filterPeriod !== 'todos' && (
+            <button
+              className="btn-export"
+              onClick={handleDownloadPdf}
+              disabled={filteredReports.length === 0}
+              title={filteredReports.length === 0 ? 'No hay reportes para descargar con los filtros actuales' : 'Descargar un PDF con todos los reportes del período'}
+            >
+              📄 Descargar PDF
+            </button>
+          )}
         </div>
       </div>
 

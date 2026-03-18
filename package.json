@@ -50,7 +50,8 @@
     "eject": "react-scripts eject",
     "build:mobile": "npm run build && npx cap sync",
     "android:open": "npx cap open android",
-    "android:run": "npx cap run android"
+    "android:run": "npx cap run android",
+    "postinstall": "patch-package"
   },
   "eslintConfig": {
     "extends": [
@@ -72,6 +73,7 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
-    "baseline-browser-mapping": "^2.9.19"
+    "baseline-browser-mapping": "^2.9.19",
+    "patch-package": "^8.0.1"
   }
 }
