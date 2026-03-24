@@ -285,7 +285,9 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
-  const [selectedVehicleFicha, setSelectedVehicleFicha] = useState<string>('');
+  const [showVehicleHistoryModal, setShowVehicleHistoryModal] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<{tipo: string; modelo: string; ficha: string} | null>(null);
+  const [vehicleHistory, setVehicleHistory] = useState<any[]>([]);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('actividades');
   const [loading, setLoading] = useState(false);
   const [busquedaFicha, setBusquedaFicha] = useState<string>('');
@@ -606,10 +608,78 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     return INTERVENTION_COLORS.default;
   };
 
-  const handleViewDetail = (numeroReporte: string, ficha?: string) => {
+  const handleViewDetail = (numeroReporte: string) => {
     setSelectedReportNumber(numeroReporte);
-    setSelectedVehicleFicha(ficha || '');
     setShowDetailView(true);
+  };
+
+  const openVehicleHistory = async (vehiculo: {tipo: string; modelo: string; ficha: string}) => {
+    setSelectedVehicle(vehiculo);
+    setShowVehicleHistoryModal(true);
+
+    try {
+      const allReports = await firebaseReportStorage.getAllReports();
+      const filteredReports = allReports
+        .filter(report => report.vehiculos && Array.isArray(report.vehiculos) && report.vehiculos.some((v: any) => v.ficha === vehiculo.ficha))
+        .map((report: any) => {
+          const start = report.fechaInicio || report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
+          const location = `${report.region || ''} / ${report.provincia || ''} / ${report.distrito || ''} / ${report.municipio || ''} / ${report.sector || ''}`;
+
+          return {
+            numeroReporte: report.numeroReporte,
+            tipoIntervencion: report.tipoIntervencion,
+            usuario: report.creadoPor || report.usuarioId || 'Desconocido',
+            region: report.region || '',
+            provincia: report.provincia || '',
+            distrito: report.distrito || '',
+            municipio: report.municipio || '',
+            sector: report.sector || '',
+            fechaInicio: start,
+            fechaFinOriginal: report.fechaFinal || '',
+            estadoOriginal: report.estado || '',
+            direccion: location
+          };
+        });
+
+      const sortedByStart = filteredReports.sort((a: any, b: any) => new Date(a.fechaInicio).getTime() - new Date(b.fechaInicio).getTime());
+      const computedHistory = sortedByStart.map((item: any, index: number) => {
+        const nextItem = sortedByStart[index + 1];
+        const fechaFin = nextItem ? new Date(nextItem.fechaInicio).toLocaleDateString('es-ES') : 'Actualidad';
+        const estado = nextItem ? 'Finalizado' : 'Actualidad';
+
+        return {
+          ...item,
+          fechaFin,
+          estado,
+          fechaInicio: item.fechaInicio ? new Date(item.fechaInicio).toLocaleDateString('es-ES') : 'N/A'
+        };
+      });
+
+      const formatVehicleDate = (value: string) => {
+        if (!value || value.trim() === '') return 'N/A';
+        if (value === 'Actualidad') return 'Actualidad';
+
+        const d = new Date(value);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('es-ES');
+        }
+        return value;
+      };
+
+
+      // Mostrar más reciente primero
+      computedHistory.sort((a: any, b: any) => new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime());
+      setVehicleHistory(computedHistory);
+    } catch (error) {
+      console.error('Error cargando historial de vehículo:', error);
+      setVehicleHistory([]);
+    }
+  };
+
+  const closeVehicleHistory = () => {
+    setShowVehicleHistoryModal(false);
+    setSelectedVehicle(null);
+    setVehicleHistory([]);
   };
 
   const handleBackToMap = () => {
@@ -622,7 +692,6 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       <DetailedReportView 
         user={user} 
         initialReportNumber={selectedReportNumber} 
-        initialVehicleFicha={selectedVehicleFicha}
         onBack={handleBackToMap} 
       />
     );
@@ -1131,7 +1200,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                         {reporte.vehiculos.map((vehiculo, idx) => (
                           <div 
                             key={idx} 
-                            onClick={() => handleViewDetail(reporte.numeroReporte, vehiculo.ficha)}
+                            onClick={() => openVehicleHistory(vehiculo)}
                             style={{ 
                               display: 'flex',
                               alignItems: 'center',
@@ -1453,6 +1522,61 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           </MapContainer>
         </div>
       </div>
+
+      {showVehicleHistoryModal && selectedVehicle && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000
+        }}>
+          <div style={{
+            background: 'white',
+            width: '90%',
+            maxWidth: '800px',
+            maxHeight: '85vh',
+            borderRadius: '12px',
+            overflowY: 'auto',
+            padding: '20px',
+            position: 'relative'
+          }}>
+            <button onClick={closeVehicleHistory} style={{
+              position: 'absolute',
+              right: '16px',
+              top: '16px',
+              background: 'transparent',
+              border: 'none',
+              fontSize: '22px',
+              cursor: 'pointer'
+            }}>✕</button>
+            <h2 style={{ marginTop: 0 }}>Historial de Vehículo</h2>
+            <p><strong>Ficha:</strong> {selectedVehicle.ficha}</p>
+            <p><strong>Tipo:</strong> {selectedVehicle.tipo} <strong>Modelo:</strong> {selectedVehicle.modelo}</p>
+
+            {vehicleHistory.length === 0 ? (
+              <p>No se encontró historial de intervenciones para este vehículo.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '12px' }}>
+                {vehicleHistory.map((item, idx) => (
+                  <div key={idx} style={{ border: '1px solid #e9ecef', borderRadius: '8px', padding: '10px' }}>
+                    <div style={{ fontWeight: '700', marginBottom: '6px' }}>#{item.numeroReporte || 'N/A'} - {item.tipoIntervencion || 'N/A'}</div>
+                    <div>📅 Inicio: {item.fechaInicio || 'N/A'} | Fin: {item.fechaFin || 'N/A'}</div>
+                    <div>🟢 Estado: {item.estado || 'Desconocido'}</div>
+                    <div>📍 Ubicación: {item.direccion}</div>
+                    <div>👤 Registrado por: {item.usuario || 'Desconocido'}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <style>{`
         .custom-marker {

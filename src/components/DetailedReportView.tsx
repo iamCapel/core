@@ -95,7 +95,6 @@ interface DetailedReportViewProps {
     role?: string;
   };
   initialReportNumber?: string;
-  initialVehicleFicha?: string;
   onBack?: () => void;
 }
 
@@ -105,7 +104,7 @@ type SortField = 'reportNumber' | 'date' | 'tipo' | 'estado' | 'kilometraje';
 type SortOrder = 'asc' | 'desc';
 type StatsListType = 'total' | 'completados' | 'pendientes' | 'enProgreso' | 'kmTotal' | 'kmPromedio';
 
-const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user, initialReportNumber, initialVehicleFicha, onBack }) => {
+const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user, initialReportNumber, onBack }) => {
   // Estados de vista
   const [viewMode, setViewMode] = useState<ViewMode>('hierarchy');
   
@@ -200,14 +199,14 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           if (hasVehicle) {
             // Construir fechas y estado/reflejo activo según datos de Firebase
             const fechaInicioReporte = report.fechaInicio || report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
-            const fechaFinReporte = report.fechaFinal || report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
+            const fechaFinReporte = report.fechaFinal || '';
             const now = new Date();
-            const fechaFinDate = new Date(fechaFinReporte);
+            const fechaFinDate = fechaFinReporte ? new Date(fechaFinReporte) : null;
             const estadoReporte = report.estado || '';
 
             const statusInfo = estadoReporte
               ? estadoReporte
-              : (!isNaN(fechaFinDate.getTime()) && fechaFinDate >= now)
+              : (fechaFinDate && !isNaN(fechaFinDate.getTime()) && fechaFinDate >= now)
                 ? 'Activo hasta la fecha'
                 : 'Finalizado';
 
@@ -276,14 +275,43 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         }
       }
       
-      // Ordenar por fecha descendente
-      history.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-      
-      setVehicleHistory(history);
+      // Convertir fechas y detectar cierre / actualidad según regla de ficha única
+      const sortedByStart = history.sort((a, b) => new Date(a.fechaInicio).getTime() - new Date(b.fechaInicio).getTime());
+      const adjustedHistory = sortedByStart.map((item, index) => {
+        const nextItem = sortedByStart[index + 1];
+        const fechaFinLabel = nextItem
+          ? new Date(nextItem.fechaInicio).toLocaleDateString('es-ES')
+          : 'Actualidad';
+
+        const estadoLabel = nextItem ? 'Finalizado' : 'Actualidad';
+
+        return {
+          ...item,
+          fechaInicio: item.fechaInicio ? new Date(item.fechaInicio).toLocaleDateString('es-ES') : 'N/A',
+          fechaFin: fechaFinLabel,
+          estado: estadoLabel,
+          fecha: item.fechaInicio
+        };
+      });
+
+      // Mostrar más reciente primero
+      adjustedHistory.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      setVehicleHistory(adjustedHistory);
     } catch (error) {
         console.error('Error al cargar historial de vehículo:', error);
       setVehicleHistory([]);
     }
+  };
+
+  const formatVehicleDate = (value: string) => {
+    if (!value || value.trim() === '') return 'N/A';
+    if (value === 'Actualidad') return 'Actualidad';
+
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('es-ES');
+    }
+    return value;
   };
 
   // Función para cerrar modal de vehículo
@@ -520,16 +548,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       }
     }
   }, [initialReportNumber, allReportsFlat, selectedReport]);
-
-  // Abrir historial automáticamente si viene initialVehicleFicha
-  useEffect(() => {
-    if (initialVehicleFicha && selectedReport && selectedReport.vehiculos && Array.isArray(selectedReport.vehiculos)) {
-      const vehiculo = selectedReport.vehiculos.find(v => v.ficha === initialVehicleFicha);
-      if (vehiculo) {
-        loadVehicleHistory(vehiculo);
-      }
-    }
-  }, [initialVehicleFicha, selectedReport]);
 
   // Escuchar evento para abrir reportes desde otras vistas (como ReportsPage)
   useEffect(() => {
@@ -2028,9 +2046,9 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                         </div>
 
                         <div className="history-period">
-                          <strong>Inicio:</strong> {activity.fechaInicio ? new Date(activity.fechaInicio).toLocaleDateString('es-ES') : 'N/A'}
+                          <strong>Inicio:</strong> {formatVehicleDate(activity.fechaInicio)}
                           <span style={{ margin: '0 10px' }}>•</span>
-                          <strong>Fin:</strong> {activity.fechaFin ? new Date(activity.fechaFin).toLocaleDateString('es-ES') : 'N/A'}
+                          <strong>Fin:</strong> {formatVehicleDate(activity.fechaFin)}
                           <span style={{ margin: '0 10px' }}>•</span>
                           <strong>Estado:</strong> {activity.estado || 'Desconocido'}
                         </div>

@@ -49,9 +49,48 @@ class FirebaseReportStorage {
       
       await setDoc(reportRef, cleanReport);
       console.log('✅ Reporte guardado en Firebase con vehículos');
+
+      // Actualizar registros previos del mismo vehículo para que no sigan como "Actualidad"
+      if (Array.isArray(cleanReport.vehiculos) && cleanReport.vehiculos.length > 0) {
+        await this._closePreviousVehicleInterventions(cleanReport);
+      }
     } catch (error) {
       console.error('Error guardando en Firestore:', error);
       throw error;
+    }
+  }
+
+  private async _closePreviousVehicleInterventions(report: ReportData): Promise<void> {
+    const currentStart = new Date(report.fechaInicio || report.fechaProyecto || report.fechaCreacion || report.timestamp || new Date().toISOString());
+
+    const allReports = await this.getAllReports();
+    const vehicleFichas = Array.from(new Set((report.vehiculos || []).map(v => v.ficha)));
+
+    for (const ficha of vehicleFichas) {
+      // Obtener reportes con este mismo vehículo (funicular en múltiplos lugares)
+      const relatedReports = allReports
+        .filter(r => r.id !== report.id && Array.isArray(r.vehiculos) && r.vehiculos.some(v => v.ficha === ficha));
+
+      // Tomar el anterior más reciente antes del reporte actual
+      const previous = relatedReports
+        .map(r => ({
+          ...r,
+          _fechaInicio: new Date(r.fechaInicio || r.fechaProyecto || r.fechaCreacion || r.timestamp || new Date().toISOString())
+        }))
+        .filter(r => r._fechaInicio < currentStart)
+        .sort((a, b) => b._fechaInicio.getTime() - a._fechaInicio.getTime())[0];
+
+      if (previous) {
+        const previousFechaFin = previous.fechaFinal ? new Date(previous.fechaFinal) : null;
+        const shouldUpdate = !previousFechaFin || previousFechaFin.getTime() > currentStart.getTime();
+
+        if (shouldUpdate) {
+          await this.updateReport(previous.id, {
+            fechaFinal: currentStart.toISOString(),
+            estado: 'completado'
+          });
+        }
+      }
     }
   }
 
