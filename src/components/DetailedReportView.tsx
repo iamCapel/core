@@ -95,6 +95,7 @@ interface DetailedReportViewProps {
     role?: string;
   };
   initialReportNumber?: string;
+  initialVehicleFicha?: string;
   onBack?: () => void;
 }
 
@@ -104,7 +105,7 @@ type SortField = 'reportNumber' | 'date' | 'tipo' | 'estado' | 'kilometraje';
 type SortOrder = 'asc' | 'desc';
 type StatsListType = 'total' | 'completados' | 'pendientes' | 'enProgreso' | 'kmTotal' | 'kmPromedio';
 
-const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user, initialReportNumber, onBack }) => {
+const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null, onEditReport, user, initialReportNumber, initialVehicleFicha, onBack }) => {
   // Estados de vista
   const [viewMode, setViewMode] = useState<ViewMode>('hierarchy');
   
@@ -197,6 +198,21 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           const hasVehicle = report.vehiculos.some((v: any) => v.ficha === vehiculo.ficha);
           
           if (hasVehicle) {
+            // Construir fechas y estado/reflejo activo según datos de Firebase
+            const fechaInicioReporte = report.fechaInicio || report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
+            const fechaFinReporte = report.fechaFinal || report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
+            const now = new Date();
+            const fechaFinDate = new Date(fechaFinReporte);
+            const estadoReporte = report.estado || '';
+
+            const statusInfo = estadoReporte
+              ? estadoReporte
+              : (!isNaN(fechaFinDate.getTime()) && fechaFinDate >= now)
+                ? 'Activo hasta la fecha'
+                : 'Finalizado';
+
+            const ubicacionTexto = `${report.region || 'N/A'} > ${report.provincia || 'N/A'} > ${report.distrito || 'N/A'} > ${report.municipio || 'N/A'} > ${report.sector || 'N/A'}`;
+
             // Si es multi-día, expandir cada día
             if (report.esProyectoMultiDia && report.diasTrabajo && report.diasTrabajo.length > 0) {
               const totalDias = report.diasTrabajo.length;
@@ -221,13 +237,18 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     provincia: report.provincia,
                     distrito: report.distrito,
                     municipio: report.municipio,
-                    sector: report.sector
+                    sector: report.sector,
+                    direccion: ubicacionTexto,
+                    fechaInicio: fechaInicioReporte,
+                    fechaFin: fechaFinReporte,
+                    estado: statusInfo,
+                    registradoEn: (report as any).registro || (report as any).registradoEn || ''
                   });
                 }
               });
             } else {
               // Reporte de un solo día
-              const fechaMostrar = report.fechaProyecto || report.fechaCreacion;
+              const fechaMostrar = report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
               history.push({
                 fecha: fechaMostrar,
                 fechaDisplay: new Date(fechaMostrar).toLocaleDateString('es-ES', {
@@ -243,7 +264,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                 provincia: report.provincia,
                 distrito: report.distrito,
                 municipio: report.municipio,
-                sector: report.sector
+                sector: report.sector,
+                direccion: ubicacionTexto,
+                fechaInicio: fechaInicioReporte,
+                fechaFin: fechaFinReporte,
+                estado: statusInfo,
+                registradoEn: (report as any).registro || (report as any).registradoEn || ''
               });
             }
           }
@@ -494,6 +520,16 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
       }
     }
   }, [initialReportNumber, allReportsFlat, selectedReport]);
+
+  // Abrir historial automáticamente si viene initialVehicleFicha
+  useEffect(() => {
+    if (initialVehicleFicha && selectedReport && selectedReport.vehiculos && Array.isArray(selectedReport.vehiculos)) {
+      const vehiculo = selectedReport.vehiculos.find(v => v.ficha === initialVehicleFicha);
+      if (vehiculo) {
+        loadVehicleHistory(vehiculo);
+      }
+    }
+  }, [initialVehicleFicha, selectedReport]);
 
   // Escuchar evento para abrir reportes desde otras vistas (como ReportsPage)
   useEffect(() => {
@@ -1990,12 +2026,21 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                         <div className="history-date-full">
                           📅 {activity.fechaDisplay}
                         </div>
-                        
+
+                        <div className="history-period">
+                          <strong>Inicio:</strong> {activity.fechaInicio ? new Date(activity.fechaInicio).toLocaleDateString('es-ES') : 'N/A'}
+                          <span style={{ margin: '0 10px' }}>•</span>
+                          <strong>Fin:</strong> {activity.fechaFin ? new Date(activity.fechaFin).toLocaleDateString('es-ES') : 'N/A'}
+                          <span style={{ margin: '0 10px' }}>•</span>
+                          <strong>Estado:</strong> {activity.estado || 'Desconocido'}
+                        </div>
+
                         <div className="history-location">
                           <div className="location-item">
                             <strong>📍 Ubicación:</strong>
                           </div>
                           <div className="location-details">
+                            <div style={{ marginBottom: '4px' }}><strong>Dirección completa:</strong> {activity.direccion || `${activity.region} / ${activity.provincia} / ${activity.distrito} / ${activity.municipio} / ${activity.sector}`}</div>
                             <div>• <strong>Región:</strong> {activity.region}</div>
                             <div>• <strong>Provincia:</strong> {activity.provincia}</div>
                             <div>• <strong>Distrito:</strong> {activity.distrito}</div>

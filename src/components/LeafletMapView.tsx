@@ -285,6 +285,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedReportNumber, setSelectedReportNumber] = useState<string>('');
+  const [selectedVehicleFicha, setSelectedVehicleFicha] = useState<string>('');
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('actividades');
   const [loading, setLoading] = useState(false);
   const [busquedaFicha, setBusquedaFicha] = useState<string>('');
@@ -605,8 +606,9 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     return INTERVENTION_COLORS.default;
   };
 
-  const handleViewDetail = (numeroReporte: string) => {
+  const handleViewDetail = (numeroReporte: string, ficha?: string) => {
     setSelectedReportNumber(numeroReporte);
+    setSelectedVehicleFicha(ficha || '');
     setShowDetailView(true);
   };
 
@@ -620,6 +622,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       <DetailedReportView 
         user={user} 
         initialReportNumber={selectedReportNumber} 
+        initialVehicleFicha={selectedVehicleFicha}
         onBack={handleBackToMap} 
       />
     );
@@ -1126,18 +1129,22 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                           🚜 VEHÍCULOS EN ESTA OBRA ({reporte.vehiculos.length})
                         </p>
                         {reporte.vehiculos.map((vehiculo, idx) => (
-                          <div key={idx} style={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px',
-                            marginBottom: idx < reporte.vehiculos.length - 1 ? '6px' : 0,
-                            backgroundColor: busquedaFicha && vehiculo.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()) 
-                              ? '#FFF3E6' : '#fff',
-                            borderRadius: '6px',
-                            border: busquedaFicha && vehiculo.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()) 
-                              ? '2px solid #FF7700' : '1px solid #e9ecef'
-                          }}>
+                          <div 
+                            key={idx} 
+                            onClick={() => handleViewDetail(reporte.numeroReporte, vehiculo.ficha)}
+                            style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px',
+                              marginBottom: idx < reporte.vehiculos.length - 1 ? '6px' : 0,
+                              backgroundColor: busquedaFicha && vehiculo.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()) 
+                                ? '#FFF3E6' : '#fff',
+                              borderRadius: '6px',
+                              border: busquedaFicha && vehiculo.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()) 
+                                ? '2px solid #FF7700' : '1px solid #e9ecef',
+                              cursor: 'pointer'
+                            }}>
                             <span style={{ fontSize: '20px' }}>🚜</span>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontWeight: '600', color: '#2c3e50', fontSize: '13px' }}>
