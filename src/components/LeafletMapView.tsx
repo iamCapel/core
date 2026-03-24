@@ -768,7 +768,14 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   // Formatear fecha corta
   const formatearFechaCorta = (fecha: string | undefined): string => {
     if (!fecha) return 'N/A';
-    return new Date(fecha).toLocaleDateString('es-ES', {
+    if (fecha === 'Actualidad') return 'Actualidad';
+
+    const parsed = new Date(fecha);
+    if (isNaN(parsed.getTime())) {
+      return fecha;
+    }
+
+    return parsed.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
