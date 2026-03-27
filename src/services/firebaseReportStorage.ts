@@ -14,6 +14,7 @@ import { ReportData } from "./reportStorage";
 
 const db = getFirestore(app);
 const REPORTS_COLLECTION = "reports";
+const VEHICLES_COLLECTION = "vehiculos"; // Colección de registros de vehículos pesados (CORE-APK)
 
 class FirebaseReportStorage {
   /**
@@ -109,6 +110,19 @@ class FirebaseReportStorage {
   async getAllReports(): Promise<ReportData[]> {
     const snapshot = await getDocs(collection(db, REPORTS_COLLECTION));
     return snapshot.docs.map(doc => doc.data() as ReportData);
+  }
+
+  /**
+   * Obtener todos los registros de vehículos (CORE-APK, colección vehiculos)
+   */
+  async getAllVehicleReports(): Promise<any[]> {
+    try {
+      const snapshot = await getDocs(collection(db, VEHICLES_COLLECTION));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.warn(`No se pudo leer colección ${VEHICLES_COLLECTION} o está vacía`, error);
+      return [];
+    }
   }
 
   /**
