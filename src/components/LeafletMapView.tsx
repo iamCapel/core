@@ -149,31 +149,56 @@ const findLocationCoordinate = (value: string): { lat: number; lng: number } | n
   return null;
 };
 
-const getReportCoordinates = (report: any): { lat: number; lng: number } | null => {
+type LocationMode = 'provincia' | 'municipio' | 'distrito';
+
+const getReportCoordinates = (report: any, mode: LocationMode = 'municipio'): { lat: number; lng: number } | null => {
+  // El modo determina qué jerarquía usar primero.
+  let locationOrder: (string | undefined)[];
+  if (mode === 'provincia') {
+    locationOrder = [
+      report.provincia,
+      report.region,
+      report.zona,
+      report.sector,
+      report.direccion,
+      report.municipio,
+      report.distrito,
+    ];
+  } else if (mode === 'distrito') {
+    locationOrder = [
+      report.distrito,
+      report.municipio,
+      report.provincia,
+      report.region,
+      report.zona,
+      report.sector,
+      report.direccion,
+    ];
+  } else {
+    locationOrder = [
+      report.municipio,
+      report.distrito,
+      report.provincia,
+      report.region,
+      report.zona,
+      report.sector,
+      report.direccion,
+    ];
+  }
+
+  for (const place of locationOrder) {
+    const coordinates = findLocationCoordinate(place);
+    if (coordinates) {
+      return coordinates;
+    }
+  }
+
+  // Si no hay dirección válida, usar GPS o coordenadas directas (precisa actual) como fallback.
   if (report.gpsData?.punto_inicial?.lat && report.gpsData?.punto_inicial?.lon) {
     return { lat: report.gpsData.punto_inicial.lat, lng: report.gpsData.punto_inicial.lon };
   }
   if (report.gpsData?.punto_alcanzado?.lat && report.gpsData?.punto_alcanzado?.lon) {
     return { lat: report.gpsData.punto_alcanzado.lat, lng: report.gpsData.punto_alcanzado.lon };
-  }
-
-  // Jerarquía geográfica fuerte: si el reporte define municipio/provincia/distrito/region, se usa primero
-  const locationOrder = [
-    report.municipio,
-    report.distrito,
-    report.provincia,
-    report.region,
-    report.zona,
-    report.sector,
-    report.direccion,
-  ];
-
-  for (const place of locationOrder) {
-    const coordinates = findLocationCoordinate(place);
-    if (coordinates) {
-      // Devolver ubicación basada en los metadatos de obra (ej. Puerto Plata)
-      return coordinates;
-    }
   }
 
   // Si no hay geocodificación textual válida, usar coordenadas directas (lat/lng) y gps
@@ -401,14 +426,25 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [showVehicleHistoryModal, setShowVehicleHistoryModal] = useState(false);
 
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>('actividades');
+  const [locationMode, setLocationMode] = useState<LocationMode>('provincia');
   const [loading, setLoading] = useState(false);
   const [busquedaFicha, setBusquedaFicha] = useState<string>('');
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
 
+  const refreshCycle: LocationMode[] = ['provincia', 'municipio', 'distrito'];
+  const handleRefreshClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocationMode(prev => {
+      const nextIndex = (refreshCycle.indexOf(prev) + 1) % refreshCycle.length;
+      return refreshCycle[nextIndex];
+    });
+    setRefreshTimestamp(Date.now());
+  };
+
   // Cargar datos según el modo de vista
   useEffect(() => {
     loadMapData();
-  }, [user, mapViewMode, refreshTimestamp]);
+  }, [user, mapViewMode, refreshTimestamp, locationMode]);
 
   const loadMapData = async () => {
     setLoading(true);
@@ -426,27 +462,28 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
       // Procesar datos según el modo
       if (mapViewMode === 'actividades') {
         const interventionsData = filteredReports.map((report: any, index: number) => {
-          // Obtener coordenadas basadas en la dirección seleccionada en el reporte
-          // Prioridad: municipio > provincia > región
+          // Obtener coordenadas claras usando modo de ubicación activo: provincia/municipio/distrito
+          const coords = getReportCoordinates(report, locationMode);
           let latitud: number | undefined;
           let longitud: number | undefined;
-          
-          // Buscar por municipio primero
-          if (report.municipio && municipioCoordinates[report.municipio]) {
-            latitud = municipioCoordinates[report.municipio].lat;
-            longitud = municipioCoordinates[report.municipio].lng;
+
+          if (coords) {
+            latitud = coords.lat;
+            longitud = coords.lng;
+          } else {
+            // Fallback a la lógica anterior si no se pudo resolver coordenadas
+            if (report.municipio && municipioCoordinates[report.municipio]) {
+              latitud = municipioCoordinates[report.municipio].lat;
+              longitud = municipioCoordinates[report.municipio].lng;
+            } else if (report.distrito && municipioCoordinates[report.distrito]) {
+              latitud = municipioCoordinates[report.distrito].lat;
+              longitud = municipioCoordinates[report.distrito].lng;
+            } else if (report.provincia && municipioCoordinates[report.provincia]) {
+              latitud = municipioCoordinates[report.provincia].lat;
+              longitud = municipioCoordinates[report.provincia].lng;
+            }
           }
-          // Buscar por distrito si no hay municipio
-          else if (report.distrito && municipioCoordinates[report.distrito]) {
-            latitud = municipioCoordinates[report.distrito].lat;
-            longitud = municipioCoordinates[report.distrito].lng;
-          }
-          // Buscar por provincia si no hay municipio ni distrito
-          else if (report.provincia && municipioCoordinates[report.provincia]) {
-            latitud = municipioCoordinates[report.provincia].lat;
-            longitud = municipioCoordinates[report.provincia].lng;
-          }
-          
+
           return {
             id: index,
             timestamp: report.timestamp || report.fechaCreacion,
@@ -482,7 +519,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
         filteredReports.forEach((report: any) => {
           if (!report.vehiculos || !Array.isArray(report.vehiculos) || report.vehiculos.length === 0) return;
 
-          const coords = getReportCoordinates(report);
+          const coords = getReportCoordinates(report, locationMode);
           if (!coords) return;
 
           let fechaInicioReporte = report.fechaInicio;
@@ -578,7 +615,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           if (!ficha) return;
 
           // Prioriza coordenadas directas si existen, sino usa la misma función de reporte
-          const coords = getReportCoordinates(vr) || getReportCoordinates({
+          const coords = getReportCoordinates(vr, locationMode) || getReportCoordinates({
             municipio: vr.municipio,
             provincia: vr.provincia,
             distrito: vr.distrito
@@ -1125,7 +1162,24 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </div>
               </div>
               {mapViewMode === 'vehiculos' && (
-                <span style={{ marginLeft: 'auto', color: '#FF7700', fontWeight: 'bold' }}>✓</span>
+                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type='button'
+                    onClick={handleRefreshClick}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#FF7700',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    title='Actualizar Vehículos (ciclo provincia/municipio/distrito)'
+                  >
+                    🔄
+                  </button>
+                  <span style={{ color: '#FF7700', fontWeight: 'bold' }}>✓</span>
+                </span>
               )}
             </button>
 
@@ -1233,7 +1287,24 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </div>
               </div>
               {mapViewMode === 'actividades' && (
-                <span style={{ marginLeft: 'auto', color: '#4CAF50', fontWeight: 'bold' }}>✓</span>
+                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type='button'
+                    onClick={handleRefreshClick}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#4CAF50',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    title='Actualizar Actividades (ciclo provincia/municipio/distrito)'
+                  >
+                    🔄
+                  </button>
+                  <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>✓</span>
+                </span>
               )}
             </button>
 
@@ -1269,7 +1340,24 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </div>
               </div>
               {mapViewMode === 'operadores' && (
-                <span style={{ marginLeft: 'auto', color: '#2196F3', fontWeight: 'bold' }}>✓</span>
+                <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type='button'
+                    onClick={handleRefreshClick}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#2196F3',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                    title='Actualizar Operadores (ciclo provincia/municipio/distrito)'
+                  >
+                    🔄
+                  </button>
+                  <span style={{ color: '#2196F3', fontWeight: 'bold' }}>✓</span>
+                </span>
               )}
             </button>
             )}
@@ -1298,6 +1386,9 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                         <strong>🚜 Vehículos:</strong> Muestra las obras que tienen vehículos registrados. 
                         Haz clic en un marcador para ver la lista de fichas.
                       </p>
+                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: '#2c3e50' }}>
+                        📍 Modo de ubicación: <strong>{locationMode}</strong>
+                      </p>
                       {busquedaFicha && (
                         <p style={{ margin: 0, color: '#FF7700', fontWeight: '600' }}>
                           🔍 Filtrando por ficha: "{busquedaFicha}" - {reportesConVehiculos.filter(r => 
@@ -1308,14 +1399,24 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                     </div>
                   )}
                   {mapViewMode === 'actividades' && (
-                    <p style={{ margin: 0 }}>
-                      <strong>⛏️ Actividades:</strong> Muestra las intervenciones registradas. 
-                      Haz clic en un icono para ver el detalle del reporte.
-                    </p>
+                    <>
+                      <p style={{ margin: 0 }}>
+                        <strong>⛏️ Actividades:</strong> Muestra las intervenciones registradas. 
+                        Haz clic en un icono para ver el detalle del reporte.
+                      </p>
+                      <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#2c3e50' }}>
+                        📍 Modo de ubicación: <strong>{locationMode}</strong>
+                      </p>
+                    </>
                   )}
-                  {mapViewMode === 'operadores' && operadoresMarkers.length > 0 && (
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px' }}>
-                      {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
+                  {mapViewMode === 'operadores' && (
+                    <>
+                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: '#2c3e50' }}>
+                        📍 Modo de ubicación: <strong>{locationMode}</strong>
+                      </p>
+                      {operadoresMarkers.length > 0 && (
+                        <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px' }}>
+                          {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
                         <span style={{ color: '#2ecc71', fontWeight: '600' }}>
                           🟢 {operadoresMarkers.filter(op => op.status === 'online').length} En línea
                         </span>
@@ -1334,31 +1435,6 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                   )}
                 </>
               )}
-            </div>
-          )}
-
-          {mapViewMode === 'operadores' && (
-            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button
-                onClick={() => setRefreshTimestamp(Date.now())}
-                style={{
-                  padding: '8px 12px',
-                  fontSize: '12px',
-                  backgroundColor: '#2196F3',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease'
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1976D2')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#2196F3')}
-              >
-                🔄 Actualizar
-              </button>
-              <span style={{ fontSize: '11px', color: '#6c757d' }}>
-                Última actualización: {new Date(refreshTimestamp).toLocaleTimeString()}
-              </span>
             </div>
           )}
 
