@@ -127,7 +127,7 @@ const normalizeLocationKey = (value: string): string => {
     .replace(/\s+/g, ' ');
 };
 
-const findLocationCoordinate = (value: string): { lat: number; lng: number } | null => {
+const findLocationCoordinate = (value: string | undefined): { lat: number; lng: number } | null => {
   if (!value || typeof value !== 'string') return null;
 
   const normalized = normalizeLocationKey(value);
@@ -1379,7 +1379,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                   <p style={{ margin: '8px 0 0' }}>Cargando datos...</p>
                 </div>
               ) : (
-                <>
+                <div>
                   {mapViewMode === 'vehiculos' && (
                     <div>
                       <p style={{ margin: '0 0 8px' }}>
@@ -1399,7 +1399,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                     </div>
                   )}
                   {mapViewMode === 'actividades' && (
-                    <>
+                    <div>
                       <p style={{ margin: 0 }}>
                         <strong>⛏️ Actividades:</strong> Muestra las intervenciones registradas. 
                         Haz clic en un icono para ver el detalle del reporte.
@@ -1407,33 +1407,35 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                       <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#2c3e50' }}>
                         📍 Modo de ubicación: <strong>{locationMode}</strong>
                       </p>
-                    </>
+                    </div>
                   )}
                   {mapViewMode === 'operadores' && (
-                    <>
+                    <div>
                       <p style={{ margin: '0 0 8px', fontSize: '11px', color: '#2c3e50' }}>
                         📍 Modo de ubicación: <strong>{locationMode}</strong>
                       </p>
                       {operadoresMarkers.length > 0 && (
                         <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px' }}>
                           {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
-                        <span style={{ color: '#2ecc71', fontWeight: '600' }}>
-                          🟢 {operadoresMarkers.filter(op => op.status === 'online').length} En línea
-                        </span>
-                      )}
-                      {operadoresMarkers.filter(op => op.status === 'recent').length > 0 && (
-                        <span style={{ color: '#f39c12', fontWeight: '600' }}>
-                          🟡 {operadoresMarkers.filter(op => op.status === 'recent').length} Activo
-                        </span>
-                      )}
-                      {operadoresMarkers.filter(op => op.status === 'offline').length > 0 && (
-                        <span style={{ color: '#95a5a6', fontWeight: '600' }}>
-                          ⚫ {operadoresMarkers.filter(op => op.status === 'offline').length} Desconectado
-                        </span>
+                            <span style={{ color: '#2ecc71', fontWeight: '600' }}>
+                              🟢 {operadoresMarkers.filter(op => op.status === 'online').length} En línea
+                            </span>
+                          )}
+                          {operadoresMarkers.filter(op => op.status === 'recent').length > 0 && (
+                            <span style={{ color: '#f39c12', fontWeight: '600' }}>
+                              🟡 {operadoresMarkers.filter(op => op.status === 'recent').length} Activo
+                            </span>
+                          )}
+                          {operadoresMarkers.filter(op => op.status === 'offline').length > 0 && (
+                            <span style={{ color: '#95a5a6', fontWeight: '600' }}>
+                              ⚫ {operadoresMarkers.filter(op => op.status === 'offline').length} Desconectado
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           )}
