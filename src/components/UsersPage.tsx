@@ -33,7 +33,8 @@ interface UserProfile {
   reportsCount: number;
   joinDate: string;
   pendingReportsCount?: number;
-  password?: string;  // Contraseña (opcional para edición)
+  password?: string;  // Nueva contraseña para actualizar
+  currentPassword?: string; // Contraseña actual (solo para ver)
   cedula?: string;  // Número de cédula
   notes?: Array<{
     id: string;
@@ -73,6 +74,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAdminUser, setSelectedAdminUser] = useState<UserProfile | null>(null);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   
   // Estados para el formulario de crear usuario
   const [newUserForm, setNewUserForm] = useState({
@@ -1678,7 +1680,8 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                           onClick={() => {
                             // Cargar los datos del usuario para editar
                             setSelectedAdminUser(userItem);
-                            setEditingUser({ ...userItem });
+                            setEditingUser({ ...userItem, currentPassword: userItem.password || '' });
+                            setShowCurrentPassword(false);
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1783,6 +1786,7 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                       onClick={() => {
                         setSelectedAdminUser(null);
                         setEditingUser(null);
+                        setShowCurrentPassword(false);
                       }}
                       style={{
                         alignSelf: 'flex-start',
@@ -1879,7 +1883,56 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                           />
                         </div>
 
-                        {/* Contraseña */}
+                        {/* Contraseña actual */}
+                        <div>
+                          <label style={{
+                            display: 'block',
+                            marginBottom: '5px',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            color: '#495057'
+                          }}>
+                            Contraseña actual
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                              type={showCurrentPassword ? 'text' : 'password'}
+                              value={editingUser?.currentPassword || ''}
+                              readOnly
+                              placeholder="No disponible"
+                              style={{
+                                flex: 1,
+                                padding: '10px',
+                                border: '1px solid #ddd',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                outline: 'none',
+                                transition: 'border-color 0.2s',
+                                boxSizing: 'border-box',
+                                backgroundColor: editingUser?.currentPassword ? 'white' : '#f1f3f5'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCurrentPassword(prev => !prev)}
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid #ddd',
+                                backgroundColor: '#fff',
+                                cursor: 'pointer',
+                                minWidth: '60px'
+                              }}
+                            >
+                              {showCurrentPassword ? 'Ocultar' : 'Mostrar'}
+                            </button>
+                          </div>
+                          <small style={{ color: '#6c757d', fontSize: '11px', marginTop: '3px', display: 'block' }}>
+                            Solo si el sistema dispone de la contraseña actual. De lo contrario, no está disponible.
+                          </small>
+                        </div>
+
+                        {/* Nueva contraseña */}
                         <div>
                           <label style={{
                             display: 'block',

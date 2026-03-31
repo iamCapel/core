@@ -422,6 +422,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [selectedVehicle, setSelectedVehicle] = useState<VehiculoMarker | {tipo: string; modelo: string; ficha: string; latitud?: number; longitud?: number; reportes?: any[]} | null>(null);
   const [selectedVehicleHistory, setSelectedVehicleHistory] = useState<any[]>([]);
   const [vehicleHistory, setVehicleHistory] = useState<any[]>([]);
+
   const [selectedVehicleCurrent, setSelectedVehicleCurrent] = useState<any>(null);
   const [showVehicleHistoryModal, setShowVehicleHistoryModal] = useState(false);
 
@@ -988,6 +989,8 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     });
   };
 
+
+
   // Icono de actividad (obrero con pala)
   const createActividadIcon = (color: string) => {
     const svgIcon = `
@@ -1044,6 +1047,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
 
   return (
     <div style={{ padding: '20px', height: '100vh', backgroundColor: '#f8f9fa' }}>
+
       {/* Topbar */}
       <div style={{
         display: 'flex', 
