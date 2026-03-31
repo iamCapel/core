@@ -2233,7 +2233,9 @@ select option[value="otros"] {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2242,13 +2244,55 @@ select option[value="otros"] {
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
-  max-width: 500px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 18px;
+  max-width: 520px;
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.32);
+  border: 1px solid rgba(255,255,255,0.8);
+  backdrop-filter: saturate(180%) blur(6px);
+}
+
+.fab-grid {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.fab-btn {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 119, 0, 0.25);
+  background: linear-gradient(145deg, #ffffff 0%, #ffe7cc 100%);
+  color: #333;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.fab-btn:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 14px 24px rgba(0,0,0,0.24);
+  background: linear-gradient(145deg, #fff8f0 0%, #ffd6aa 100%);
+}
+
+.fab-btn span {
+  font-size: 1.8rem;
+  margin-bottom: 4px;
+}
+
+.fab-btn small {
+  font-size: 0.8rem;
+  color: #4a4a4a;
 }
 
 .modal-header {

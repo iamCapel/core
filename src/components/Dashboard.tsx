@@ -1734,22 +1734,16 @@ const Dashboard: React.FC = () => {
               <h2>📝 ¿Qué deseas registrar?</h2>
               <button className="modal-close" onClick={() => setShowRegisterTypeModal(false)}>✕</button>
             </div>
-            <div className="modal-body" style={{ padding: '20px' }}>
-              <p>Selecciona una opción para continuar.</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
-                <button
-                  className="btn primary"
-                  style={{ minHeight: '120px', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}
-                  onClick={handleRegisterActivities}
-                >
-                  Registrar Actividades
+            <div className="modal-body" style={{ padding: '20px', minHeight: '280px', position: 'relative' }}>
+              <p style={{ marginBottom: '12px', color: '#555', fontWeight: '600' }}>Selecciona una opción para continuar.</p>
+              <div className="fab-grid">
+                <button className="fab-btn" onClick={handleRegisterActivities}>
+                  <span>📋</span>
+                  <small>Actividades</small>
                 </button>
-                <button
-                  className="btn"
-                  style={{ minHeight: '120px', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}
-                  onClick={handleRegisterHeavyVehicles}
-                >
-                  Registrar Vehículos Pesados
+                <button className="fab-btn" onClick={handleRegisterHeavyVehicles}>
+                  <span>🚜</span>
+                  <small>Vehículos</small>
                 </button>
               </div>
               <p style={{ marginTop: '16px', color: '#6c757d', fontSize: '0.95rem' }}>
