@@ -550,6 +550,7 @@ const Dashboard: React.FC = () => {
   // Nuevo modal de selección de tipo de registro
   const [showRegisterTypeModal, setShowRegisterTypeModal] = useState(false);
   const [showHeavyVehicleRegistration, setShowHeavyVehicleRegistration] = useState(false);
+  const [initialReportsView, setInitialReportsView] = useState<'estadisticas' | 'detallado' | 'exportar' | 'vehiculos'>('estadisticas');
   
   // Estados para el formulario de completar perfil
   const [profilePhoto, setProfilePhoto] = useState<string>('');
@@ -1004,6 +1005,7 @@ const Dashboard: React.FC = () => {
       setShowCompleteProfileModal(true);
       return;
     }
+    setInitialReportsView('estadisticas');
     setShowReportsPage(true);
     setShowReportForm(false);
     setShowExportPage(false);
@@ -1034,12 +1036,13 @@ const Dashboard: React.FC = () => {
   const handleRegisterHeavyVehicles = () => {
     setShowRegisterTypeModal(false);
     setShowReportForm(false);
-    setShowReportsPage(false);
+    setInitialReportsView('vehiculos');
+    setShowReportsPage(true);
     setShowExportPage(false);
     setShowUsersPage(false);
     setShowGoogleMapView(false);
     setShowLeafletMapView(false);
-    setShowHeavyVehicleRegistration(true);
+    setShowHeavyVehicleRegistration(false);
   };
 
   const handleShowExportPage = () => {
@@ -1095,6 +1098,7 @@ const Dashboard: React.FC = () => {
     return (
       <ReportsPage 
         user={user} 
+        initialView={initialReportsView}
         onBack={handleBackToDashboard}
         onEditReport={async (reportId) => {
           try {
@@ -1182,19 +1186,6 @@ const Dashboard: React.FC = () => {
   // Si se debe mostrar Google Maps
   if (showGoogleMapView && user) {
     return <GoogleMapView user={user} onBack={handleBackToDashboard} />;
-  }
-
-  // Si se debe mostrar registro de Vehículos Pesados (en construcción)
-  if (showHeavyVehicleRegistration && user) {
-    return (
-      <div style={{ padding: '32px', textAlign: 'center' }}>
-        <h2>🚧 Registro de Vehículos Pesados</h2>
-        <p>Esta sección está en construcción. Próximamente se cargará la lógica completa.</p>
-        <button className="btn primary" onClick={handleBackToDashboard} style={{ marginTop: '16px' }}>
-          Volver al Dashboard
-        </button>
-      </div>
-    );
   }
 
   // Si se debe mostrar Leaflet Maps

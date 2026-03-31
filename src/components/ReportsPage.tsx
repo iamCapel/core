@@ -16,6 +16,7 @@ interface ReportsPageProps {
   user: User;
   onBack: () => void;
   onEditReport?: (reportId: string) => void;
+  initialView?: PageView; // Vista inicial seleccionable desde Dashboard
 }
 
 type PageView = 'estadisticas' | 'detallado' | 'exportar' | 'vehiculos';
@@ -1061,8 +1062,8 @@ const VehiculosView: React.FC<{ user: User; onOpenReport: (reportNumber: string)
   );
 };
 
-const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport }) => {
-  const [currentView, setCurrentView] = useState<PageView>('estadisticas');
+const ReportsPage: React.FC<ReportsPageProps> = ({ user, onBack, onEditReport, initialView = 'estadisticas' }) => {
+  const [currentView, setCurrentView] = useState<PageView>(initialView);
   const [statsMode, setStatsMode] = useState<StatsMode>('intervenciones');
   const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
   const [regionesData, setRegionesData] = useState<RegionData[]>([]);
