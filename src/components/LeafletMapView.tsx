@@ -431,6 +431,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [busquedaFicha, setBusquedaFicha] = useState<string>('');
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
+  const [busquedaFichaError, setBusquedaFichaError] = useState<string>('');
 
   const refreshCycle: LocationMode[] = ['provincia', 'municipio', 'distrito'];
   const handleRefreshClick = (e: React.MouseEvent) => {
@@ -1233,19 +1234,54 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej: 12345"
+                  placeholder="Ej: AB-12345"
                   value={busquedaFicha}
-                  onChange={(e) => setBusquedaFicha(e.target.value)}
+                  title="Formato: 2 letras mayúsculas + '-' + números"
+                  onChange={(e) => {
+                    let raw = e.target.value.toUpperCase();
+
+                    // Quitar caracteres no alfanuméricos
+                    raw = raw.replace(/[^A-Z0-9]/g, '');
+
+                    // Separar letras y dígitos
+                    const letters = raw.match(/[A-Z]/g)?.join('') || '';
+                    const digits = raw.match(/[0-9]/g)?.join('') || '';
+
+                    let formatted = '';
+
+                    if (letters.length === 0) {
+                      formatted = '';
+                    } else if (letters.length === 1) {
+                      formatted = letters;
+                    } else {
+                      const twoLetters = letters.slice(0, 2);
+                      formatted = twoLetters;
+                      if (digits.length > 0) {
+                        formatted += '-' + digits;
+                      } else {
+                        formatted += '-';
+                      }
+                    }
+
+                    setBusquedaFicha(formatted);
+
+                    const isValid = formatted === '' || /^[A-Z]{2}-\d+$/.test(formatted);
+                    setBusquedaFichaError(isValid ? '' : 'Formato inválido: debe ser XX-12345');
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
-                    border: '1px solid #FFD699',
+                    border: busquedaFichaError ? '1px solid #dc3545' : '1px solid #FFD699',
                     borderRadius: '6px',
                     fontSize: '13px',
                     boxSizing: 'border-box'
                   }}
                 />
-                {busquedaFicha && (
+                {busquedaFichaError ? (
+                  <div style={{ color: '#dc3545', fontSize: '11px', marginTop: '8px' }}>
+                    {busquedaFichaError}
+                  </div>
+                ) : busquedaFicha ? (
                   <button
                     onClick={() => setBusquedaFicha('')}
                     style={{
@@ -1261,7 +1297,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                   >
                     ✕ Limpiar filtro
                   </button>
-                )}
+                ) : null}
               </div>
             )}
 
