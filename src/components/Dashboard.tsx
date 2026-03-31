@@ -1734,9 +1734,8 @@ const Dashboard: React.FC = () => {
               <h2>📝 ¿Qué deseas registrar?</h2>
               <button className="modal-close" onClick={() => setShowRegisterTypeModal(false)}>✕</button>
             </div>
-            <div className="modal-body" style={{ padding: '20px', minHeight: '280px', position: 'relative' }}>
-              <p style={{ marginBottom: '12px', color: '#555', fontWeight: '600' }}>Selecciona una opción para continuar.</p>
-              <div className="fab-grid">
+            <div className="modal-body" style={{ padding: '20px', minHeight: '220px', position: 'relative' }}>
+              <div className="fab-grid" style={{ justifyContent: 'center', gap: '24px' }}>
                 <button className="fab-btn" onClick={handleRegisterActivities}>
                   <span>📋</span>
                   <small>Actividades</small>
@@ -1746,9 +1745,6 @@ const Dashboard: React.FC = () => {
                   <small>Vehículos</small>
                 </button>
               </div>
-              <p style={{ marginTop: '16px', color: '#6c757d', fontSize: '0.95rem' }}>
-                La opción de vehículos pesados está en desarrollo (próximamente).
-              </p>
             </div>
           </div>
         </div>
