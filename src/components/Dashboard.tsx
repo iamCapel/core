@@ -1729,20 +1729,16 @@ const Dashboard: React.FC = () => {
       {/* Modal de Selección de Registro */}
       {showRegisterTypeModal && (
         <div className="modal-overlay" onClick={() => setShowRegisterTypeModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>📝 ¿Qué deseas registrar?</h2>
-              <button className="modal-close" onClick={() => setShowRegisterTypeModal(false)}>✕</button>
-            </div>
-            <div className="modal-body" style={{ padding: '20px', minHeight: '220px', position: 'relative' }}>
-              <div className="fab-grid" style={{ justifyContent: 'center', gap: '24px' }}>
-                <button className="fab-btn" onClick={handleRegisterActivities}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: '0', width: '100%', maxWidth: 'none', borderRadius: '0', boxShadow: 'none', background: 'transparent' }}>
+            <div className="modal-body" style={{ minHeight: '230px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', padding: '0' }}>
+              <div className="fab-grid" style={{ justifyContent: 'center', gap: '30px' }}>
+                <button className="fab-btn" onClick={handleRegisterActivities} style={{ width: '170px', height: '170px' }}>
                   <span>📋</span>
-                  <small>Actividades</small>
+                  <small style={{ fontSize: '1.1rem' }}>Actividades</small>
                 </button>
-                <button className="fab-btn" onClick={handleRegisterHeavyVehicles}>
+                <button className="fab-btn" onClick={handleRegisterHeavyVehicles} style={{ width: '170px', height: '170px' }}>
                   <span>🚜</span>
-                  <small>Vehículos</small>
+                  <small style={{ fontSize: '1.1rem' }}>Vehículos</small>
                 </button>
               </div>
             </div>

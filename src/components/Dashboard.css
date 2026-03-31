@@ -2233,38 +2233,41 @@ select option[value="otros"] {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.25);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
+  background: rgba(0,0,0,0.40);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9995;
-  padding: 20px;
+  padding: 0;
 }
 
 .modal-content {
-  background: rgba(255,255,255,0.95);
-  border-radius: 18px;
-  max-width: 520px;
+  background: transparent;
+  border-radius: 0;
+  max-width: 100%;
   width: 100%;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 12px 34px rgba(0,0,0,0.32);
-  border: 1px solid rgba(255,255,255,0.8);
-  backdrop-filter: saturate(180%) blur(6px);
+  max-height: none;
+  overflow: visible;
+  box-shadow: none;
+  border: none;
+  backdrop-filter: none;
 }
 
 .fab-grid {
   display: flex;
-  gap: 16px;
+  gap: 22px;
   justify-content: center;
-  margin-top: 16px;
+  align-items: center;
+  margin-top: 12px;
 }
 
 .fab-btn {
-  width: 108px;
-  height: 108px;
+  width: 140px;
+  height: 140px;
+  font-size: 1.1rem;
+
   border-radius: 50%;
   border: 1px solid rgba(255, 119, 0, 0.25);
   background: linear-gradient(145deg, #ffffff 0%, #ffe7cc 100%);
