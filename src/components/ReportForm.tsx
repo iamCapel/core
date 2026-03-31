@@ -28,6 +28,7 @@ interface ReportFormProps {
   interventionToEdit?: any;
   isGpsEnabled?: boolean;
   gpsPosition?: { lat: number; lon: number } | null;
+  initialSection?: 'actividades' | 'vehiculos';
 }
 
 const ReportForm: React.FC<ReportFormProps> = ({
@@ -45,7 +46,8 @@ const ReportForm: React.FC<ReportFormProps> = ({
   plantillasPorIntervencion,
   interventionToEdit,
   isGpsEnabled: parentGpsEnabled = false,
-  gpsPosition: parentGpsPosition = null
+  gpsPosition: parentGpsPosition = null,
+  initialSection = 'actividades'
 }) => {
   // Estados del formulario
   const [region, setRegion] = useState('');
@@ -77,6 +79,13 @@ const ReportForm: React.FC<ReportFormProps> = ({
   const [tipoIntervencion, setTipoIntervencion] = useState('');
   const [subTipoCanal, setSubTipoCanal] = useState('');
   const [observaciones, setObservaciones] = useState('');
+
+  useEffect(() => {
+    if (initialSection === 'vehiculos' && !tipoIntervencion) {
+      // Activar el registro de vehículos pesados en el formulario principal
+      setTipoIntervencion('Canalización');
+    }
+  }, [initialSection, tipoIntervencion]);
 
   // Estados para vehículos (ahora es un array)
   const [vehiculos, setVehiculos] = useState<Array<{tipo: string, modelo: string, ficha: string}>>([]);

@@ -549,8 +549,8 @@ const Dashboard: React.FC = () => {
 
   // Nuevo modal de selección de tipo de registro
   const [showRegisterTypeModal, setShowRegisterTypeModal] = useState(false);
-  const [showHeavyVehicleRegistration, setShowHeavyVehicleRegistration] = useState(false);
   const [initialReportsView, setInitialReportsView] = useState<'estadisticas' | 'detallado' | 'exportar' | 'vehiculos'>('estadisticas');
+  const [initialReportFormSection, setInitialReportFormSection] = useState<'actividades' | 'vehiculos'>('actividades');
   
   // Estados para el formulario de completar perfil
   const [profilePhoto, setProfilePhoto] = useState<string>('');
@@ -1023,7 +1023,7 @@ const Dashboard: React.FC = () => {
 
   const handleRegisterActivities = () => {
     setShowRegisterTypeModal(false);
-    setShowHeavyVehicleRegistration(false);
+    setInitialReportFormSection('actividades');
     setShowReportForm(true);
     setShowReportsPage(false);
     setShowExportPage(false);
@@ -1035,14 +1035,14 @@ const Dashboard: React.FC = () => {
 
   const handleRegisterHeavyVehicles = () => {
     setShowRegisterTypeModal(false);
-    setShowReportForm(false);
-    setInitialReportsView('vehiculos');
-    setShowReportsPage(true);
+    setInitialReportFormSection('vehiculos');
+    setShowReportForm(true);
+    setShowReportsPage(false);
     setShowExportPage(false);
     setShowUsersPage(false);
     setShowGoogleMapView(false);
     setShowLeafletMapView(false);
-    setShowHeavyVehicleRegistration(false);
+    setInterventionToEdit(null);
   };
 
   const handleShowExportPage = () => {
@@ -1089,7 +1089,6 @@ const Dashboard: React.FC = () => {
     setShowUsersPage(false);
     setShowGoogleMapView(false);
     setShowLeafletMapView(false);
-    setShowHeavyVehicleRegistration(false);
     setInterventionToEdit(null);
   };
 
@@ -1166,6 +1165,7 @@ const Dashboard: React.FC = () => {
         key={interventionToEdit?._pendingReportId || interventionToEdit?.id || 'new-report'} // ✅ Forzar remontaje
         user={user}
         onBack={handleBackToDashboard}
+        initialSection={initialReportFormSection}
         plantillaDefault={plantillaDefault}
         regionesRD={regionesRD}
         provinciasPorRegion={provinciasPorRegion}
