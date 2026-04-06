@@ -75,6 +75,22 @@ const heavyVehicleTypes = [
   'Otros'
 ];
 
+const tiposIntervencion = [
+  'Rehabilitación Camino Vecinal',
+  'Rehabilitación acceso a mina',
+  'Restauración Calles comunidad',
+  'Confección de cabezal de puente',
+  'Restauración de vías de Comunicación',
+  'Operativo de Emergencia',
+  'Limpieza de alcantarillas',
+  'Confección de puente',
+  'Limpieza de Cañada',
+  'Colocación de alcantarillas',
+  'Canalización',
+  'Desalojo',
+  'Habilitación Zona protegida o Espacio público'
+];
+
 const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
   const [region, setRegion] = useState('');
   const [provincia, setProvincia] = useState('');
@@ -89,6 +105,7 @@ const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
   const [fechaInicio, setFechaInicio] = useState('');
   const [hastaLaFecha, setHastaLaFecha] = useState(true);
   const [fechaFinal, setFechaFinal] = useState('');
+  const [tipoIntervencion, setTipoIntervencion] = useState('');
 
   const [vehiculosDetalles, setVehiculosDetalles] = useState<Array<{ tipo: string; modelo: string; ficha: string; fichaError?: string }>>([
     { tipo: '', modelo: '', ficha: '', fichaError: '' }
@@ -230,6 +247,7 @@ const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
     setProvincia('');
     setMunicipio('');
     setDistrito('');
+    setTipoIntervencion('');
     setFechaInicio('');
     setHastaLaFecha(true);
     setFechaFinal('');
@@ -297,6 +315,11 @@ const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!tipoIntervencion) {
+      setMensaje('Por favor seleccione el tipo de intervención.');
+      return;
+    }
+
     if (!region || !provincia || !municipio || !distrito) {
       setMensaje('Por favor complete todos los campos de dirección jerárquica.');
       return;
@@ -340,7 +363,8 @@ const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
       hastaLaFecha,
       fechaFinal: hastaLaFecha ? new Date().toISOString().slice(0, 10) : fechaFinal,
       usuarioId: undefined,
-      observaciones: 'Registro de vehículo pesado de formulario múltiple'
+      observaciones: 'Registro de vehículo pesado de formulario múltiple',
+      tipoIntervencion
     };
 
     try {
@@ -407,6 +431,19 @@ const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
           icon="🚚"
         >
           <form onSubmit={onSubmit}>
+            <div className="form-row">
+              <ModernSelect
+                id="tipoIntervencion"
+                icon="🔧"
+                hint="Tipo de Intervención"
+                placeholder="Seleccionar tipo de intervención"
+                value={tipoIntervencion}
+                options={tiposIntervencion.map(t => ({ value: t, label: t }))}
+                required
+                onChange={setTipoIntervencion}
+              />
+            </div>
+
             <div className="form-row">
               <ModernSelect
                 id="region"

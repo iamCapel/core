@@ -24,6 +24,7 @@ export interface HeavyVehicleRecord {
   ficha: string;
   usuarioId?: string;
   observaciones?: string;
+  tipoIntervencion?: string;
   vehiculos?: Array<{ tipo: string; modelo?: string; ficha: string }>; // Soporte múltiple
 }
 
@@ -146,7 +147,7 @@ class FirebaseHeavyVehiclesStorage {
       municipio: record.municipio,
       distrito: record.distrito || record.distritoPersonalizado || '',
       sector: '',
-      tipoIntervencion: 'Vehículos Pesados',
+      tipoIntervencion: record.tipoIntervencion || 'Vehículos Pesados',
       observaciones: record.observaciones || 'Registro de vehículo pesado asociada',
       metricData: {},
       vehiculos: [vehiculo],
