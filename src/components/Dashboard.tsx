@@ -546,6 +546,10 @@ const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showMyReportsModal, setShowMyReportsModal] = useState(false);
   const [showCompleteProfileModal, setShowCompleteProfileModal] = useState(false);
+
+  // Nuevo modal de selección de tipo de registro
+  const [showRegisterTypeModal, setShowRegisterTypeModal] = useState(false);
+  const [showHeavyVehicleRegistration, setShowHeavyVehicleRegistration] = useState(false);
   
   // Estados para el formulario de completar perfil
   const [profilePhoto, setProfilePhoto] = useState<string>('');
@@ -1011,6 +1015,13 @@ const Dashboard: React.FC = () => {
       setShowCompleteProfileModal(true);
       return;
     }
+    // Abrir modal de selección de tipo de registro
+    setShowRegisterTypeModal(true);
+  };
+
+  const handleRegisterActivities = () => {
+    setShowRegisterTypeModal(false);
+    setShowHeavyVehicleRegistration(false);
     setShowReportForm(true);
     setShowReportsPage(false);
     setShowExportPage(false);
@@ -1018,6 +1029,17 @@ const Dashboard: React.FC = () => {
     setShowGoogleMapView(false);
     setShowLeafletMapView(false);
     setInterventionToEdit(null);
+  };
+
+  const handleRegisterHeavyVehicles = () => {
+    setShowRegisterTypeModal(false);
+    setShowReportForm(false);
+    setShowReportsPage(false);
+    setShowExportPage(false);
+    setShowUsersPage(false);
+    setShowGoogleMapView(false);
+    setShowLeafletMapView(false);
+    setShowHeavyVehicleRegistration(true);
   };
 
   const handleShowExportPage = () => {
@@ -1064,6 +1086,7 @@ const Dashboard: React.FC = () => {
     setShowUsersPage(false);
     setShowGoogleMapView(false);
     setShowLeafletMapView(false);
+    setShowHeavyVehicleRegistration(false);
     setInterventionToEdit(null);
   };
 
@@ -1159,6 +1182,19 @@ const Dashboard: React.FC = () => {
   // Si se debe mostrar Google Maps
   if (showGoogleMapView && user) {
     return <GoogleMapView user={user} onBack={handleBackToDashboard} />;
+  }
+
+  // Si se debe mostrar registro de Vehículos Pesados (en construcción)
+  if (showHeavyVehicleRegistration && user) {
+    return (
+      <div style={{ padding: '32px', textAlign: 'center' }}>
+        <h2>🚧 Registro de Vehículos Pesados</h2>
+        <p>Esta sección está en construcción. Próximamente se cargará la lógica completa.</p>
+        <button className="btn primary" onClick={handleBackToDashboard} style={{ marginTop: '16px' }}>
+          Volver al Dashboard
+        </button>
+      </div>
+    );
   }
 
   // Si se debe mostrar Leaflet Maps
@@ -1685,6 +1721,40 @@ const Dashboard: React.FC = () => {
               <button className="btn btn-primary" onClick={handleSaveProfile}>
                 Guardar y Verificar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Selección de Registro */}
+      {showRegisterTypeModal && (
+        <div className="modal-overlay" onClick={() => setShowRegisterTypeModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>📝 ¿Qué deseas registrar?</h2>
+              <button className="modal-close" onClick={() => setShowRegisterTypeModal(false)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <p>Selecciona una opción para continuar.</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
+                <button
+                  className="btn primary"
+                  style={{ minHeight: '120px', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}
+                  onClick={handleRegisterActivities}
+                >
+                  Registrar Actividades
+                </button>
+                <button
+                  className="btn"
+                  style={{ minHeight: '120px', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}
+                  onClick={handleRegisterHeavyVehicles}
+                >
+                  Registrar Vehículos Pesados
+                </button>
+              </div>
+              <p style={{ marginTop: '16px', color: '#6c757d', fontSize: '0.95rem' }}>
+                La opción de vehículos pesados está en desarrollo (próximamente).
+              </p>
             </div>
           </div>
         </div>

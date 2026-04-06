@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { reportStorage } from '../services/reportStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import ExportButton from './ExportButton';
+import { exportReportsAsPdf } from '../utils/reportExport';
 import './DetailedReportView.css';
 
 // Mapeo de etiquetas de campos con sus unidades (igual que en el PDF)
@@ -46,11 +47,6 @@ interface Report {
   subTipoCanal?: string;
   // Datos métricos (plantilla)
   metricData: Record<string, string>;
-  // Coordenadas GPS
-  gpsData?: {
-    punto_inicial?: { lat: number; lon: number };
-    punto_alcanzado?: { lat: number; lon: number };
-  };
   // Imágenes organizadas por día
   imagesPerDay?: Record<string, Array<{ url: string; timestamp: string }>>;
   // Imágenes (legacy - array simple)
@@ -201,6 +197,21 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           const hasVehicle = report.vehiculos.some((v: any) => v.ficha === vehiculo.ficha);
           
           if (hasVehicle) {
+            // Construir fechas y estado/reflejo activo según datos de Firebase
+            const fechaInicioReporte = report.fechaInicio || report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
+            const fechaFinReporte = report.fechaFinal || '';
+            const now = new Date();
+            const fechaFinDate = fechaFinReporte ? new Date(fechaFinReporte) : null;
+            const estadoReporte = report.estado || '';
+
+            const statusInfo = estadoReporte
+              ? estadoReporte
+              : (fechaFinDate && !isNaN(fechaFinDate.getTime()) && fechaFinDate >= now)
+                ? 'Activo hasta la fecha'
+                : 'Finalizado';
+
+            const ubicacionTexto = `${report.region || 'N/A'} > ${report.provincia || 'N/A'} > ${report.distrito || 'N/A'} > ${report.municipio || 'N/A'} > ${report.sector || 'N/A'}`;
+
             // Si es multi-día, expandir cada día
             if (report.esProyectoMultiDia && report.diasTrabajo && report.diasTrabajo.length > 0) {
               const totalDias = report.diasTrabajo.length;
@@ -225,13 +236,18 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     provincia: report.provincia,
                     distrito: report.distrito,
                     municipio: report.municipio,
-                    sector: report.sector
+                    sector: report.sector,
+                    direccion: ubicacionTexto,
+                    fechaInicio: fechaInicioReporte,
+                    fechaFin: fechaFinReporte,
+                    estado: statusInfo,
+                    registradoEn: (report as any).registro || (report as any).registradoEn || ''
                   });
                 }
               });
             } else {
               // Reporte de un solo día
-              const fechaMostrar = report.fechaProyecto || report.fechaCreacion;
+              const fechaMostrar = report.fechaProyecto || report.fechaCreacion || report.timestamp || '';
               history.push({
                 fecha: fechaMostrar,
                 fechaDisplay: new Date(fechaMostrar).toLocaleDateString('es-ES', {
@@ -247,21 +263,55 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                 provincia: report.provincia,
                 distrito: report.distrito,
                 municipio: report.municipio,
-                sector: report.sector
+                sector: report.sector,
+                direccion: ubicacionTexto,
+                fechaInicio: fechaInicioReporte,
+                fechaFin: fechaFinReporte,
+                estado: statusInfo,
+                registradoEn: (report as any).registro || (report as any).registradoEn || ''
               });
             }
           }
         }
       }
       
-      // Ordenar por fecha descendente
-      history.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-      
-      setVehicleHistory(history);
+      // Convertir fechas y detectar cierre / actualidad según regla de ficha única
+      const sortedByStart = history.sort((a, b) => new Date(a.fechaInicio).getTime() - new Date(b.fechaInicio).getTime());
+      const adjustedHistory = sortedByStart.map((item, index) => {
+        const nextItem = sortedByStart[index + 1];
+        const fechaFinLabel = nextItem
+          ? new Date(nextItem.fechaInicio).toLocaleDateString('es-ES')
+          : 'Actualidad';
+
+        const estadoLabel = nextItem ? 'Finalizado' : 'Actualidad';
+
+        return {
+          ...item,
+          fechaInicio: item.fechaInicio ? new Date(item.fechaInicio).toLocaleDateString('es-ES') : 'N/A',
+          fechaFin: fechaFinLabel,
+          estado: estadoLabel,
+          fecha: item.fechaInicio
+        };
+      });
+
+      // Mostrar más reciente primero
+      adjustedHistory.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      setVehicleHistory(adjustedHistory);
     } catch (error) {
         console.error('Error al cargar historial de vehículo:', error);
       setVehicleHistory([]);
     }
+  };
+
+  const formatVehicleDate = (value: string) => {
+    if (!value || value.trim() === '') return 'N/A';
+    if (value === 'Actualidad') return 'Actualidad';
+
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString('es-ES');
+    }
+    return value;
   };
 
   // Función para cerrar modal de vehículo
@@ -379,7 +429,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             tipoIntervencion: report.tipoIntervencion,
             subTipoCanal: report.subTipoCanal,
             metricData: dayData.metricData || report.metricData || {},
-            gpsData: dayData.gpsData || report.gpsData,
+            // gpsData intentionally omitted per requirements
             observations: dayData.observaciones || report.observaciones,
             fechaCreacion: report.fechaCreacion,
             fechaProyecto: dia,
@@ -419,7 +469,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
           tipoIntervencion: report.tipoIntervencion,
           subTipoCanal: report.subTipoCanal,
           metricData: report.metricData || {},
-          gpsData: report.gpsData,
+          // gpsData intentionally omitted per requirements
           observations: report.observaciones,
           fechaCreacion: report.fechaCreacion,
           fechaProyecto: fechaMostrar,
@@ -759,6 +809,22 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
     window.print();
   };
 
+
+  const handleDownloadPdf = async () => {
+    if (!filteredReports || filteredReports.length === 0) {
+      alert('No hay reportes para descargar en este período.');
+      return;
+    }
+
+    try {
+      await exportReportsAsPdf(filteredReports as any);
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert('No se pudo generar el PDF. Por favor intente de nuevo.');
+    }
+  };
+
+
   const toggleRegion = (regionName: string) => {
     const newExpanded = new Set(expandedRegions);
     if (newExpanded.has(regionName)) {
@@ -1047,29 +1113,7 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
             )}
 
             {/* Coordenadas GPS */}
-            {selectedReport.gpsData && (
-              <div className="report-section">
-                <h3 className="section-title">🗺️ COORDENADAS GPS</h3>
-                <div className="report-grid">
-                  {selectedReport.gpsData.punto_inicial && (
-                    <div className="report-field">
-                      <label>Punto Inicial:</label>
-                      <div className="field-value">
-                        Lat: {selectedReport.gpsData.punto_inicial.lat.toFixed(6)}°, Lon: {selectedReport.gpsData.punto_inicial.lon.toFixed(6)}°
-                      </div>
-                    </div>
-                  )}
-                  {selectedReport.gpsData.punto_alcanzado && (
-                    <div className="report-field">
-                      <label>Punto Alcanzado:</label>
-                      <div className="field-value">
-                        Lat: {selectedReport.gpsData.punto_alcanzado.lat.toFixed(6)}°, Lon: {selectedReport.gpsData.punto_alcanzado.lon.toFixed(6)}°
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+
 
             {/* Imágenes - Priorizar imagesPerDay sobre images */}
             {selectedReport.imagesPerDay && Object.keys(selectedReport.imagesPerDay).length > 0 ? (
@@ -1252,7 +1296,6 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     subTipoCanal: selectedReport.subTipoCanal,
                     observaciones: selectedReport.observations || '', // observations → observaciones
                     metricData: selectedReport.metricData || {},
-                    gpsData: selectedReport.gpsData || {},
                     vehiculos: selectedReport.vehiculos || [],
                     fechaReporte: selectedReport.fechaProyecto || selectedReport.fechaCreacion?.split('T')[0] || '',
                     fechaInicio: selectedReport.fechaProyecto || '',
@@ -1650,8 +1693,18 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
         </div>
         <div className="export-buttons">
           <button className="btn-export" onClick={handlePrint}>
-            🖨️ Imprimir
+            🖨️ Imprimir vista actual
           </button>
+          {filterPeriod !== 'todos' && (
+            <button
+              className="btn-export"
+              onClick={handleDownloadPdf}
+              disabled={filteredReports.length === 0}
+              title={filteredReports.length === 0 ? 'No hay reportes para descargar con los filtros actuales' : 'Descargar un PDF con todos los reportes del período'}
+            >
+              📄 Descargar PDF
+            </button>
+          )}
         </div>
       </div>
 
@@ -1991,12 +2044,21 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                         <div className="history-date-full">
                           📅 {activity.fechaDisplay}
                         </div>
-                        
+
+                        <div className="history-period">
+                          <strong>Inicio:</strong> {formatVehicleDate(activity.fechaInicio)}
+                          <span style={{ margin: '0 10px' }}>•</span>
+                          <strong>Fin:</strong> {formatVehicleDate(activity.fechaFin)}
+                          <span style={{ margin: '0 10px' }}>•</span>
+                          <strong>Estado:</strong> {activity.estado || 'Desconocido'}
+                        </div>
+
                         <div className="history-location">
                           <div className="location-item">
                             <strong>📍 Ubicación:</strong>
                           </div>
                           <div className="location-details">
+                            <div style={{ marginBottom: '4px' }}><strong>Dirección completa:</strong> {activity.direccion || `${activity.region} / ${activity.provincia} / ${activity.distrito} / ${activity.municipio} / ${activity.sector}`}</div>
                             <div>• <strong>Región:</strong> {activity.region}</div>
                             <div>• <strong>Provincia:</strong> {activity.provincia}</div>
                             <div>• <strong>Distrito:</strong> {activity.distrito}</div>

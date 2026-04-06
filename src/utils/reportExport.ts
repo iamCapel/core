@@ -17,6 +17,51 @@ export interface ReportData {
 
 export type FullReportData = any; // actual type defined elsewhere
 
+// Mapeo de etiquetas de campos con sus unidades (igual que en el PDF)
+const fieldLabels: Record<string, { label: string; unit: string }> = {
+  'longitud_intervencion': { label: 'Longitud de intervención', unit: 'km' },
+  'limpieza_superficie': { label: 'Limpieza de superficie', unit: 'm²' },
+  'perfilado_superficie': { label: 'Perfilado de superficie', unit: 'm²' },
+  'compactado_superficie': { label: 'Compactado de superficie', unit: 'm²' },
+  'conformacion_cunetas': { label: 'Conformación de cunetas', unit: 'ml' },
+  'extraccion_bote_material': { label: 'Extracción y bote de material inservible', unit: 'm³' },
+  'escarificacion_superficies': { label: 'Escarificación de superficies', unit: 'm²' },
+  'conformacion_plataforma': { label: 'Conformación de plataforma', unit: 'm²' },
+  'zafra_material': { label: 'Zafra de material', unit: 'm³' },
+  'motonivelacion_superficie': { label: 'Motonivelación de superficie', unit: 'm²' },
+  'escarpe_talud': { label: 'Escarpe de talud', unit: 'm²' },
+  'limpieza_alcantarillas': { label: 'Limpieza de alcantarillas', unit: 'und' },
+  'desmalezado_arbustos': { label: 'Desmalezado de arbustos', unit: 'm²' },
+  'corte_poda_arboles': { label: 'Corte y poda de árboles', unit: 'und' },
+  'escarificado_plataforma': { label: 'Escarificado de plataforma', unit: 'm²' },
+  'tapada_baches': { label: 'Tapada de baches', unit: 'm³' },
+  'reposicion_tuberias': { label: 'Reposición de tuberías', unit: 'und' },
+  'trabajos_especiales': { label: 'Trabajos especiales', unit: '' },
+  'cantidad_material_colocado': { label: 'Cantidad de material colocado', unit: 'm³' },
+  'camino_inicio': { label: 'Camino inicio', unit: '' },
+  'camino_termino': { label: 'Camino término', unit: '' },
+  'apertura_zanjas': { label: 'Apertura de zanjas', unit: 'ml' },
+  'mano_obra': { label: 'Mano de obra', unit: '' }
+};
+
+async function urlToDataUrl(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.warn('No se pudo cargar imagen para PDF:', url, error);
+    return null;
+  }
+}
+
 async function loadFullReport(reportNumber: string) {
   const allReports = await firebaseReportStorage.getAllReports();
   const fullReport = allReports.find(r => r.numeroReporte === reportNumber);
@@ -54,300 +99,231 @@ export async function exportReport(displayReport: ReportData, format: 'excel' | 
 
 // stub implementations: (for brevity, we will copy relevant code segments from ExportPage)
 
-async function generateProfessionalPDF(fullReport: FullReportData, displayData: ReportData) {
-  const doc = new jsPDF();
+async function renderReportToPdf(doc: jsPDF, fullReport: FullReportData) {
   let yPos = 20;
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
-  const contentWidth = pageWidth - (margin * 2);
+  const contentWidth = pageWidth - margin * 2;
 
-  // Encabezado blanco con logo
-  doc.setFillColor(255, 255, 255); // Blanco
-  doc.rect(0, 0, pageWidth, 50, 'F');
+  const addText = (text: string, x: number, y: number, options?: { fontSize?: number; fontStyle?: 'normal' | 'bold'; color?: [number, number, number]; align?: 'left' | 'center' | 'right' }) => {
+    if (options?.color) doc.setTextColor(...options.color);
+    if (options?.fontSize) doc.setFontSize(options.fontSize);
+    doc.setFont('helvetica', options?.fontStyle || 'normal');
+    doc.text(text, x, y, { align: options?.align || 'left' });
+    if (options?.color) doc.setTextColor(0, 0, 0);
+  };
 
-  // Cargar y agregar logo (lado izquierdo superior - reducido 45% vertical)
+  const addLine = (x1: number, y1: number, x2: number, y2: number, options?: { color?: [number, number, number]; width?: number }) => {
+    if (options?.color) doc.setDrawColor(...options.color);
+    if (options?.width) doc.setLineWidth(options.width);
+    doc.line(x1, y1, x2, y2);
+    if (options?.color) doc.setDrawColor(0, 0, 0);
+    if (options?.width) doc.setLineWidth(0.2);
+  };
+
+  const ensurePageSpace = (height: number) => {
+    if (yPos + height > pageHeight - 20) {
+      doc.addPage();
+      yPos = 20;
+    }
+  };
+
+  // Encabezado (compacto para no tapar el título de la actividad)
+  const headerHeight = 55;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
   try {
     const logoImg = new Image();
     logoImg.src = '/mopc-logo.png';
-    await new Promise((resolve) => {
-      logoImg.onload = resolve;
-      logoImg.onerror = resolve; // Continuar si falla
+    await new Promise<void>((resolve) => {
+      logoImg.onload = () => resolve();
+      logoImg.onerror = () => resolve();
     });
     if (logoImg.complete) {
-      doc.addImage(logoImg, 'PNG', margin, 12, 30, 16.5); // Altura reducida a 45% (de 30 a 16.5)
+      doc.addImage(logoImg, 'PNG', margin, 12, 30, 16.5);
     }
   } catch (error) {
     console.log('Logo no cargado, continuando sin logo');
   }
 
-  // Información del reporte - Lado derecho del encabezado (aumentado 40% - 48% * 1.40 = 67.2% del original)
-  const infoBoxWidth = 47; // 33.6 * 1.40 = 47.04
-  const infoBoxHeight = 23.5; // 16.8 * 1.40 = 23.52
+  const infoBoxWidth = 47;
+  const infoBoxHeight = 23.5;
   const infoBoxX = pageWidth - margin - infoBoxWidth;
-  const infoBoxY = 8;
+  const infoBoxY = 12;
+  const titleCenterX = pageWidth / 2;
 
-  // Calcular posición del título - movido 7.5% hacia la izquierda
-  const titleCenterX = infoBoxX * 0.7; // 77.5% - 7.5% = 70% del espacio a la izquierda
+  addText('DIRECCIÓN DE COORDINACIÓN REGIONAL', titleCenterX, 34, { fontSize: 14, fontStyle: 'bold', color: [255, 122, 0], align: 'center' });
+  addText(fullReport.tipoIntervencion || 'INTERVENCIÓN VIAL', titleCenterX, 46, { fontSize: 12, fontStyle: 'bold', align: 'center' });
 
-  // Nombre de la dirección (movido a la izquierda - reducido)
-  doc.setTextColor(255, 122, 0); // Naranja para el texto
-  doc.setFontSize(11); // Reducido de 14 a 11
-  doc.setFont('helvetica', 'bold');
-  doc.text('DIRECCIÓN DE COORDINACIÓN REGIONAL', titleCenterX, 20, { align: 'center' });
-
-  // Tipo de intervención
-  doc.setFontSize(10); // Reducido de 12 a 10
-  doc.setFont('helvetica', 'bold');
-  doc.text(fullReport.tipoIntervencion || 'INTERVENCIÓN VIAL', titleCenterX, 30, { align: 'center' });
-
-  doc.setFillColor(255, 255, 255); // Fondo blanco
+  doc.setFillColor(255, 255, 255);
   doc.rect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, 'F');
   doc.setDrawColor(255, 122, 0);
   doc.setLineWidth(0.7);
   doc.rect(infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, 'S');
 
-  // Número de reporte
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(5.9); // 4.2 * 1.40 = 5.88
-  doc.setFont('helvetica', 'bold');
-  doc.text('N° REPORTE:', infoBoxX + 2.1, infoBoxY + 4.2);
-  doc.setTextColor(255, 122, 0);
-  doc.setFontSize(5.9);
-  doc.setFont('helvetica', 'bold');
-  const reportNumLines = doc.splitTextToSize(fullReport.numeroReporte, infoBoxWidth - 4.2);
-  doc.text(reportNumLines, infoBoxX + 2.1, infoBoxY + 7.6);
+  addText('N° REPORTE:', infoBoxX + 2.1, infoBoxY + 4.2, { fontSize: 5.9, fontStyle: 'bold' });
+  addText(fullReport.numeroReporte || '', infoBoxX + 2.1, infoBoxY + 7.6, { fontSize: 5.9, fontStyle: 'bold', color: [255, 122, 0] });
 
-  // Usuario que lo creó
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(5); // 3.6 * 1.40 = 5.04
-  doc.setFont('helvetica', 'bold');
-  doc.text('CREADO POR:', infoBoxX + 2.1, infoBoxY + 12);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(5);
-  const userName = fullReport.creadoPor || 'Sistema';
-  const userLines = doc.splitTextToSize(userName, infoBoxWidth - 4.2);
-  doc.text(userLines, infoBoxX + 2.1, infoBoxY + 15.4);
+  addText('CREADO POR:', infoBoxX + 2.1, infoBoxY + 12, { fontSize: 5, fontStyle: 'bold' });
+  addText(fullReport.creadoPor || 'Sistema', infoBoxX + 2.1, infoBoxY + 15.4, { fontSize: 5 });
 
-  // Fecha de creación
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(5);
-  doc.setTextColor(100, 100, 100);
-  doc.text('FECHA:', infoBoxX + 2.1, infoBoxY + 19.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(new Date(fullReport.fechaCreacion).toLocaleDateString('es-PY'), infoBoxX + 13.4, infoBoxY + 19.5);
+  addText('FECHA:', infoBoxX + 2.1, infoBoxY + 19.5, { fontSize: 5, fontStyle: 'bold', color: [100, 100, 100] });
+  addText(new Date(fullReport.fechaCreacion || '').toLocaleDateString('es-PY'), infoBoxX + 13.4, infoBoxY + 19.5, { fontSize: 5 });
 
-  // Estado del reporte (badge pequeño)
-  const estadoColor = fullReport.estado === 'completado' ? [34, 139, 34] : 
-                      fullReport.estado === 'pendiente' ? [255, 140, 0] : [128, 128, 128];
+  const estadoColor = fullReport.estado === 'completado' ? [34, 139, 34] : fullReport.estado === 'pendiente' ? [255, 140, 0] : [128, 128, 128];
   doc.setFillColor(estadoColor[0], estadoColor[1], estadoColor[2]);
   doc.roundedRect(infoBoxX + 23.5, infoBoxY + 21.6, 20.2, 4.8, 0.8, 0.8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(4.2); // 3 * 1.40 = 4.2
-  doc.setFont('helvetica', 'bold');
-  doc.text(fullReport.estado.toUpperCase(), infoBoxX + 33.6, infoBoxY + 24.2, { align: 'center' });
-  doc.setTextColor(0, 0, 0);
+  addText((fullReport.estado || '').toUpperCase(), infoBoxX + 33.6, infoBoxY + 24.2, { fontSize: 4.2, fontStyle: 'bold', color: [255, 255, 255], align: 'center' });
 
-  // Línea separadora naranja debajo del encabezado
-  doc.setDrawColor(255, 122, 0);
-  doc.setLineWidth(2);
-  doc.line(0, 50, pageWidth, 50);
+  addLine(0, 50, pageWidth, 50, { color: [255, 122, 0], width: 2 });
 
-  yPos = 55;
-
+  yPos = 60;
   yPos += 5;
 
-  // Sección de Ubicación
-  doc.setFillColor(255, 122, 0); // Naranja
+  // Ubicación
+  ensurePageSpace(60);
+  doc.setFillColor(255, 122, 0);
   doc.rect(margin, yPos, contentWidth, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('UBICACIÓN GEOGRÁFICA', margin + 3, yPos + 5);
-  
+  addText('UBICACIÓN GEOGRÁFICA', margin + 3, yPos + 5, { fontSize: 11, fontStyle: 'bold', color: [255, 122, 0] });
   yPos += 13;
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Región:', margin + 5, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(fullReport.region || 'N/A', margin + 30, yPos);
-  
-  yPos += 7;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Provincia:', margin + 5, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(fullReport.provincia || 'N/A', margin + 30, yPos);
-  
-  yPos += 7;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Municipio:', margin + 5, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(fullReport.municipio || 'N/A', margin + 30, yPos);
-  
-  yPos += 7;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Distrito:', margin + 5, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(fullReport.distrito || 'N/A', margin + 30, yPos);
-  
-  yPos += 7;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Sector:', margin + 5, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(fullReport.sector || 'N/A', margin + 30, yPos);
-  
-  yPos += 15;
 
-  // Sección de Intervención
-  doc.setFillColor(255, 122, 0); // Naranja
-  doc.rect(margin, yPos, contentWidth, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DATOS DE LA INTERVENCIÓN', margin + 3, yPos + 5);
-  
-  yPos += 13;
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Tipo de Intervención:', margin + 5, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(fullReport.tipoIntervencion || 'N/A', margin + 50, yPos);
-  
-  if (fullReport.subTipoCanal) {
-    yPos += 7;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Subtipo:', margin + 5, yPos);
-    doc.setFont('helvetica', 'normal');
-    doc.text(fullReport.subTipoCanal, margin + 50, yPos);
-  }
-  
-  yPos += 15;
+  const ubicacionItems: Array<[string, string]> = [
+    ['Región:', fullReport.region || 'N/A'],
+    ['Provincia:', fullReport.provincia || 'N/A'],
+    ['Municipio:', fullReport.municipio || 'N/A'],
+    ['Distrito:', fullReport.distrito || 'N/A'],
+    ['Sector:', fullReport.sector || 'N/A']
+  ];
 
-  // Datos métricos
+  ubicacionItems.forEach(([label, value]) => {
+    addText(label, margin + 5, yPos, { fontSize: 9, fontStyle: 'bold' });
+    addText(value, margin + 40, yPos, { fontSize: 9 });
+    yPos += 5.5;
+  });
+
+  yPos += 6;
+
+  // Detalles de intervención
   if (fullReport.metricData && Object.keys(fullReport.metricData).length > 0) {
-    doc.setFillColor(255, 122, 0); // Naranja
+    ensurePageSpace(60);
+    doc.setFillColor(255, 122, 0);
     doc.rect(margin, yPos, contentWidth, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DATOS MÉTRICOS DE LA INTERVENCIÓN', margin + 3, yPos + 5);
-    
+    addText('DETALLES DE INTERVENCIÓN', margin + 3, yPos + 5, { fontSize: 11, fontStyle: 'bold', color: [255, 122, 0] });
     yPos += 13;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(9);
-    
-    for (const [key, value] of Object.entries(fullReport.metricData)) {
-      const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      const unit = '';
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${label}:`, margin + 5, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(value) + (unit ? ` ${unit}` : ''), margin + 100, yPos);
-      yPos += 6;
-    }
-    
-    yPos += 10;
+
+    Object.entries(fullReport.metricData)
+      .filter(([key]) => key !== 'punto_inicial' && key !== 'punto_alcanzado')
+      .forEach(([key, value]) => {
+        const fieldInfo = fieldLabels[key];
+        const label = fieldInfo ? fieldInfo.label : key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const displayValue = fieldInfo?.unit ? `${value} ${fieldInfo.unit}` : `${value}`;
+
+        addText(`${label}:`, margin + 5, yPos, { fontSize: 9, fontStyle: 'bold' });
+        addText(displayValue, margin + 60, yPos, { fontSize: 9 });
+        yPos += 5.5;
+
+        if (yPos > pageHeight - 40) {
+          doc.addPage();
+          yPos = 20;
+        }
+      });
+
+    yPos += 6;
   }
 
-  // Datos GPS
-  if (fullReport.gpsData && (fullReport.gpsData.punto_inicial || fullReport.gpsData.punto_alcanzado)) {
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
-    }
-    
-    doc.setFillColor(255, 122, 0); // Naranja
-    doc.rect(margin, yPos, contentWidth, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('COORDENADAS GPS', margin + 3, yPos + 5);
-    
-    yPos += 13;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(9);
-    
-    if (fullReport.gpsData.punto_inicial) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Punto Inicial:', margin + 5, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Lat: ${fullReport.gpsData.punto_inicial.lat}, Lon: ${fullReport.gpsData.punto_inicial.lon}`, margin + 35, yPos);
-      yPos += 6;
-    }
-    
-    if (fullReport.gpsData.punto_alcanzado) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('Punto Alcanzado:', margin + 5, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Lat: ${fullReport.gpsData.punto_alcanzado.lat}, Lon: ${fullReport.gpsData.punto_alcanzado.lon}`, margin + 35, yPos);
-      yPos += 6;
-    }
-    
-    yPos += 10;
-  }
 
   // Observaciones
   if (fullReport.observaciones) {
-    if (yPos > 240) {
-      doc.addPage();
-      yPos = 20;
-    }
-    
-    doc.setFillColor(255, 122, 0); // Naranja
+    ensurePageSpace(40);
+    doc.setFillColor(255, 122, 0);
     doc.rect(margin, yPos, contentWidth, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('OBSERVACIONES', margin + 3, yPos + 5);
-    
-    yPos += 13;
-    doc.setTextColor(0, 0, 0);
+    addText('OBSERVACIONES', margin + 3, yPos + 5, { fontSize: 11, fontStyle: 'bold', color: [255, 122, 0] });
+    yPos += 12;
+
+    const obsLines = doc.splitTextToSize(fullReport.observaciones, contentWidth - 6);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    
-    const lines = doc.splitTextToSize(fullReport.observaciones, contentWidth - 10);
-    lines.forEach((line: string) => {
-      if (yPos > 280) {
-        doc.addPage();
-        yPos = 20;
+    doc.text(obsLines, margin + 3, yPos);
+    yPos += obsLines.length * 5.5;
+  }
+
+  // Fotos (limitar a 4 para evitar PDF gigante)
+  const allImages: string[] = [];
+  if (fullReport.imagesPerDay) {
+    Object.values(fullReport.imagesPerDay).forEach((imgs: any) => {
+      if (Array.isArray(imgs)) {
+        imgs.forEach((img: any) => {
+          if (img?.url) allImages.push(img.url);
+        });
       }
-      doc.text(line, margin + 5, yPos);
-      yPos += 5;
     });
-    
+  }
+  if (fullReport.images) {
+    fullReport.images.forEach((img: any) => {
+      if (img) allImages.push(img);
+    });
+  }
+
+  const imagesToAdd = allImages.slice(0, 4);
+  if (imagesToAdd.length > 0) {
+    ensurePageSpace(80);
+    addText('📸 EVIDENCIA FOTOGRÁFICA', margin, yPos, { fontSize: 11, fontStyle: 'bold', color: [255, 122, 0] });
     yPos += 10;
+
+    const imageSize = 60;
+    const gap = 8;
+    let x = margin;
+
+    for (const imageUrl of imagesToAdd) {
+      const dataUrl = await urlToDataUrl(imageUrl);
+      if (!dataUrl) continue;
+
+      if (x + imageSize > pageWidth - margin) {
+        x = margin;
+        yPos += imageSize + gap;
+        if (yPos + imageSize > pageHeight - 20) {
+          doc.addPage();
+          yPos = 20;
+        }
+      }
+
+      try {
+        doc.addImage(dataUrl, 'JPEG', x, yPos, imageSize, imageSize);
+      } catch (error) {
+        // Si no se puede agregar la imagen, la ignoramos
+      }
+      x += imageSize + gap;
+    }
+
+    yPos += imageSize + 10;
   }
 
-  // Pie de página en todas las páginas
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    
-    // Línea decorativa naranja
-    doc.setDrawColor(255, 122, 0);
-    doc.setLineWidth(1);
-    doc.line(margin, 280, pageWidth - margin, 280);
-    
-    // Información del pie
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Generado: ${new Date().toLocaleDateString('es-PY')} ${new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}`, margin, 285);
-    doc.text(`Técnico: ${fullReport.creadoPor}`, margin, 290);
-    
-    // Número de página en naranja
-    doc.setTextColor(255, 122, 0);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Pág. ${i} de ${totalPages}`, pageWidth - margin, 287, { align: 'right' });
-  }
+  // Footer
+  ensurePageSpace(20);
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text('Generado por MOPC - Sistema de reportes', margin, pageHeight - 12);
+}
 
-  // Descargar el PDF
-  doc.save(`${displayData.reportNumber}.pdf`);
+async function generateProfessionalPDF(fullReport: FullReportData, displayData: ReportData) {
+  const doc = new jsPDF();
+  await renderReportToPdf(doc, fullReport);
+  const fileName = `reporte_${fullReport.numeroReporte || displayData.reportNumber}.pdf`;
+  doc.save(fileName);
+}
+
+export async function exportReportsAsPdf(reports: FullReportData[]) {
+  if (!reports || reports.length === 0) return;
+
+  const doc = new jsPDF();
+  for (let i = 0; i < reports.length; i++) {
+    if (i > 0) doc.addPage();
+    await renderReportToPdf(doc, reports[i]);
+  }
+  const fileName = `reportes_${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(fileName);
 }
 
 async function generateExcelContent(fullReport: FullReportData, displayData: ReportData) {
@@ -688,50 +664,6 @@ async function generateWordContent(fullReport: FullReportData, displayData: Repo
     }));
   }
   
-  // COORDENADAS GPS
-  if (fullReport.gpsData && (fullReport.gpsData.punto_inicial || fullReport.gpsData.punto_alcanzado)) {
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: 'COORDENADAS GPS',
-            bold: true,
-            size: 22,
-            color: 'FFFFFF'
-          })
-        ],
-        shading: { fill: 'FF7A00' },
-        spacing: { before: 300, after: 100 }
-      })
-    );
-    
-    const gpsRows: TableRow[] = [];
-    if (fullReport.gpsData.punto_inicial) {
-      gpsRows.push(
-        new TableRow({
-          children: [
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Punto Inicial:', bold: true, size: 18 })] })] }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Lat: ${fullReport.gpsData.punto_inicial.lat}, Lon: ${fullReport.gpsData.punto_inicial.lon}`, size: 18 })] })] })
-          ]
-        })
-      );
-    }
-    if (fullReport.gpsData.punto_alcanzado) {
-      gpsRows.push(
-        new TableRow({
-          children: [
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Punto Alcanzado:', bold: true, size: 18 })] })] }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Lat: ${fullReport.gpsData.punto_alcanzado.lat}, Lon: ${fullReport.gpsData.punto_alcanzado.lon}`, size: 18 })] })] })
-          ]
-        })
-      );
-    }
-    
-    children.push(new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: gpsRows
-    }));
-  }
   
   // OBSERVACIONES
   if (fullReport.observaciones) {
