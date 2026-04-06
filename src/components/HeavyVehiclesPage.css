@@ -1,0 +1,147 @@
+/* HeavyVehiclesPage.css - Estilos para página de gestión de vehículos pesados */
+
+.heavy-vehicles-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--pale-orange) 0%, var(--tertiary-orange) 100%);
+  font-family: var(--font-family);
+  padding: 20px;
+}
+
+/* Header */
+.topbar-modern {
+  background: linear-gradient(135deg, rgba(20, 20, 28, 0.72) 0%, rgba(28, 28, 38, 0.9) 100%);
+  padding: 16px 24px;
+  border-radius: 0 0 18px 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.topbar-back-button-modern {
+  background: transparent;
+  border: 2px solid var(--primary-orange);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-orange);
+  transition: all 0.3s ease;
+}
+
+.topbar-back-button-modern:hover {
+  background: var(--primary-orange);
+  color: white;
+  transform: translateX(-3px);
+}
+
+.topbar-actions-modern {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-orange);
+  margin: 0;
+}
+
+/* Content */
+.heavy-vehicles-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Botón moderno */
+.btn-modern {
+  background: linear-gradient(135deg, var(--primary-orange) 0%, var(--primary-orange-light) 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
+}
+
+.btn-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 122, 0, 0.4);
+}
+
+.btn-modern:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Vehicle row */
+.vehicle-row {
+  background: rgba(255, 255, 255, 0.03);
+  margin-bottom: var(--spacing-md);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .heavy-vehicles-page {
+    padding: 16px;
+  }
+
+  .heavy-vehicles-content {
+    max-width: 100%;
+    margin: 0;
+    padding: 8px 0 0;
+  }
+
+  .topbar-modern {
+    padding: 12px 12px;
+    border-radius: 0;
+  }
+
+  .topbar-back-button-modern {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+    font-size: 14px;
+  }
+
+  .topbar-title {
+    font-size: 16px;
+  }
+
+  .btn-modern {
+    width: 100%;
+    padding: 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .heavy-vehicles-page {
+    padding: 8px;
+  }
+
+  .topbar-title {
+    font-size: 14px;
+  }
+
+  .form-row {
+    display: block;
+    gap: 8px;
+  }
+
+  .form-row > * {
+    width: 100% !important;
+    margin-bottom: 8px;
+  }
+}

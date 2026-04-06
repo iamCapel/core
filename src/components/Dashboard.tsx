@@ -8,6 +8,7 @@ import LeafletMapView from './LeafletMapView';
 import DetailedReportView from './DetailedReportView';
 import PendingReportsModal from './PendingReportsModal';
 import MyReportsCalendar from './MyReportsCalendar';
+import HeavyVehiclesPage from './HeavyVehiclesPage';
 import { UserRole, applyUserTheme, getRoleBadge } from '../types/userRoles';
 import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import { userStorage } from '../services/userStorage';
@@ -1184,17 +1185,9 @@ const Dashboard: React.FC = () => {
     return <GoogleMapView user={user} onBack={handleBackToDashboard} />;
   }
 
-  // Si se debe mostrar registro de Vehículos Pesados (en construcción)
+  // Si se debe mostrar registro de Vehículos Pesados
   if (showHeavyVehicleRegistration && user) {
-    return (
-      <div style={{ padding: '32px', textAlign: 'center' }}>
-        <h2>🚧 Registro de Vehículos Pesados</h2>
-        <p>Esta sección está en construcción. Próximamente se cargará la lógica completa.</p>
-        <button className="btn primary" onClick={handleBackToDashboard} style={{ marginTop: '16px' }}>
-          Volver al Dashboard
-        </button>
-      </div>
-    );
+    return <HeavyVehiclesPage onClose={handleBackToDashboard} />;
   }
 
   // Si se debe mostrar Leaflet Maps
@@ -1728,35 +1721,114 @@ const Dashboard: React.FC = () => {
 
       {/* Modal de Selección de Registro */}
       {showRegisterTypeModal && (
-        <div className="modal-overlay" onClick={() => setShowRegisterTypeModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>📝 ¿Qué deseas registrar?</h2>
-              <button className="modal-close" onClick={() => setShowRegisterTypeModal(false)}>✕</button>
-            </div>
-            <div className="modal-body" style={{ padding: '20px' }}>
-              <p>Selecciona una opción para continuar.</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
-                <button
-                  className="btn primary"
-                  style={{ minHeight: '120px', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}
-                  onClick={handleRegisterActivities}
-                >
-                  Registrar Actividades
-                </button>
-                <button
-                  className="btn"
-                  style={{ minHeight: '120px', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}
-                  onClick={handleRegisterHeavyVehicles}
-                >
-                  Registrar Vehículos Pesados
-                </button>
-              </div>
-              <p style={{ marginTop: '16px', color: '#6c757d', fontSize: '0.95rem' }}>
-                La opción de vehículos pesados está en desarrollo (próximamente).
-              </p>
-            </div>
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+          onClick={() => setShowRegisterTypeModal(false)}
+        >
+          <div 
+            style={{
+              display: 'flex',
+              gap: '32px',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Botón Registrar Actividades */}
+            <button
+              onClick={handleRegisterActivities}
+              style={{
+                width: '180px',
+                height: '180px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'linear-gradient(135deg, #FF7A00 0%, #FF9933 100%)',
+                boxShadow: '0 12px 40px rgba(255, 122, 0, 0.4), 0 0 0 0 rgba(255, 122, 0, 0.3)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                transition: 'all 0.3s ease',
+                color: 'white',
+                fontWeight: '600',
+                fontSize: '16px',
+                animation: 'pulse 2s infinite'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.08)';
+                e.currentTarget.style.boxShadow = '0 16px 50px rgba(255, 122, 0, 0.5), 0 0 0 8px rgba(255, 122, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 122, 0, 0.4), 0 0 0 0 rgba(255, 122, 0, 0.3)';
+              }}
+            >
+              <span style={{ fontSize: '48px' }}>⛏️</span>
+              <span style={{ textAlign: 'center', lineHeight: '1.3' }}>Registrar<br/>Actividades</span>
+            </button>
+
+            {/* Botón Registrar Vehículos Pesados */}
+            <button
+              onClick={handleRegisterHeavyVehicles}
+              style={{
+                width: '180px',
+                height: '180px',
+                borderRadius: '50%',
+                border: 'none',
+                background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                boxShadow: '0 12px 40px rgba(108, 117, 125, 0.4), 0 0 0 0 rgba(108, 117, 125, 0.3)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                transition: 'all 0.3s ease',
+                color: 'white',
+                fontWeight: '600',
+                fontSize: '16px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.08)';
+                e.currentTarget.style.boxShadow = '0 16px 50px rgba(108, 117, 125, 0.5), 0 0 0 8px rgba(108, 117, 125, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 12px 40px rgba(108, 117, 125, 0.4), 0 0 0 0 rgba(108, 117, 125, 0.3)';
+              }}
+            >
+              <span style={{ fontSize: '48px' }}>🚜</span>
+              <span style={{ textAlign: 'center', lineHeight: '1.3' }}>Vehículos<br/>Pesados</span>
+            </button>
           </div>
+
+          {/* Animación de pulso para el botón principal */}
+          <style>{`
+            @keyframes pulse {
+              0%, 100% {
+                box-shadow: 0 12px 40px rgba(255, 122, 0, 0.4), 0 0 0 0 rgba(255, 122, 0, 0.3);
+              }
+              50% {
+                box-shadow: 0 12px 40px rgba(255, 122, 0, 0.4), 0 0 0 12px rgba(255, 122, 0, 0.1);
+              }
+            }
+          `}</style>
         </div>
       )}
     </div>
