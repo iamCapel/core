@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './RegionDetailModal.css';
+import ClickableUsername from './ClickableUsername';
 
 interface RegionDetailModalProps {
   regionName: string;
@@ -297,7 +298,12 @@ const RegionDetailModal: React.FC<RegionDetailModalProps> = ({
               <div className="report-detail-info">
                 <div className="report-info-row">
                   <span className="info-label">Usuario:</span>
-                  <span className="info-value">{selectedReport.userFullName}</span>
+                  <span className="info-value">
+                    <ClickableUsername 
+                      username={selectedReport.userName}
+                      fullName={selectedReport.userFullName}
+                    />
+                  </span>
                 </div>
                 <div className="report-info-row">
                   <span className="info-label">Fecha:</span>
@@ -414,7 +420,13 @@ const RegionDetailModal: React.FC<RegionDetailModalProps> = ({
                   >
                     <div className="report-number">#{report.reportNumber}</div>
                     <div className="report-info">
-                      <div className="report-user">👤 {report.userFullName}</div>
+                      <div className="report-user">
+                        👤{' '}
+                        <ClickableUsername 
+                          username={report.userName}
+                          fullName={report.userFullName}
+                        />
+                      </div>
                       <div className="report-date">📅 {report.date}</div>
                       <div className="report-type">{report.tipoIntervencion}</div>
                     </div>

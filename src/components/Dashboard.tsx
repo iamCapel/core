@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReportsPage from './ReportsPage';
 import ReportForm from './ReportForm';
 import ExportPage from './ExportPage';
@@ -9,11 +9,14 @@ import DetailedReportView from './DetailedReportView';
 import PendingReportsModal from './PendingReportsModal';
 import MyReportsCalendar from './MyReportsCalendar';
 import HeavyVehiclesPage from './HeavyVehiclesPage';
+import ChatList from './ChatList';
 import { UserRole, applyUserTheme, getRoleBadge } from '../types/userRoles';
 import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import { userStorage } from '../services/userStorage';
 import * as firebaseUserStorage from '../services/firebaseUserStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
+import userPresenceService from '../services/userPresenceService';
+import { chatService } from '../services/chatService';
 import './Dashboard.css';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
@@ -547,6 +550,11 @@ const Dashboard: React.FC = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showMyReportsModal, setShowMyReportsModal] = useState(false);
   const [showCompleteProfileModal, setShowCompleteProfileModal] = useState(false);
+  
+  // Estado para el chat list
+  const [showChatList, setShowChatList] = useState(false);
+  const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
+  const ignoreChatOpenUntilRef = useRef(0);
 
   // Nuevo modal de selección de tipo de registro
   const [showRegisterTypeModal, setShowRegisterTypeModal] = useState(false);
@@ -771,9 +779,23 @@ const Dashboard: React.FC = () => {
     if (user && user.role) {
       // Aplicar tema del rol
       applyUserTheme(user.role);
+      
+      // Iniciar rastreo de presencia si el usuario ya está logueado
+      if (user.username) {
+        userPresenceService.startPresenceTracking(user.username);
+        
+        // Limpiar mensajes antiguos (>7 días) al iniciar sesión
+        // Se ejecuta en segundo plano sin bloquear la UI
+        chatService.cleanOldMessages().catch(error => {
+          console.error('Error al limpiar mensajes antiguos:', error);
+        });
+      }
     } else {
       // Si no hay rol definido, usar rol por defecto (Admin para compatibilidad)
       applyUserTheme(UserRole.ADMIN);
+      
+      // Detener rastreo de presencia si no hay usuario
+      userPresenceService.stopPresenceTracking();
     }
   }, [user]);
 
@@ -864,6 +886,10 @@ const Dashboard: React.FC = () => {
         
         localStorage.setItem('mopc_user', JSON.stringify(newUser));
         setUser(newUser);
+        
+        // Iniciar rastreo de presencia web
+        userPresenceService.startPresenceTracking(validatedUser.username);
+        
         setLoginUser('');
         setLoginPass('');
         
@@ -898,6 +924,10 @@ const Dashboard: React.FC = () => {
         
         localStorage.setItem('mopc_user', JSON.stringify(newUser));
         setUser(newUser);
+        
+        // Iniciar rastreo de presencia web
+        userPresenceService.startPresenceTracking(validatedUser.username);
+        
         setLoginUser('');
         setLoginPass('');
         
@@ -994,10 +1024,30 @@ const Dashboard: React.FC = () => {
   };
 
   const handleLogout = () => {
+    // Detener rastreo de presencia web
+    userPresenceService.stopPresenceTracking();
+    
     setUser(null);
+    setActiveChatUser(null);
     try { 
       localStorage.removeItem('mopc_user'); 
     } catch {}
+  };
+
+  const handleOpenChatModal = (username: string) => {
+    setActiveChatUser(username);
+  };
+
+  const handleCloseChatModal = () => {
+    // Evita click-through al botón de mensajes inmediatamente después de cerrar.
+    ignoreChatOpenUntilRef.current = Date.now() + 350;
+    setActiveChatUser(null);
+    setShowChatList(false);
+  };
+
+  const handleOpenChatList = () => {
+    if (Date.now() < ignoreChatOpenUntilRef.current) return;
+    setShowChatList(true);
   };
 
   const handleShowReports = () => {
@@ -1094,129 +1144,235 @@ const Dashboard: React.FC = () => {
   // Si se debe mostrar la página de informes
   if (showReportsPage && user) {
     return (
-      <ReportsPage 
-        user={user} 
-        onBack={handleBackToDashboard}
-        onEditReport={async (reportId) => {
-          try {
-            console.log('📋 Cargando reporte para editar desde ReportsPage:', reportId);
-            
-            // Cargar el reporte desde Firebase
-            const report = await firebaseReportStorage.getReport(reportId);
-            
-            if (report) {
-              // 📸 CARGAR IMÁGENES del reporte
-              let imagesPerDay: Record<string, any> = {};
-              try {
-                console.log('📸 Cargando imágenes del reporte...');
-                const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
-                imagesPerDay = await firebaseImageStorage.getReportImages(reportId);
-                console.log('✅ Imágenes cargadas:', imagesPerDay);
-              } catch (imageError) {
-                console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
+      <>
+        <ReportsPage 
+          user={user} 
+          onBack={handleBackToDashboard}
+          onEditReport={async (reportId) => {
+            try {
+              console.log('📋 Cargando reporte para editar desde ReportsPage:', reportId);
+              
+              // Cargar el reporte desde Firebase
+              const report = await firebaseReportStorage.getReport(reportId);
+              
+              if (report) {
+                // 📸 CARGAR IMÁGENES del reporte
+                let imagesPerDay: Record<string, any> = {};
+                try {
+                  console.log('📸 Cargando imágenes del reporte...');
+                  const { default: firebaseImageStorage } = await import('../services/firebaseImageStorage');
+                  imagesPerDay = await firebaseImageStorage.getReportImages(reportId);
+                  console.log('✅ Imágenes cargadas:', imagesPerDay);
+                } catch (imageError) {
+                  console.warn('⚠️ No se pudieron cargar las imágenes:', imageError);
+                }
+                
+                // Preparar datos completos con imágenes
+                const dataToLoad = {
+                  ...report,
+                  imagesPerDay: imagesPerDay,
+                  fechaInicio: report.fechaInicio || (report.fechaCreacion ? report.fechaCreacion.split('T')[0] : ''),
+                  fechaFinal: report.fechaFinal || '',
+                  fechaReporte: report.fechaCreacion ? report.fechaCreacion.split('T')[0] : '',
+                  diasTrabajo: report.diasTrabajo || [],
+                  reportesPorDia: report.reportesPorDia || {},
+                  diaActual: report.diaActual || 0,
+                  _isEditingPending: report.estado === 'pendiente'
+                };
+                
+                console.log('✅ Datos completos cargados para edición');
+                setInterventionToEdit(dataToLoad);
+                setShowReportsPage(false);
+                setShowReportForm(true);
+              } else {
+                console.error('❌ Reporte no encontrado');
+                alert('No se pudo cargar el reporte. Por favor intente nuevamente.');
               }
-              
-              // Preparar datos completos con imágenes
-              const dataToLoad = {
-                ...report,
-                imagesPerDay: imagesPerDay,
-                fechaInicio: report.fechaInicio || (report.fechaCreacion ? report.fechaCreacion.split('T')[0] : ''),
-                fechaFinal: report.fechaFinal || '',
-                fechaReporte: report.fechaCreacion ? report.fechaCreacion.split('T')[0] : '',
-                diasTrabajo: report.diasTrabajo || [],
-                reportesPorDia: report.reportesPorDia || {},
-                diaActual: report.diaActual || 0,
-                _isEditingPending: report.estado === 'pendiente'
-              };
-              
-              console.log('✅ Datos completos cargados para edición');
-              setInterventionToEdit(dataToLoad);
-              setShowReportsPage(false);
-              setShowReportForm(true);
-            } else {
-              console.error('❌ Reporte no encontrado');
-              alert('No se pudo cargar el reporte. Por favor intente nuevamente.');
+            } catch (error) {
+              console.error('❌ Error al cargar reporte para editar:', error);
+              alert('Error al cargar el reporte. Por favor intente nuevamente.');
             }
-          } catch (error) {
-            console.error('❌ Error al cargar reporte para editar:', error);
-            alert('Error al cargar el reporte. Por favor intente nuevamente.');
-          }
-        }}
-      />
+          }}
+        />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
     );
   }
 
   // Si se debe mostrar la página de exportar
   if (showExportPage && user) {
-    return <ExportPage user={user} onBack={handleBackToDashboard} />;
+    return (
+      <>
+        <ExportPage user={user} onBack={handleBackToDashboard} />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
+    );
   }
 
   // Si se debe mostrar la página de usuarios
   if (showUsersPage && user) {
-    return <UsersPage user={user} onBack={handleBackToDashboard} />;
+    return (
+      <>
+        <UsersPage user={user} onBack={handleBackToDashboard} />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
+    );
   }
 
   // Si se debe mostrar el formulario de reportes
   if (showReportForm && user) {
     return (
-      <ReportForm
-        key={interventionToEdit?._pendingReportId || interventionToEdit?.id || 'new-report'} // ✅ Forzar remontaje
-        user={user}
-        onBack={handleBackToDashboard}
-        plantillaDefault={plantillaDefault}
-        regionesRD={regionesRD}
-        provinciasPorRegion={provinciasPorRegion}
-        municipiosPorProvincia={municipiosPorProvincia}
-        sectoresPorProvincia={sectoresPorProvincia}
-        distritosPorProvincia={distritosPorProvincia}
-        distritosPorMunicipio={distritosPorMunicipio}
-        opcionesIntervencion={opcionesIntervencion}
-        canalOptions={canalOptions}
-        plantillasPorIntervencion={plantillasPorIntervencion}
-        interventionToEdit={interventionToEdit}
-        isGpsEnabled={isGpsEnabled}
-        gpsPosition={gpsPosition}
-      />
+      <>
+        <ReportForm
+          key={interventionToEdit?._pendingReportId || interventionToEdit?.id || 'new-report'} // ✅ Forzar remontaje
+          user={user}
+          onBack={handleBackToDashboard}
+          plantillaDefault={plantillaDefault}
+          regionesRD={regionesRD}
+          provinciasPorRegion={provinciasPorRegion}
+          municipiosPorProvincia={municipiosPorProvincia}
+          sectoresPorProvincia={sectoresPorProvincia}
+          distritosPorProvincia={distritosPorProvincia}
+          distritosPorMunicipio={distritosPorMunicipio}
+          opcionesIntervencion={opcionesIntervencion}
+          canalOptions={canalOptions}
+          plantillasPorIntervencion={plantillasPorIntervencion}
+          interventionToEdit={interventionToEdit}
+          isGpsEnabled={isGpsEnabled}
+          gpsPosition={gpsPosition}
+        />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
     );
   }
 
   // Si se debe mostrar Google Maps
   if (showGoogleMapView && user) {
-    return <GoogleMapView user={user} onBack={handleBackToDashboard} />;
+    return (
+      <>
+        <GoogleMapView user={user} onBack={handleBackToDashboard} />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
+    );
   }
 
   // Si se debe mostrar registro de Vehículos Pesados
   if (showHeavyVehicleRegistration && user) {
-    return <HeavyVehiclesPage onClose={handleBackToDashboard} />;
+    return (
+      <>
+        <HeavyVehiclesPage onClose={handleBackToDashboard} />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
+    );
   }
 
   // Si se debe mostrar Leaflet Maps
   if (showLeafletMapView && user) {
-    return <LeafletMapView user={user} onBack={handleBackToDashboard} />;
+    return (
+      <>
+        <LeafletMapView user={user} onBack={handleBackToDashboard} />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
+    );
   }
 
   // Si se debe mostrar DetailedReportView (vista de detalles del reporte)
   if (showDetailedReportView && user) {
     return (
-      <DetailedReportView 
-        user={user} 
-        onClose={() => {
-          setShowDetailedReportView(false);
-          setSelectedReportNumber(undefined);
-        }}
-        onBack={() => {
-          setShowDetailedReportView(false);
-          setSelectedReportNumber(undefined);
-        }}
-        onEditReport={(report: any) => {
-          // Cerrar la vista de detalles y abrir el formulario de edición
-          setShowDetailedReportView(false);
-          setSelectedReportNumber(undefined);
-          setInterventionToEdit(report);
-          setShowReportForm(true);
-        }}
-        initialReportNumber={selectedReportNumber}
-      />
+      <>
+        <DetailedReportView 
+          user={user} 
+          onClose={() => {
+            setShowDetailedReportView(false);
+            setSelectedReportNumber(undefined);
+          }}
+          onBack={() => {
+            setShowDetailedReportView(false);
+            setSelectedReportNumber(undefined);
+          }}
+          onEditReport={(report: any) => {
+            // Cerrar la vista de detalles y abrir el formulario de edición
+            setShowDetailedReportView(false);
+            setSelectedReportNumber(undefined);
+            setInterventionToEdit(report);
+            setShowReportForm(true);
+          }}
+          initialReportNumber={selectedReportNumber}
+        />
+        
+        {/* Panel de Mensajes - Persiste en todas las páginas */}
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      </>
     );
   }
 
@@ -1307,60 +1463,52 @@ const Dashboard: React.FC = () => {
 
           {user ? (
             <>
-              {/* Icono de notificaciones en el topbar */}
-              <div className="notification-container topbar-notification">
-                <img 
-                  src="/images/notification-bell-icon.svg" 
-                  alt="Notificaciones" 
-                  className="notification-icon topbar-notification-icon"
+              {/* Icono de mensajes en el topbar */}
+              <div
+                className="notification-container topbar-notification"
+                onClick={handleOpenChatList}
+              >
+                <div
                   style={{
-                    width: '24px', 
-                    height: '24px',
-                    filter: 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    marginLeft: '8px',
-                    animation: pendingCount > 0 ? 'bellShake 0.5s ease-in-out infinite alternate' : 'none'
+                    borderRadius: '8px',
+                    marginRight: '8px'
                   }}
-                  onClick={async () => {
-                    // Abrir modal con lista de reportes pendientes
-                    await updatePendingCount();
-                    setShowPendingModal(true);
-                  }}
-                  onMouseOver={(e) => {
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 122, 0, 0.1)';
                     e.currentTarget.style.transform = 'scale(1.1)';
-                    e.currentTarget.style.filter = 'drop-shadow(0 3px 6px rgba(255, 152, 0, 0.6))';
                   }}
-                  onMouseOut={(e) => {
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.filter = 'drop-shadow(0 2px 4px rgba(255, 152, 0, 0.4))';
                   }}
-                />
-                {/* Contador de notificaciones */}
-                {pendingCount > 0 ? (
-                  <span 
-                    className="notification-badge topbar-notification-badge"
-                    style={{
-                      position: 'absolute',
-                      top: '-6px',
-                      right: '-6px',
-                      backgroundColor: '#e74c3c',
-                      color: 'white',
-                      borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '10px',
-                      fontWeight: 'bold',
-                      border: '2px solid white',
-                      animation: 'badgeGlow 2s infinite'
-                    }}
+                >
+                  <svg 
+                    width="24" 
+                    height="24" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ filter: 'drop-shadow(0 2px 4px rgba(255, 122, 0, 0.4))' }}
                   >
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                ) : null}
+                    <path 
+                      d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" 
+                      fill="#FF7A00"
+                    />
+                    <path 
+                      d="M7 9H17M7 13H14" 
+                      stroke="white" 
+                      strokeWidth="2" 
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
               </div>
 
               {/* Menú desplegable del usuario */}
@@ -1546,6 +1694,18 @@ const Dashboard: React.FC = () => {
         onContinueReport={handleContinuePendingReport}
         onCancelReport={handleCancelPendingReport}
       />
+
+      {/* Panel de Mensajes */}
+      {user && (
+        <ChatList
+          isOpen={showChatList}
+          onClose={() => setShowChatList(false)}
+          currentUsername={user.username}
+          activeChatUser={activeChatUser}
+          onOpenChat={handleOpenChatModal}
+          onCloseChat={handleCloseChatModal}
+        />
+      )}
 
       {/* Modal de Perfil de Usuario */}
       {showProfileModal && (
@@ -1836,3 +1996,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+

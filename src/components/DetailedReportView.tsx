@@ -4,6 +4,7 @@ import firebaseReportStorage from '../services/firebaseReportStorage';
 import ExportButton from './ExportButton';
 import { exportReportsAsPdf } from '../utils/reportExport';
 import './DetailedReportView.css';
+import ClickableUsername from './ClickableUsername';
 
 // Mapeo de etiquetas de campos con sus unidades (igual que en el PDF)
 const fieldLabels: Record<string, { label: string; unit: string }> = {
@@ -1002,7 +1003,14 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                 <span className="report-info-label">CREADO POR:</span>
               </div>
               <div className="report-info-box-row">
-                <span className="report-info-value-normal">{selectedReport.createdBy}</span>
+                <ClickableUsername 
+                  username={selectedReport.creadoPor || selectedReport.createdBy}
+                  fullName={selectedReport.createdBy}
+                  style={{ 
+                    fontSize: '11px',
+                    fontWeight: '400'
+                  }}
+                />
               </div>
               <div className="report-info-box-row" style={{ marginTop: '8px' }}>
                 <span className="report-info-label">FECHA:</span>
@@ -1674,7 +1682,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     >
                       #{report.numeroReporte || report.reportNumber}
                     </button>
-                    <span className="stats-list-user">👤 {report.creadoPor || report.createdBy || 'N/A'}</span>
+                    <span className="stats-list-user">
+                      👤{' '}
+                      <ClickableUsername 
+                        username={report.creadoPor || report.createdBy || 'N/A'}
+                      />
+                    </span>
                   </div>
                   <div className="stats-list-date">
                     📅 {getReportStartDate(report)}
@@ -1782,7 +1795,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                                             onClick={(e) => viewReport(report, e)}
                                           >
                                             <span className="report-number">#{report.reportNumber}</span>
-                                            <span className="report-creator">{report.createdBy}</span>
+                                            <span className="report-creator">
+                                              <ClickableUsername 
+                                                username={report.creadoPor || report.createdBy}
+                                                fullName={report.createdBy}
+                                              />
+                                            </span>
                                             <span className="report-date">{report.date}</span>
                                           </div>
                                         </div>
@@ -1870,7 +1888,12 @@ const DetailedReportView: React.FC<DetailedReportViewProps> = ({ onClose = null,
                     <td className="km-cell">
                       {(parseFloat(report.metricData?.longitud_intervencion || '0') || report.kilometraje || 0).toFixed(2)} km
                     </td>
-                    <td className="user-cell">{report.createdBy}</td>
+                    <td className="user-cell">
+                      <ClickableUsername 
+                        username={report.creadoPor || report.createdBy}
+                        fullName={report.createdBy}
+                      />
+                    </td>
                     <td>
                       <div className="action-buttons">
                         <button 

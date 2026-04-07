@@ -4,6 +4,7 @@ import firebaseReportStorage from '../services/firebaseReportStorage';
 import { Wrapper } from '@googlemaps/react-wrapper';
 import { GOOGLE_MAPS_API_KEY } from '../config/googleMapsConfig';
 import './ReportDetailView.css';
+import ClickableUsername from './ClickableUsername';
 
 interface ReportDetailViewProps {
   numeroReporte: string;
@@ -351,7 +352,11 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({ numeroReporte, onBa
           <div className="template-footer">
             <div className="footer-item">
               <label>Creado por:</label>
-              <span>{report.creadoPor}</span>
+              <span>
+                <ClickableUsername 
+                  username={report.creadoPor}
+                />
+              </span>
             </div>
             <div className="footer-item">
               <label>Fecha de creación:</label>

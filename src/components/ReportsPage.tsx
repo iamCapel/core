@@ -5,6 +5,7 @@ import firebaseReportStorage from '../services/firebaseReportStorage';
 import PendingReportsModal from './PendingReportsModal';
 import DetailedReportView from './DetailedReportView';
 import './ReportsPage.css';
+import ClickableUsername from './ClickableUsername';
 
 interface User {
   username: string;
@@ -906,7 +907,11 @@ const VehiculosView: React.FC<{ user: User; onOpenReport: (reportNumber: string)
                   </div>
                   <div className="reporte-field">
                     <label>Creado por:</label>
-                    <div className="field-value">{selectedReporteDetail.creadoPor}</div>
+                    <div className="field-value">
+                      <ClickableUsername 
+                        username={selectedReporteDetail.creadoPor}
+                      />
+                    </div>
                   </div>
                   <div className="reporte-field">
                     <label>Fecha de Creación:</label>

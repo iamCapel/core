@@ -7,6 +7,7 @@ import { sendWelcomeEmail } from '../services/emailService';
 import { UserRole } from '../types/userRoles';
 import './UsersPage.css';
 import PendingReportsModal from './PendingReportsModal';
+import ClickableUsername from './ClickableUsername';
 
 interface User {
   username: string;
@@ -1710,7 +1711,10 @@ const UsersPage: React.FC<UsersPageProps> = ({ user, onBack }) => {
                                 color: '#2c3e50',
                                 marginBottom: '3px'
                               }}>
-                                {userItem.name}
+                                <ClickableUsername 
+                                  username={userItem.username}
+                                  fullName={userItem.name}
+                                />
                               </div>
                               <div style={{
                                 fontSize: '13px',

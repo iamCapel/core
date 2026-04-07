@@ -7,6 +7,7 @@ import firebaseReportStorage from '../services/firebaseReportStorage';
 import userLocationService from '../services/userLocationService';
 import DetailedReportView from './DetailedReportView';
 import { UserRole } from '../types/userRoles';
+import ClickableUsername from './ClickableUsername';
 
 // Configurar iconos de Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -1711,7 +1712,11 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                       
                       <div style={{ fontSize: '13px' }}>
                         <p style={{ margin: '0 0 6px' }}>
-                          <strong>👤 Técnico:</strong> {intervention.usuario || intervention.creadoPor}
+                          <strong>👤 Técnico:</strong>{' '}
+                          <ClickableUsername 
+                            username={intervention.usuario || intervention.creadoPor || 'desconocido'}
+                            style={{ color: '#3498db' }}
+                          />
                         </p>
                         <p style={{ margin: '0 0 6px' }}>
                           <strong>📅 Inicio:</strong> {formatearFechaCorta(intervention.fechaInicio || intervention.timestamp)}
@@ -1769,7 +1774,12 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <h3 style={{ margin: 0, fontSize: '16px', flex: 1 }}>
-                          👷 {operador.nombre}
+                          👷{' '}
+                          <ClickableUsername 
+                            username={operador.username || operador.nombre}
+                            fullName={operador.nombre}
+                            style={{ color: 'white', textDecoration: 'none' }}
+                          />
                         </h3>
                         {operador.status === 'online' && (
                           <span style={{ 

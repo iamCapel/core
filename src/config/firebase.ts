@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
+import { getStorage } from "firebase/storage";
 // import { getAnalytics } from "firebase/analytics"; // Solo si usas analytics
 
 const firebaseConfig = {
@@ -18,7 +19,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const database = getDatabase(app); // Exportar Realtime Database
+export const realtimeDb = getDatabase(app); // Realtime Database para presencia de usuarios
+export const database = getDatabase(app); // Alias para compatibilidad
+export const storage = getStorage(app); // Firebase Storage para imágenes
 // const analytics = getAnalytics(app); // Solo si usas analytics
 
 export default app;
