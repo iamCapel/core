@@ -133,22 +133,25 @@
 }
 
 .chat-icon-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  background: rgba(26, 26, 26, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1a1a1a;
-  font-size: 13px;
+  color: #ffffff;
+  font-size: 15px;
   transition: background 0.2s ease;
+  pointer-events: auto;
+  position: relative;
+  z-index: 10;
 }
 
 .chat-icon-btn:hover {
-  background: rgba(26, 26, 26, 0.35);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Chat Body */
