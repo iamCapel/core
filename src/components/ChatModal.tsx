@@ -142,7 +142,13 @@ const ChatModal: React.FC<ChatModalProps> = ({
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
+  const handleCloseMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const handleCloseClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
     e.stopPropagation();
     onClose();
   };
@@ -260,6 +266,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
             <button
               className="chat-icon-btn"
               title="Cerrar"
+              onMouseDown={handleCloseMouseDown}
               onClick={handleCloseClick}
             >
               ✕
