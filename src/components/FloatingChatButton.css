@@ -1,0 +1,187 @@
+.fc-bubble-btn {
+  position: fixed;
+  z-index: 2147483647;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a90e2 0%, #5b6af0 100%);
+  box-shadow: 0 4px 18px rgba(74, 144, 226, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: box-shadow 0.2s, transform 0.15s;
+  color: #fff;
+}
+
+.fc-bubble-btn:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+  box-shadow: 0 2px 10px rgba(74, 144, 226, 0.4), 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.fc-bubble-btn:hover {
+  box-shadow: 0 6px 24px rgba(74, 144, 226, 0.7), 0 3px 8px rgba(0, 0, 0, 0.45);
+  transform: scale(1.07);
+}
+
+/* Cuando está sobre la zona de cierre */
+.fc-bubble-over-close {
+  background: linear-gradient(135deg, #e84040 0%, #c02020 100%) !important;
+  box-shadow: 0 4px 18px rgba(232, 64, 64, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+  transform: scale(1.12);
+}
+
+/* Zona de cierre inferior centrada */
+.fc-close-zone {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483646;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(20, 20, 30, 0.85);
+  border: 2px solid rgba(232, 64, 64, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(232, 64, 64, 0.7);
+  font-size: 22px;
+  font-weight: 700;
+  pointer-events: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.fc-close-zone-active {
+  background: rgba(232, 64, 64, 0.25);
+  border-color: #e84040;
+  color: #e84040;
+  transform: translateX(-50%) scale(1.18);
+}
+
+.fc-bubble-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: #e84040;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Toast container ── */
+.fc-toast-container {
+  position: fixed;
+  bottom: 90px;
+  right: 16px;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+/* ── Individual toast ── */
+.fc-toast {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(15, 15, 30, 0.96);
+  border: 1px solid rgba(74, 144, 226, 0.35);
+  border-left: 3px solid #4a90e2;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(74, 144, 226, 0.2);
+  min-width: 260px;
+  max-width: 320px;
+  cursor: pointer;
+  animation: fc-toast-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.fc-toast:hover {
+  border-color: rgba(74, 144, 226, 0.65);
+  background: rgba(20, 20, 40, 0.98);
+}
+
+@keyframes fc-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(60px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.fc-toast-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a90e2 0%, #5b6af0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.fc-toast-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fc-toast-sender {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-toast-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-toast-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.fc-toast-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}

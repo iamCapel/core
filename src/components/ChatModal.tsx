@@ -16,6 +16,8 @@ interface ChatModalProps {
   isOpen: boolean;
   onClose: () => void;
   userName: string;
+  currentUser?: string;
+  initialChatId?: string;
   userAvatar?: string;
   isOnline?: boolean;
 }
@@ -24,15 +26,17 @@ const ChatModal: React.FC<ChatModalProps> = ({
   isOpen,
   onClose,
   userName,
+  currentUser,
+  initialChatId,
   userAvatar,
   isOnline = true
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [chatId, setChatId] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<string | null>(initialChatId || null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentUsername, setCurrentUsername] = useState<string>('');
+  const [currentUsername, setCurrentUsername] = useState<string>(currentUser || '');
   
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,22 +46,30 @@ const ChatModal: React.FC<ChatModalProps> = ({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  // Obtener usuario actual del localStorage
+  // Obtener usuario actual: usar prop si está disponible, sino localStorage como fallback
   useEffect(() => {
-    const userStr = localStorage.getItem('currentUser');
+    if (currentUser) {
+      setCurrentUsername(currentUser);
+      return;
+    }
+    const userStr = localStorage.getItem('mopc_user') || localStorage.getItem('currentUser');
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        setCurrentUsername(user.username || user.name || 'Usuario');
-      } catch (error) {
-        console.error('Error al obtener usuario:', error);
-        setCurrentUsername('Usuario');
+        setCurrentUsername(user.username || user.name || '');
+      } catch {
+        // fallback vacío — no enviar con username incorrecto
       }
     }
-  }, []);
+  }, [currentUser]);
 
   // Obtener o crear chat cuando se abre el modal
+  // Si ya tenemos initialChatId (chat existente), lo usamos directamente
   useEffect(() => {
+    if (initialChatId) {
+      setChatId(initialChatId);
+      return;
+    }
     if (isOpen && currentUsername && userName) {
       const initChat = async () => {
         try {
@@ -69,13 +81,16 @@ const ChatModal: React.FC<ChatModalProps> = ({
       };
       initChat();
     }
-  }, [isOpen, currentUsername, userName]);
+  }, [isOpen, currentUsername, userName, initialChatId]);
 
   // Suscribirse a los mensajes en tiempo real
   useEffect(() => {
     if (chatId && isOpen) {
-      const unsubscribe = chatService.subscribeToMessages(chatId, (firebaseMessages) => {
-        const formattedMessages: Message[] = firebaseMessages.map((msg) => ({
+      // Marcar como leídos al abrir el chat
+      chatService.markChatAsRead(chatId, currentUsername);
+
+      const toFormatted = (firebaseMessages: any[]) =>
+        firebaseMessages.map((msg) => ({
           id: msg.id,
           text: msg.text,
           isMe: msg.senderId === currentUsername,
@@ -83,11 +98,23 @@ const ChatModal: React.FC<ChatModalProps> = ({
           type: msg.type,
           imageUrl: msg.imageUrl
         }));
-        setMessages(formattedMessages);
+
+      const unsubscribe = chatService.subscribeToMessages(chatId, (firebaseMessages) => {
+        setMessages(toFormatted(firebaseMessages));
+        chatService.markChatAsRead(chatId, currentUsername);
       });
+
+      // Polling de respaldo cada 6 segundos por si el onSnapshot falla
+      const pollInterval = setInterval(async () => {
+        try {
+          const msgs = await chatService.getChatHistory(chatId);
+          setMessages(toFormatted(msgs));
+        } catch { /* ignorar */ }
+      }, 6000);
 
       return () => {
         unsubscribe();
+        clearInterval(pollInterval);
       };
     }
   }, [chatId, isOpen, currentUsername]);
@@ -168,17 +195,50 @@ const ChatModal: React.FC<ChatModalProps> = ({
   };
 
   const handleSend = async () => {
-    if (inputText.trim() && chatId && currentUsername) {
-      setIsLoading(true);
-      try {
-        await chatService.sendMessage(chatId, currentUsername, inputText);
-        setInputText('');
-      } catch (error) {
-        console.error('Error al enviar mensaje:', error);
-        alert('Error al enviar mensaje. Intenta de nuevo.');
-      } finally {
-        setIsLoading(false);
+    if (!inputText.trim()) return;
+    if (!currentUsername) {
+      console.error('[ChatModal] currentUsername vacío, no se puede enviar');
+      return;
+    }
+    if (!chatId) {
+      console.error('[ChatModal] chatId null, no se puede enviar');
+      if (currentUsername && userName) {
+        try {
+          const id = await chatService.getOrCreateChat(currentUsername, userName);
+          setChatId(id);
+        } catch (e) {
+          console.error('[ChatModal] Error al reinicializar chat:', e);
+        }
       }
+      return;
+    }
+
+    const text = inputText.trim();
+    setInputText('');
+
+    // Actualización optimista: mostrar el mensaje de inmediato
+    const optimisticId = `opt-${Date.now()}`;
+    const optimisticMsg: Message = {
+      id: optimisticId,
+      text,
+      isMe: true,
+      timestamp: getTimeNow(),
+      type: 'text',
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    setIsLoading(true);
+    try {
+      await chatService.sendMessage(chatId, currentUsername, text);
+      // El onSnapshot reemplazará el mensaje optimista con el real (misma key no importa, id diferente)
+    } catch (error) {
+      console.error('[ChatModal] Error al enviar mensaje:', error);
+      // Revertir el mensaje optimista si falla
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      setInputText(text);
+      alert('Error al enviar mensaje. Intenta de nuevo.');
+    } finally {
+      setIsLoading(false);
     }
   };
 

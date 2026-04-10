@@ -242,6 +242,24 @@
   transform: rotate(15deg) scale(1.1);
 }
 
+/* Animación cuando llega un mensaje nuevo */
+.topbar-notification-ring {
+  animation: chat-ring 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  background: var(--pale-orange) !important;
+  box-shadow: 0 0 0 4px rgba(255, 122, 0, 0.25), var(--shadow-md) !important;
+}
+
+@keyframes chat-ring {
+  0%   { transform: scale(1) rotate(0deg); }
+  15%  { transform: scale(1.18) rotate(-12deg); }
+  30%  { transform: scale(1.18) rotate(12deg); }
+  45%  { transform: scale(1.18) rotate(-8deg); }
+  60%  { transform: scale(1.12) rotate(8deg); }
+  75%  { transform: scale(1.05) rotate(-4deg); }
+  90%  { transform: scale(1.02) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
 .topbar-notification-badge {
   position: absolute;
   top: -4px;

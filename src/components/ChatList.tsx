@@ -28,7 +28,9 @@ const ChatList: React.FC<ChatListProps> = ({
   onCloseChat
 }) => {
   const [chats, setChats] = useState<ChatListItem[]>([]);
+  const [uniqueChats, setUniqueChats] = useState<ChatListItem[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [showChatModal, setShowChatModal] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,20 +67,62 @@ const ChatList: React.FC<ChatListProps> = ({
     if (!isOpen || !currentUsername) return;
 
     const unsubscribe = chatService.subscribeToUserChats(currentUsername, (fetchedChats) => {
-      // Procesar chats para obtener el otro usuario
-      const processedChats = fetchedChats.map(chat => {
-        const otherUsername = chat.participants.find(p => p !== currentUsername) || '';
-        return {
-          ...chat,
-          otherUsername,
-          isOnline: false // Se actualizará con userPresenceService
-        };
-      });
+      // Guardar raw — la normalización y dedup se hace en el efecto que depende de allUsers
+      const processedChats = fetchedChats.map(chat => ({
+        ...chat,
+        otherUsername: chat.participants.find(p => p !== currentUsername) || '',
+        isOnline: false
+      }));
       setChats(processedChats);
     });
 
     return () => unsubscribe();
   }, [isOpen, currentUsername]);
+
+  // Deduplicar chats cuando cambian los chats O los usuarios cargados
+  // Esto maneja el race condition donde allUsers llega después de los chats
+  useEffect(() => {
+    if (chats.length === 0) { setUniqueChats([]); return; }
+
+    // Obtener UID del usuario actual para excluirlo de participants
+    const allUsersIncludingMe = [...allUsers];
+    // allUsers ya filtra al currentUsername por username; buscar también por id
+    const currentUserData = allUsersIncludingMe.find(u => u.username === currentUsername);
+    const currentUserUid = currentUserData?.id;
+
+    const resolve = (identifier: string): string => {
+      const u = allUsers.find(u => u.username === identifier || u.id === identifier);
+      return u ? u.username : identifier;
+    };
+
+    const seen = new Map<string, number>(); // resolvedKey -> index in acc
+    const acc: ChatListItem[] = [];
+
+    for (const chat of chats) {
+      // Identificar corrctamente al otro participante
+      // El usuario actual puede estar guardado como username O como UID
+      const otherRaw = chat.participants.find(p =>
+        p !== currentUsername && (!currentUserUid || p !== currentUserUid)
+      ) || '';
+
+      const resolvedKey = resolve(otherRaw) || otherRaw;
+
+      const existing = seen.get(resolvedKey);
+      if (existing === undefined) {
+        seen.set(resolvedKey, acc.length);
+        acc.push({ ...chat, otherUsername: resolvedKey });
+      } else {
+        // Conservar el chat con el mensaje más reciente (para el chatId correcto)
+        const existingTime = acc[existing].lastMessageTime?.toMillis?.() ?? 0;
+        const thisTime = chat.lastMessageTime?.toMillis?.() ?? 0;
+        if (thisTime > existingTime) {
+          acc[existing] = { ...chat, otherUsername: resolvedKey };
+        }
+      }
+    }
+
+    setUniqueChats(acc);
+  }, [chats, allUsers, currentUsername]);
 
   // Suscribirse al estado online de cada usuario
   useEffect(() => {
@@ -109,7 +153,7 @@ const ChatList: React.FC<ChatListProps> = ({
     };
   }, [isOpen, chats]);
 
-  const handleChatClick = (username: string) => {
+  const handleChatClick = (username: string, chatId?: string) => {
     if (isChatControlledByParent && onOpenChat) {
       onOpenChat(username);
       onClose();
@@ -117,6 +161,7 @@ const ChatList: React.FC<ChatListProps> = ({
     }
 
     setSelectedUser(username);
+    setSelectedChatId(chatId || null);
     setShowChatModal(true);
     onClose();
   };
@@ -129,6 +174,7 @@ const ChatList: React.FC<ChatListProps> = ({
 
     setShowChatModal(false);
     setSelectedUser(null);
+    setSelectedChatId(null);
   };
 
   const handleSelectUser = (username: string) => {
@@ -215,12 +261,25 @@ const ChatList: React.FC<ChatListProps> = ({
       }).slice(0, 5) // Máximo 5 resultados
     : [];
 
-  // Filtrar chats según el término de búsqueda
-  const filteredChats = chats.filter(chat => {
+  // Resuelve un identificador (puede ser username o Firebase UID) al nombre para mostrar
+  const resolveDisplayName = (identifier: string): string => {
+    const user = allUsers.find(u => u.username === identifier || u.id === identifier);
+    return user ? (user.name || user.username) : identifier;
+  };
+
+  const resolveUsername = (identifier: string): string => {
+    const user = allUsers.find(u => u.username === identifier || u.id === identifier);
+    return user ? user.username : identifier;
+  };
+
+  // uniqueChats ya está deduplicado y normalizado por el useEffect de arriba.
+  // Aplicar solo el filtro de búsqueda aquí.
+  const deduplicatedChats = uniqueChats.filter(chat => {
     if (!searchTerm.trim()) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
       chat.otherUsername.toLowerCase().includes(searchLower) ||
+      resolveDisplayName(chat.otherUsername).toLowerCase().includes(searchLower) ||
       (chat.lastMessage && chat.lastMessage.toLowerCase().includes(searchLower))
     );
   });
@@ -343,7 +402,7 @@ const ChatList: React.FC<ChatListProps> = ({
                     Haz clic en el nombre de un usuario para iniciar un chat
                   </p>
                 </div>
-              ) : filteredChats.length === 0 ? (
+              ) : deduplicatedChats.length === 0 ? (
                 <div className="chat-list-empty">
                   <div className="chat-list-empty-icon">🔍</div>
                   <p className="chat-list-empty-title">No se encontraron resultados</p>
@@ -353,14 +412,14 @@ const ChatList: React.FC<ChatListProps> = ({
                 </div>
               ) : (
                 <div className="chat-list-items">
-                  {filteredChats.map((chat) => {
+                  {deduplicatedChats.map((chat) => {
                     const isOnline = onlineUsers.has(chat.otherUsername);
                     
                     return (
                       <div
                         key={chat.id}
                         className="chat-list-item"
-                        onClick={() => handleChatClick(chat.otherUsername)}
+                        onClick={() => handleChatClick(resolveUsername(chat.otherUsername), chat.id)}
                       >
                         {/* Avatar y estado */}
                         <div className="chat-list-item-avatar">
@@ -373,7 +432,7 @@ const ChatList: React.FC<ChatListProps> = ({
                         {/* Información */}
                         <div className="chat-list-item-info">
                           <div className="chat-list-item-header">
-                            <span className="chat-list-item-name">{chat.otherUsername}</span>
+                            <span className="chat-list-item-name">{resolveDisplayName(chat.otherUsername)}</span>
                             <span className="chat-list-item-time">
                               {formatTimestamp(chat.lastMessageTime)}
                             </span>
@@ -401,6 +460,8 @@ const ChatList: React.FC<ChatListProps> = ({
           isOpen={true}
           onClose={handleCloseChatModal}
           userName={effectiveChatUser}
+          currentUser={currentUsername}
+          initialChatId={selectedChatId || undefined}
         />
       )}
     </>

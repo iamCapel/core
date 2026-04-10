@@ -12,7 +12,9 @@ import {
   setDoc,
   getDoc,
   limit,
-  updateDoc
+  limitToLast,
+  updateDoc,
+  increment
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../config/firebase';
@@ -32,6 +34,7 @@ export interface Chat {
   lastMessage: string;
   lastMessageTime: Timestamp;
   createdAt: Timestamp;
+  unreadCounts?: Record<string, number>;
 }
 
 class ChatService {
@@ -48,24 +51,33 @@ class ChatService {
   }
 
   /**
-   * Obtiene o crea un chat entre dos usuarios
+   * Obtiene o crea un chat entre dos usuarios.
+   * Busca primero cualquier chat existente entre ambos (independientemente del formato de ID)
+   * para evitar duplicados causados por móvil (UIDs) vs web (usernames).
    */
   async getOrCreateChat(currentUser: string, otherUser: string): Promise<string> {
+    // 1. Ruta rápida: ID determinístico por usernames
     const chatId = this.getChatId(currentUser, otherUser);
     const chatRef = doc(db, this.chatsCollection, chatId);
-    
     const chatDoc = await getDoc(chatRef);
-    
-    if (!chatDoc.exists()) {
-      // Crear nuevo chat
-      await setDoc(chatRef, {
-        participants: [currentUser, otherUser],
-        lastMessage: '',
-        lastMessageTime: Timestamp.now(),
-        createdAt: Timestamp.now()
-      });
+    if (chatDoc.exists()) return chatId;
+
+    // 2. Buscar cualquier chat existente entre estos dos participantes (cualquier formato)
+    const chatsRef = collection(db, this.chatsCollection);
+    const q = query(chatsRef, where('participants', 'array-contains', currentUser));
+    const snapshot = await getDocs(q);
+    for (const d of snapshot.docs) {
+      const parts: string[] = d.data().participants || [];
+      if (parts.includes(otherUser)) return d.id;
     }
-    
+
+    // 3. No existe: crear nuevo con ID determinístico por usernames
+    await setDoc(chatRef, {
+      participants: [currentUser, otherUser],
+      lastMessage: '',
+      lastMessageTime: Timestamp.now(),
+      createdAt: Timestamp.now()
+    });
     return chatId;
   }
 
@@ -82,12 +94,20 @@ class ChatService {
       type: 'text'
     });
 
-    // Actualizar último mensaje del chat
+    // Obtener participantes para incrementar contador del destinatario
     const chatRef = doc(db, this.chatsCollection, chatId);
-    await updateDoc(chatRef, {
+    const chatSnap = await getDoc(chatRef);
+    const participants: string[] = chatSnap.exists() ? chatSnap.data().participants : [];
+    const recipient = participants.find(p => p !== senderId);
+
+    // Actualizar último mensaje e incrementar no leídos del destinatario
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: { [key: string]: any } = {
       lastMessage: text,
       lastMessageTime: Timestamp.now()
-    });
+    };
+    if (recipient) updateData[`unreadCounts.${recipient}`] = increment(1);
+    await updateDoc(chatRef, updateData);
   }
 
   /**
@@ -114,12 +134,20 @@ class ChatService {
         imageUrl
       });
 
-      // Actualizar último mensaje del chat
+      // Obtener participantes para incrementar contador del destinatario
       const chatRef = doc(db, this.chatsCollection, chatId);
-      await updateDoc(chatRef, {
+      const chatSnap = await getDoc(chatRef);
+      const participants: string[] = chatSnap.exists() ? chatSnap.data().participants : [];
+      const recipient = participants.find(p => p !== senderId);
+
+      // Actualizar último mensaje e incrementar no leídos del destinatario
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: { [key: string]: any } = {
         lastMessage: '📷 Imagen',
         lastMessageTime: Timestamp.now()
-      });
+      };
+      if (recipient) updateData[`unreadCounts.${recipient}`] = increment(1);
+      await updateDoc(chatRef, updateData);
     } catch (error) {
       console.error('Error al subir imagen:', error);
       throw error;
@@ -130,24 +158,44 @@ class ChatService {
    * Suscribe a los mensajes de un chat en tiempo real
    */
   subscribeToMessages(
-    chatId: string, 
+    chatId: string,
     callback: (messages: ChatMessage[]) => void
   ): () => void {
     const messagesRef = collection(db, this.chatsCollection, chatId, this.messagesSubcollection);
-    const q = query(messagesRef, orderBy('timestamp', 'asc'), limit(100));
+    // limitToLast(100) garantiza que siempre recibimos los mensajes MÁS RECIENTES
+    const q = query(messagesRef, orderBy('timestamp', 'asc'), limitToLast(100));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messages: ChatMessage[] = [];
-      snapshot.forEach((doc) => {
-        messages.push({
-          id: doc.id,
-          ...doc.data()
-        } as ChatMessage);
-      });
-      callback(messages);
-    });
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+    let currentUnsub: (() => void) | null = null;
 
-    return unsubscribe;
+    const subscribe = (): (() => void) => {
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
+          const messages: ChatMessage[] = [];
+          snapshot.forEach((doc) => {
+            messages.push({ id: doc.id, ...doc.data() } as ChatMessage);
+          });
+          callback(messages);
+        },
+        (error) => {
+          console.error('[ChatService] onSnapshot error, reintentando en 3s:', error);
+          unsub();
+          retryTimeout = setTimeout(() => {
+            currentUnsub = subscribe();
+          }, 3000);
+        }
+      );
+      return unsub;
+    };
+
+    currentUnsub = subscribe();
+
+    return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
+      if (currentUnsub) currentUnsub();
+    };
   }
 
   /**
@@ -289,6 +337,45 @@ class ChatService {
     });
 
     return unsubscribe;
+  }
+
+  /**
+   * Suscribe al total de mensajes no leídos de un usuario
+   */
+  subscribeToTotalUnread(
+    username: string,
+    callback: (total: number) => void
+  ): () => void {
+    const chatsRef = collection(db, this.chatsCollection);
+    const q = query(
+      chatsRef,
+      where('participants', 'array-contains', username)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let total = 0;
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        total += data.unreadCounts?.[username] ?? 0;
+      });
+      callback(total);
+    });
+
+    return unsubscribe;
+  }
+
+  /**
+   * Marca todos los mensajes de un chat como leídos para el usuario
+   */
+  async markChatAsRead(chatId: string, username: string): Promise<void> {
+    try {
+      const chatRef = doc(db, this.chatsCollection, chatId);
+      await updateDoc(chatRef, {
+        [`unreadCounts.${username}`]: 0
+      });
+    } catch (error) {
+      console.error('Error al marcar chat como leído:', error);
+    }
   }
 }
 

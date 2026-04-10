@@ -9,14 +9,14 @@ import DetailedReportView from './DetailedReportView';
 import PendingReportsModal from './PendingReportsModal';
 import MyReportsCalendar from './MyReportsCalendar';
 import HeavyVehiclesPage from './HeavyVehiclesPage';
-import ChatList from './ChatList';
 import { UserRole, applyUserTheme, getRoleBadge } from '../types/userRoles';
 import { firebasePendingReportStorage } from '../services/firebasePendingReportStorage';
 import { userStorage } from '../services/userStorage';
+import { chatService } from '../services/chatService';
+import ChatList from './ChatList';
 import * as firebaseUserStorage from '../services/firebaseUserStorage';
 import firebaseReportStorage from '../services/firebaseReportStorage';
 import userPresenceService from '../services/userPresenceService';
-import { chatService } from '../services/chatService';
 import './Dashboard.css';
 
 type Field = { key: string; label: string; type: 'text' | 'number'; unit: string };
@@ -540,6 +540,13 @@ const Dashboard: React.FC = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingReportsList, setPendingReportsList] = useState<any[]>([]);
   const [showPendingModal, setShowPendingModal] = useState(false);
+
+  // Estado para el chat del topbar
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [chatHasNewMessage, setChatHasNewMessage] = useState(false);
+  const prevChatUnreadRef = useRef(0);
+  const [showChatList, setShowChatList] = useState(false);
+  const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   
   // Estado para DetailedReportView
   const [showDetailedReportView, setShowDetailedReportView] = useState(false);
@@ -551,11 +558,6 @@ const Dashboard: React.FC = () => {
   const [showMyReportsModal, setShowMyReportsModal] = useState(false);
   const [showCompleteProfileModal, setShowCompleteProfileModal] = useState(false);
   
-  // Estado para el chat list
-  const [showChatList, setShowChatList] = useState(false);
-  const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
-  const ignoreChatOpenUntilRef = useRef(0);
-
   // Nuevo modal de selección de tipo de registro
   const [showRegisterTypeModal, setShowRegisterTypeModal] = useState(false);
   const [showHeavyVehicleRegistration, setShowHeavyVehicleRegistration] = useState(false);
@@ -679,6 +681,22 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Suscribirse a mensajes no leídos del chat (topbar)
+  useEffect(() => {
+    if (!user?.username) return;
+    const unsub = chatService.subscribeToTotalUnread(user.username, (total) => {
+      setChatUnreadCount(prev => {
+        if (total > prev) {
+          // Llegó un mensaje nuevo — disparar animación
+          setChatHasNewMessage(true);
+          setTimeout(() => setChatHasNewMessage(false), 1500);
+        }
+        return total;
+      });
+    });
+    return () => unsub();
+  }, [user?.username]);
+
   // Actualizar contador al cargar y cada vez que cambie localStorage
   useEffect(() => {
     updatePendingCount();
@@ -783,12 +801,6 @@ const Dashboard: React.FC = () => {
       // Iniciar rastreo de presencia si el usuario ya está logueado
       if (user.username) {
         userPresenceService.startPresenceTracking(user.username);
-        
-        // Limpiar mensajes antiguos (>7 días) al iniciar sesión
-        // Se ejecuta en segundo plano sin bloquear la UI
-        chatService.cleanOldMessages().catch(error => {
-          console.error('Error al limpiar mensajes antiguos:', error);
-        });
       }
     } else {
       // Si no hay rol definido, usar rol por defecto (Admin para compatibilidad)
@@ -798,6 +810,8 @@ const Dashboard: React.FC = () => {
       userPresenceService.stopPresenceTracking();
     }
   }, [user]);
+
+
 
 
   // Solicitar permisos GPS al cargar la aplicación
@@ -1028,26 +1042,9 @@ const Dashboard: React.FC = () => {
     userPresenceService.stopPresenceTracking();
     
     setUser(null);
-    setActiveChatUser(null);
     try { 
       localStorage.removeItem('mopc_user'); 
     } catch {}
-  };
-
-  const handleOpenChatModal = (username: string) => {
-    setActiveChatUser(username);
-  };
-
-  const handleCloseChatModal = () => {
-    // Evita click-through al botón de mensajes inmediatamente después de cerrar.
-    ignoreChatOpenUntilRef.current = Date.now() + 350;
-    setActiveChatUser(null);
-    setShowChatList(false);
-  };
-
-  const handleOpenChatList = () => {
-    if (Date.now() < ignoreChatOpenUntilRef.current) return;
-    setShowChatList(true);
   };
 
   const handleShowReports = () => {
@@ -1194,16 +1191,6 @@ const Dashboard: React.FC = () => {
             }
           }}
         />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
       </>
     );
   }
@@ -1213,16 +1200,6 @@ const Dashboard: React.FC = () => {
     return (
       <>
         <ExportPage user={user} onBack={handleBackToDashboard} />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
       </>
     );
   }
@@ -1232,16 +1209,6 @@ const Dashboard: React.FC = () => {
     return (
       <>
         <UsersPage user={user} onBack={handleBackToDashboard} />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
       </>
     );
   }
@@ -1268,16 +1235,6 @@ const Dashboard: React.FC = () => {
           isGpsEnabled={isGpsEnabled}
           gpsPosition={gpsPosition}
         />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
       </>
     );
   }
@@ -1287,16 +1244,6 @@ const Dashboard: React.FC = () => {
     return (
       <>
         <GoogleMapView user={user} onBack={handleBackToDashboard} />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
       </>
     );
   }
@@ -1306,16 +1253,6 @@ const Dashboard: React.FC = () => {
     return (
       <>
         <HeavyVehiclesPage onClose={handleBackToDashboard} />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
       </>
     );
   }
@@ -1325,16 +1262,6 @@ const Dashboard: React.FC = () => {
     return (
       <>
         <LeafletMapView user={user} onBack={handleBackToDashboard} />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
       </>
     );
   }
@@ -1361,16 +1288,6 @@ const Dashboard: React.FC = () => {
             setShowReportForm(true);
           }}
           initialReportNumber={selectedReportNumber}
-        />
-        
-        {/* Panel de Mensajes - Persiste en todas las páginas */}
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
         />
       </>
     );
@@ -1459,58 +1376,24 @@ const Dashboard: React.FC = () => {
 
         <div className="topbar-right">
           <div className="topbar-icon" aria-hidden />
-          <div className="topbar-icon" aria-hidden />
+          {/* Botón de chat con notificaciones */}
+          <div
+            className={`topbar-notification${chatHasNewMessage ? ' topbar-notification-ring' : ''}`}
+            onClick={() => setShowChatList(prev => !prev)}
+            title="Mensajes"
+          >
+            <svg className="topbar-notification-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            {chatUnreadCount > 0 && (
+              <span className="topbar-notification-badge">
+                {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+              </span>
+            )}
+          </div>
 
           {user ? (
             <>
-              {/* Icono de mensajes en el topbar */}
-              <div
-                className="notification-container topbar-notification"
-                onClick={handleOpenChatList}
-              >
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    borderRadius: '8px',
-                    marginRight: '8px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 122, 0, 0.1)';
-                    e.currentTarget.style.transform = 'scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                >
-                  <svg 
-                    width="24" 
-                    height="24" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ filter: 'drop-shadow(0 2px 4px rgba(255, 122, 0, 0.4))' }}
-                  >
-                    <path 
-                      d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" 
-                      fill="#FF7A00"
-                    />
-                    <path 
-                      d="M7 9H17M7 13H14" 
-                      stroke="white" 
-                      strokeWidth="2" 
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-              </div>
-
               {/* Menú desplegable del usuario */}
               <div className="user-menu-container" style={{ position: 'relative' }}>
                 <div 
@@ -1581,6 +1464,17 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="dashboard-content">
+        {/* Chat mural del topbar */}
+        {user && (
+          <ChatList
+            isOpen={showChatList}
+            onClose={() => setShowChatList(false)}
+            currentUsername={user.username}
+            activeChatUser={activeChatUser}
+            onOpenChat={(username) => setActiveChatUser(username)}
+            onCloseChat={() => setActiveChatUser(null)}
+          />
+        )}
         {/* Notificación de perfil incompleto */}
         {showProfileIncompleteNotification && (
           <div className="profile-incomplete-notification">
@@ -1694,18 +1588,6 @@ const Dashboard: React.FC = () => {
         onContinueReport={handleContinuePendingReport}
         onCancelReport={handleCancelPendingReport}
       />
-
-      {/* Panel de Mensajes */}
-      {user && (
-        <ChatList
-          isOpen={showChatList}
-          onClose={() => setShowChatList(false)}
-          currentUsername={user.username}
-          activeChatUser={activeChatUser}
-          onOpenChat={handleOpenChatModal}
-          onCloseChat={handleCloseChatModal}
-        />
-      )}
 
       {/* Modal de Perfil de Usuario */}
       {showProfileModal && (
