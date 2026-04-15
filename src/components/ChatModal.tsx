@@ -105,12 +105,7 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
   // Resolver UID del otro usuario si no fue pasado directamente
   useEffect(() => {
-    // Si tenemos targetUsername, ese YA es el username real
-    if (targetUsername) {
-      console.log('[ChatModal] 🎯 Usando targetUsername como username real:', targetUsername);
-      setOtherUsernameReal(targetUsername);
-    }
-    
+    // Prioridad: Si hay targetUid, resolver desde UID primero (más confiable)
     if (targetUid) {
       setOtherUid(targetUid);
       setOtherName(userName);
@@ -118,14 +113,23 @@ const ChatModal: React.FC<ChatModalProps> = ({
       import('../services/firebaseUserStorage').then(({ getUserById }) => {
         getUserById(targetUid).then(user => {
           if (user?.username) {
-            console.log('[ChatModal] Username del otro usuario resuelto desde UID:', user.username);
+            console.log('[ChatModal] ✅ Username del otro usuario resuelto desde UID:', user.username);
             setOtherUsernameReal(user.username);
+          } else {
+            console.warn('[ChatModal] ⚠️ UID sin username, usando targetUsername:', targetUsername);
+            // Fallback a targetUsername solo si no hay username en el usuario
+            if (targetUsername) setOtherUsernameReal(targetUsername);
           }
-        }).catch(e => console.error('[ChatModal] Error obteniendo username del otro:', e));
+        }).catch(e => {
+          console.error('[ChatModal] Error obteniendo username del otro:', e);
+          // Fallback a targetUsername en caso de error
+          if (targetUsername) setOtherUsernameReal(targetUsername);
+        });
       });
       return;
     }
     
+    // Si NO hay targetUid, intentar resolver desde targetUsername
     const identifier = targetUsername || userName;
     if (!identifier) return;
 
@@ -145,7 +149,9 @@ const ChatModal: React.FC<ChatModalProps> = ({
           }).catch(e => console.error('[ChatModal] Error obteniendo username del otro:', e));
         });
       } else {
-        console.error('[ChatModal] No se pudo resolver UID para:', identifier);
+        console.error('[ChatModal] ⚠️ No se pudo resolver UID para:', identifier, '- usando como username');
+        // Si no se puede resolver, asumir que es el username
+        setOtherUsernameReal(identifier);
       }
     });
   }, [targetUsername, targetUid, userName]);
