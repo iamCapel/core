@@ -15,7 +15,9 @@ interface Message {
 interface ChatModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userName: string;
+  userName: string;          // nombre para mostrar en el header
+  targetUsername?: string;   // username o UID del otro usuario para resolver en Firestore
+  targetUid?: string;        // UID ya resuelto del otro usuario (cuando viene de ChatList)
   currentUser?: string;
   initialChatId?: string;
   userAvatar?: string;
@@ -26,6 +28,8 @@ const ChatModal: React.FC<ChatModalProps> = ({
   isOpen,
   onClose,
   userName,
+  targetUsername,
+  targetUid,
   currentUser,
   initialChatId,
   userAvatar,
@@ -37,6 +41,15 @@ const ChatModal: React.FC<ChatModalProps> = ({
   const [chatId, setChatId] = useState<string | null>(initialChatId || null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUsername, setCurrentUsername] = useState<string>(currentUser || '');
+
+  // IDs efectivos para interactuar con Firestore (UIDs)
+  const [currentUid, setCurrentUid] = useState<string | null>(null);
+  const [currentName, setCurrentName] = useState<string>('');
+  const [currentUsernameReal, setCurrentUsernameReal] = useState<string>(''); // Username real desde firebaseUserStorage
+  const [otherUid, setOtherUid] = useState<string | null>(targetUid || null);
+  const [otherName, setOtherName] = useState<string>(userName);
+  const [otherUsernameReal, setOtherUsernameReal] = useState<string>(''); // Username real desde firebaseUserStorage
+  const [chatHeader, setChatHeader] = useState<{ lastMessage: string; lastMessageSenderId: string; lastMessageTime: any } | null>(null);
   
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,78 +59,238 @@ const ChatModal: React.FC<ChatModalProps> = ({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  // Obtener usuario actual: usar prop si está disponible, sino localStorage como fallback
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 12000): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('SEND_TIMEOUT')), timeoutMs);
+      });
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  // Obtener usuario actual y su UID desde auth/localStorage
   useEffect(() => {
+    const uid = chatService.getEffectiveUid();
+    const name = chatService.getCurrentUserName();
+    setCurrentUid(uid);
+    setCurrentName(name);
+
     if (currentUser) {
       setCurrentUsername(currentUser);
-      return;
-    }
-    const userStr = localStorage.getItem('mopc_user') || localStorage.getItem('currentUser');
-    if (userStr) {
+    } else {
       try {
-        const user = JSON.parse(userStr);
-        setCurrentUsername(user.username || user.name || '');
-      } catch {
-        // fallback vacío — no enviar con username incorrecto
-      }
+        const raw = localStorage.getItem('mopc_user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          setCurrentUsername(u.username || u.name || '');
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Obtener username real del usuario actual
+    if (uid) {
+      import('../services/firebaseUserStorage').then(({ getUserById }) => {
+        getUserById(uid).then(user => {
+          if (user?.username) {
+            console.log('[ChatModal] Username actual resuelto:', user.username);
+            setCurrentUsernameReal(user.username);
+          }
+        }).catch(e => console.error('[ChatModal] Error obteniendo username actual:', e));
+      });
     }
   }, [currentUser]);
 
+  // Resolver UID del otro usuario si no fue pasado directamente
+  useEffect(() => {
+    // Si tenemos targetUsername, ese YA es el username real
+    if (targetUsername) {
+      console.log('[ChatModal] 🎯 Usando targetUsername como username real:', targetUsername);
+      setOtherUsernameReal(targetUsername);
+    }
+    
+    if (targetUid) {
+      setOtherUid(targetUid);
+      setOtherName(userName);
+      // Resolver username del otro usuario desde UID
+      import('../services/firebaseUserStorage').then(({ getUserById }) => {
+        getUserById(targetUid).then(user => {
+          if (user?.username) {
+            console.log('[ChatModal] Username del otro usuario resuelto desde UID:', user.username);
+            setOtherUsernameReal(user.username);
+          }
+        }).catch(e => console.error('[ChatModal] Error obteniendo username del otro:', e));
+      });
+      return;
+    }
+    
+    const identifier = targetUsername || userName;
+    if (!identifier) return;
+
+    console.log('[ChatModal] Resolviendo UID para:', identifier);
+    chatService.resolveUserUid(identifier).then(result => {
+      console.log('[ChatModal] Resultado resolveUserUid:', result);
+      if (result) {
+        setOtherUid(result.uid);
+        setOtherName(result.name || userName);
+        // Obtener username real desde Firebase
+        import('../services/firebaseUserStorage').then(({ getUserById }) => {
+          getUserById(result.uid).then(user => {
+            if (user?.username) {
+              console.log('[ChatModal] Username del otro usuario resuelto:', user.username);
+              setOtherUsernameReal(user.username);
+            }
+          }).catch(e => console.error('[ChatModal] Error obteniendo username del otro:', e));
+        });
+      } else {
+        console.error('[ChatModal] No se pudo resolver UID para:', identifier);
+      }
+    });
+  }, [targetUsername, targetUid, userName]);
+
   // Obtener o crear chat cuando se abre el modal
-  // Si ya tenemos initialChatId (chat existente), lo usamos directamente
   useEffect(() => {
     if (initialChatId) {
       setChatId(initialChatId);
       return;
     }
-    if (isOpen && currentUsername && userName) {
-      const initChat = async () => {
-        try {
-          const id = await chatService.getOrCreateChat(currentUsername, userName);
-          setChatId(id);
-        } catch (error) {
-          console.error('Error al inicializar chat:', error);
-        }
-      };
-      initChat();
-    }
-  }, [isOpen, currentUsername, userName, initialChatId]);
-
-  // Suscribirse a los mensajes en tiempo real
-  useEffect(() => {
-    if (chatId && isOpen) {
-      // Marcar como leídos al abrir el chat
-      chatService.markChatAsRead(chatId, currentUsername);
-
-      const toFormatted = (firebaseMessages: any[]) =>
-        firebaseMessages.map((msg) => ({
-          id: msg.id,
-          text: msg.text,
-          isMe: msg.senderId === currentUsername,
-          timestamp: formatTimestamp(msg.timestamp),
-          type: msg.type,
-          imageUrl: msg.imageUrl
-        }));
-
-      const unsubscribe = chatService.subscribeToMessages(chatId, (firebaseMessages) => {
-        setMessages(toFormatted(firebaseMessages));
-        chatService.markChatAsRead(chatId, currentUsername);
+    
+    // Ahora permitimos crear chat con username o UID
+    const hasCurrentIdentifier = currentUid || currentUsernameReal || currentUsername;
+    const hasOtherIdentifier = otherUid || otherUsernameReal || targetUsername;
+    
+    if (!isOpen || !hasCurrentIdentifier || !hasOtherIdentifier) {
+      console.log('[ChatModal] No se puede inicializar chat:', { 
+        isOpen, 
+        currentUid, 
+        currentUsernameReal, 
+        currentUsername,
+        otherUid, 
+        otherUsernameReal,
+        targetUsername 
       });
-
-      // Polling de respaldo cada 6 segundos por si el onSnapshot falla
-      const pollInterval = setInterval(async () => {
-        try {
-          const msgs = await chatService.getChatHistory(chatId);
-          setMessages(toFormatted(msgs));
-        } catch { /* ignorar */ }
-      }, 6000);
-
-      return () => {
-        unsubscribe();
-        clearInterval(pollInterval);
-      };
+      return;
     }
-  }, [chatId, isOpen, currentUsername]);
+
+    const initChat = async () => {
+      try {
+        // Priorizar username real, luego UID, luego username display
+        const currentIdentifier = currentUsernameReal || currentUid || currentUsername;
+        const otherIdentifier = otherUsernameReal || otherUid || targetUsername || userName;
+        const effectiveName = currentName || currentUsername;
+        
+        console.log('[ChatModal] Inicializando chat con:', { 
+          currentIdentifier, 
+          effectiveName, 
+          otherIdentifier, 
+          otherName 
+        });
+        
+        const id = await chatService.getOrCreateChat(
+          currentIdentifier,
+          effectiveName,
+          otherIdentifier,
+          otherName
+        );
+        console.log('[ChatModal] Chat inicializado con ID:', id);
+        setChatId(id);
+      } catch (error) {
+        console.error('[ChatModal] Error al inicializar chat:', error);
+      }
+    };
+    initChat();
+  }, [isOpen, currentUid, currentUsernameReal, currentUsername, otherUid, otherUsernameReal, targetUsername, currentName, otherName, userName, initialChatId]);
+
+  const toMillis = (value: any): number => {
+    try {
+      if (!value) return 0;
+      if (typeof value?.toMillis === 'function') return value.toMillis();
+      if (typeof value?.toDate === 'function') return value.toDate().getTime();
+      const n = new Date(value).getTime();
+      return Number.isNaN(n) ? 0 : n;
+    } catch {
+      return 0;
+    }
+  };
+
+  // Suscribirse a los mensajes en tiempo real.
+  // IMPORTANTE: chatHeader NO está en las deps para evitar el loop de re-suscripción
+  // (cada mensaje del APK actualizaba el doc del chat → setChatHeader → re-ejecutar este
+  // effect → destruir y recrear ambas suscripciones → los mensajes desaparecían).
+  useEffect(() => {
+    if (!chatId || !isOpen) {
+      console.log('[ChatModal] ⚠️ No se puede suscribir:', { chatId, isOpen });
+      return;
+    }
+
+    // Usar username real para identificación
+    const currentIdentifier = currentUsernameReal || currentUid || chatService.getEffectiveUid() || currentUsername;
+    
+    console.log('[ChatModal] 🎯 Suscribiendo a chat:', chatId, '| currentIdentifier:', currentIdentifier);
+    chatService.markChatAsRead(chatId, currentIdentifier);
+
+    const unsubscribe = chatService.subscribeToMessages(chatId, (firebaseMessages) => {
+      console.log('[ChatModal] 📬 Recibidos', firebaseMessages.length, 'mensajes del servidor');
+      const mapped = firebaseMessages.map((msg) => ({
+        id: msg.id,
+        text: msg.text,
+        isMe: (!!currentUid && msg.senderId === currentUid) || 
+              msg.senderId === currentUsername ||
+              msg.senderId === currentUsernameReal,
+        timestamp: formatTimestamp(msg.timestamp),
+        type: (msg.type === 'image' ? 'image' : 'text') as 'text' | 'image',
+        imageUrl: msg.imageUrl,
+      }));
+      console.log('[ChatModal] ✅ Actualizando UI con', mapped.length, 'mensajes');
+      setMessages(mapped);
+      chatService.markChatAsRead(chatId, currentIdentifier);
+    });
+
+    console.log('[ChatModal] ✅ Suscripción creada exitosamente');
+    return () => {
+      console.log('[ChatModal] 🔌 Desuscribiendo del chat:', chatId);
+      unsubscribe();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, isOpen, currentUid, currentUsername, currentUsernameReal]);
+
+  // Suscripción separada al encabezado del chat (solo actualiza metadatos, no un loop).
+  useEffect(() => {
+    if (!chatId || !isOpen) return;
+
+    const effectiveUid = currentUid || chatService.getEffectiveUid();
+
+    const unsubscribeHeader = chatService.subscribeToChat(chatId, (chat) => {
+      if (!chat) return;
+      setChatHeader({
+        lastMessage: chat.lastMessage || '',
+        lastMessageSenderId: chat.lastMessageSenderId || '',
+        lastMessageTime: chat.lastMessageTime || null,
+      });
+      // Fallback: si la subcolección messages todavía no tiene el último mensaje
+      // (escritura del APK aún en tránsito), añadirlo visualmente desde el header.
+      if (chat.lastMessage) {
+        setMessages(prev => {
+          const alreadyExists = prev.some(
+            m => (m.text || '').trim() === chat.lastMessage.trim()
+          );
+          if (alreadyExists) return prev;
+          return [...prev, {
+            id: `header-only-${Date.now()}`,
+            text: chat.lastMessage,
+            isMe: (!!effectiveUid && chat.lastMessageSenderId === effectiveUid)
+              || chat.lastMessageSenderId === currentUsername,
+            timestamp: formatTimestamp(chat.lastMessageTime),
+            type: 'text' as const,
+          }];
+        });
+      }
+    });
+
+    return () => unsubscribeHeader();
+  }, [chatId, isOpen, currentUid, currentUsername]);
 
   useEffect(() => {
     if (chatBodyRef.current) {
@@ -180,11 +353,19 @@ const ChatModal: React.FC<ChatModalProps> = ({
     onClose();
   };
 
-  const formatTimestamp = (timestamp: Timestamp): string => {
-    const date = timestamp.toDate();
-    const hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+  const formatTimestamp = (timestamp: Timestamp | null | string | number): string => {
+    if (!timestamp) return '';
+    try {
+      const date = typeof (timestamp as any)?.toDate === 'function'
+        ? (timestamp as any).toDate()
+        : new Date(timestamp as string | number);
+      if (Number.isNaN(date.getTime())) return '';
+      const hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    } catch {
+      return '';
+    }
   };
 
   const getTimeNow = () => {
@@ -196,44 +377,63 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
-    if (!currentUsername) {
-      console.error('[ChatModal] currentUsername vacío, no se puede enviar');
+
+    const uid = currentUid || chatService.getEffectiveUid();
+    const name = currentName || currentUsername;
+    const other = otherUid;
+    const currentUsernameFinal = currentUsernameReal || currentUsername;
+    const otherUsernameFinal = otherUsernameReal || otherName;
+
+    if (!uid || !other) {
+      console.error('[ChatModal] UIDs no resueltos, no se puede enviar');
       return;
     }
-    if (!chatId) {
-      console.error('[ChatModal] chatId null, no se puede enviar');
-      if (currentUsername && userName) {
-        try {
-          const id = await chatService.getOrCreateChat(currentUsername, userName);
-          setChatId(id);
-        } catch (e) {
-          console.error('[ChatModal] Error al reinicializar chat:', e);
-        }
+
+    console.log('[ChatModal] 📤 Enviando mensaje con:', {
+      uid,
+      currentUsernameFinal,
+      other,
+      otherUsernameFinal,
+      chatId
+    });
+
+    let activeChatId = chatId;
+    if (!activeChatId) {
+      try {
+        // Usar usernames reales para crear el chat
+        activeChatId = await chatService.getOrCreateChat(uid, currentUsernameFinal, other, otherUsernameFinal);
+        setChatId(activeChatId);
+        console.log('[ChatModal] ✅ Chat creado/obtenido:', activeChatId);
+      } catch (e) {
+        console.error('[ChatModal] Error al inicializar chat:', e);
+        return;
       }
-      return;
     }
 
     const text = inputText.trim();
     setInputText('');
 
-    // Actualización optimista: mostrar el mensaje de inmediato
+    // Actualización optimista
     const optimisticId = `opt-${Date.now()}`;
-    const optimisticMsg: Message = {
+    setMessages(prev => [...prev, {
       id: optimisticId,
       text,
       isMe: true,
       timestamp: getTimeNow(),
       type: 'text',
-    };
-    setMessages(prev => [...prev, optimisticMsg]);
+    }]);
 
     setIsLoading(true);
     try {
-      await chatService.sendMessage(chatId, currentUsername, text);
-      // El onSnapshot reemplazará el mensaje optimista con el real (misma key no importa, id diferente)
+      // Pasar usernames reales al servicio
+      await withTimeout(chatService.sendMessage(activeChatId, uid, currentUsernameFinal, text, otherUsernameFinal));
+      console.log('[ChatModal] ✅ Mensaje enviado exitosamente');
     } catch (error) {
+      if (error instanceof Error && error.message === 'SEND_TIMEOUT') {
+        console.warn('[ChatModal] Envio lento: se libera el estado de carga para no bloquear la UI');
+        return;
+      }
       console.error('[ChatModal] Error al enviar mensaje:', error);
-      // Revertir el mensaje optimista si falla
       setMessages(prev => prev.filter(m => m.id !== optimisticId));
       setInputText(text);
       alert('Error al enviar mensaje. Intenta de nuevo.');
@@ -254,23 +454,31 @@ const ChatModal: React.FC<ChatModalProps> = ({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0 && chatId && currentUsername) {
+    const uid = currentUid || chatService.getEffectiveUid();
+    const other = otherUid;
+    
+    // Usar usernames reales, no display names
+    const currentUsernameFinal = currentUsernameReal || currentUsername;
+    const otherUsernameFinal = otherUsernameReal || otherName;
+
+    if (files && files.length > 0 && chatId && uid && other && currentUsernameFinal && otherUsernameFinal) {
       const file = files[0];
       
-      // Validar tamaño (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert('La imagen es demasiado grande. Máximo 5MB.');
         return;
       }
 
+      console.log('[ChatModal] 📤 Enviando imagen con usernames reales:', currentUsernameFinal, otherUsernameFinal);
       setIsLoading(true);
       try {
-        await chatService.sendImageMessage(chatId, currentUsername, file);
-        // Limpiar el input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
+        await withTimeout(chatService.sendImageMessage(chatId, uid, currentUsernameFinal, file, otherUsernameFinal));
+        if (fileInputRef.current) fileInputRef.current.value = '';
       } catch (error) {
+        if (error instanceof Error && error.message === 'SEND_TIMEOUT') {
+          console.warn('[ChatModal] Subida lenta: se libera el estado de carga para no bloquear la UI');
+          return;
+        }
         console.error('Error al subir imagen:', error);
         alert('Error al subir imagen. Intenta de nuevo.');
       } finally {
