@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Chat en Vivo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      font-size: 13px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #4ec9b0;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+    .section {
+      background: #252526;
+      border: 1px solid #3e3e42;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      color: #569cd6;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+    .log-entry {
+      background: #1e1e1e;
+      border-left: 3px solid #4ec9b0;
+      padding: 10px;
+      margin: 5px 0;
+      font-size: 12px;
+    }
+    .log-error {
+      border-left-color: #f48771;
+    }
+    .log-warning {
+      border-left-color: #dcdcaa;
+    }
+    .log-success {
+      border-left-color: #4ec9b0;
+    }
+    .btn {
+      background: #0e639c;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-family: inherit;
+      font-size: 12px;
+    }
+    .btn:hover {
+      background: #1177bb;
+    }
+    .btn-danger {
+      background: #a1260d;
+    }
+    .btn-danger:hover {
+      background: #c72e0d;
+    }
+    pre {
+      background: #1e1e1e;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 11px;
+      border: 1px solid #3e3e42;
+    }
+    .highlight {
+      background: #264f78;
+      color: #fff;
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .chat-comparison {
+      background: #1e1e1e;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .chat-id {
+      color: #ce9178;
+      font-weight: bold;
+    }
+    .field-name {
+      color: #9cdcfe;
+    }
+    .field-value {
+      color: #ce9178;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Debug Chat en Tiempo Real</h1>
+    
+    <div class="section">
+      <h2>Controles</h2>
+      <button class="btn" onclick="startMonitoring()">▶ Iniciar Monitoreo</button>
+      <button class="btn btn-danger" onclick="stopMonitoring()">⏹ Detener</button>
+      <button class="btn" onclick="clearLogs()">🗑️ Limpiar Logs</button>
+      <button class="btn" onclick="analyzeAllChats()">📊 Analizar Todos los Chats</button>
+    </div>
+
+    <div class="section">
+      <h2>Estado localStorage</h2>
+      <div id="localStorage-status"></div>
+    </div>
+
+    <div class="grid">
+      <div class="section">
+        <h2>📱 Chats en Firebase (Tiempo Real)</h2>
+        <div id="firebase-chats"></div>
+      </div>
+      
+      <div class="section">
+        <h2>📝 Logs del Sistema</h2>
+        <div id="console-logs"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🔬 Análisis de Compatibilidad</h2>
+      <div id="analysis"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { 
+      getFirestore, 
+      collection, 
+      onSnapshot,
+      query,
+      orderBy
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiMkTNIhWd6DHuA9YzBkMGGh8UQSlKFG0",
+      authDomain: "mopc-dashboard.firebaseapp.com",
+      projectId: "mopc-dashboard",
+      storageBucket: "mopc-dashboard.firebasestorage.app",
+      messagingSenderId: "773403726623",
+      appId: "1:773403726623:web:81e82394c05ea20e95cdc8",
+      measurementId: "G-5C5CCHG2B5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let unsubscribeChats = null;
+    let logs = [];
+
+    function addLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const logClass = type === 'error' ? 'log-error' : 
+                       type === 'warning' ? 'log-warning' : 
+                       type === 'success' ? 'log-success' : 'log-entry';
+      
+      logs.unshift({ timestamp, message, type });
+      
+      const logsDiv = document.getElementById('console-logs');
+      const logHtml = logs.slice(0, 50).map(log => 
+        `<div class="${logClass}">[${log.timestamp}] ${log.message}</div>`
+      ).join('');
+      logsDiv.innerHTML = logHtml;
+    }
+
+    function updateLocalStorageStatus() {
+      const statusDiv = document.getElementById('localStorage-status');
+      
+      try {
+        const mopcUser = localStorage.getItem('mopc_user');
+        if (!mopcUser) {
+          statusDiv.innerHTML = '<div class="log-error">❌ No hay usuario en localStorage (mopc_user)</div>';
+          return;
+        }
+
+        const user = JSON.parse(mopcUser);
+        statusDiv.innerHTML = `
+          <pre>${JSON.stringify(user, null, 2)}</pre>
+          ${!user.uid && !user.id ? '<div class="log-error">❌ PROBLEMA: No tiene UID ni ID</div>' : ''}
+          ${user.uid ? `<div class="log-success">✅ UID: <span class="chat-id">${user.uid}</span></div>` : ''}
+          ${user.id ? `<div class="log-success">✅ ID: <span class="chat-id">${user.id}</span></div>` : ''}
+        `;
+      } catch (e) {
+        statusDiv.innerHTML = `<div class="log-error">❌ Error: ${e.message}</div>`;
+      }
+    }
+
+    window.startMonitoring = function() {
+      if (unsubscribeChats) {
+        addLog('⚠️ Monitoreo ya está activo', 'warning');
+        return;
+      }
+
+      addLog('🚀 Iniciando monitoreo en tiempo real...', 'success');
+      updateLocalStorageStatus();
+
+      const chatsRef = collection(db, 'chats');
+      
+      unsubscribeChats = onSnapshot(chatsRef, (snapshot) => {
+        addLog(`📊 Actualización: ${snapshot.size} chat(s) detectado(s)`, 'info');
+        
+        const chatsDiv = document.getElementById('firebase-chats');
+        
+        if (snapshot.empty) {
+          chatsDiv.innerHTML = '<div class="log-warning">⚠️ No hay chats en Firebase</div>';
+          return;
+        }
+
+        let html = '';
+        snapshot.forEach(chatDoc => {
+          const chat = chatDoc.data();
+          const chatId = chatDoc.id;
+          
+          html += `
+            <div class="chat-comparison">
+              <div><span class="field-name">Chat ID:</span> <span class="chat-id">${chatId}</span></div>
+              <div><span class="field-name">Participants:</span> <span class="field-value">${JSON.stringify(chat.participants || [])}</span></div>
+              <div><span class="field-name">Names:</span> <span class="field-value">${JSON.stringify(chat.participantNames || {})}</span></div>
+              <div><span class="field-name">Last Message:</span> ${chat.lastMessage || 'N/A'}</div>
+              <div><span class="field-name">Sender ID:</span> ${chat.lastMessageSenderId || 'N/A'}</div>
+              <div><span class="field-name">Time:</span> ${chat.lastMessageTime?.toDate?.() || 'N/A'}</div>
+              <button class="btn" onclick="inspectChatMessages('${chatId}')">🔍 Ver Mensajes</button>
+            </div>
+          `;
+        });
+        
+        chatsDiv.innerHTML = html;
+      }, (error) => {
+        addLog(`❌ Error en monitoreo: ${error.message}`, 'error');
+      });
+    };
+
+    window.stopMonitoring = function() {
+      if (unsubscribeChats) {
+        unsubscribeChats();
+        unsubscribeChats = null;
+        addLog('⏹ Monitoreo detenido', 'warning');
+      }
+    };
+
+    window.clearLogs = function() {
+      logs = [];
+      document.getElementById('console-logs').innerHTML = '';
+      addLog('🗑️ Logs limpiados', 'info');
+    };
+
+    window.inspectChatMessages = async function(chatId) {
+      addLog(`🔍 Inspeccionando mensajes de chat: ${chatId}`, 'info');
+      
+      try {
+        const messagesRef = collection(db, 'chats', chatId, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'desc'));
+        
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          addLog(`⚠️ Chat ${chatId} no tiene mensajes`, 'warning');
+          return;
+        }
+
+        const analysisDiv = document.getElementById('analysis');
+        let html = `<h3>Mensajes en ${chatId} (${snapshot.size} total)</h3>`;
+        
+        snapshot.forEach(msgDoc => {
+          const msg = msgDoc.data();
+          html += `
+            <div class="chat-comparison">
+              <pre>${JSON.stringify(msg, null, 2)}</pre>
+            </div>
+          `;
+        });
+        
+        analysisDiv.innerHTML = html;
+        
+      } catch (error) {
+        addLog(`❌ Error inspeccionando mensajes: ${error.message}`, 'error');
+      }
+    };
+
+    window.analyzeAllChats = async function() {
+      addLog('📊 Analizando todos los chats...', 'info');
+      
+      try {
+        const chatsRef = collection(db, 'chats');
+        const snapshot = await getDocs(chatsRef);
+        
+        if (snapshot.empty) {
+          addLog('⚠️ No hay chats para analizar', 'warning');
+          return;
+        }
+
+        const analysisDiv = document.getElementById('analysis');
+        let html = '<h3>Análisis de Compatibilidad</h3>';
+        
+        const mopcUser = localStorage.getItem('mopc_user');
+        const currentUser = mopcUser ? JSON.parse(mopcUser) : null;
+        const currentUid = currentUser?.uid || currentUser?.id;
+        
+        if (!currentUid) {
+          html += '<div class="log-error">❌ No tienes UID en localStorage, no puedo analizar tus chats</div>';
+          analysisDiv.innerHTML = html;
+          return;
+        }
+
+        html += `<div class="log-success">Tu UID: <span class="chat-id">${currentUid}</span></div>`;
+        html += `<div>Usuario: ${currentUser.username || currentUser.name}</div><br>`;
+
+        const myChats = [];
+        const otherChats = [];
+        
+        snapshot.forEach(chatDoc => {
+          const chat = chatDoc.data();
+          const chatId = chatDoc.id;
+          const participants = chat.participants || [];
+          
+          if (participants.includes(currentUid)) {
+            myChats.push({ id: chatId, data: chat });
+          } else {
+            otherChats.push({ id: chatId, data: chat });
+          }
+        });
+
+        html += `<div class="log-success">✅ Chats donde participas: ${myChats.length}</div>`;
+        html += `<div class="log-warning">⚠️ Chats donde NO participas: ${otherChats.length}</div><br>`;
+
+        if (myChats.length > 0) {
+          html += '<h4>Tus Chats:</h4>';
+          myChats.forEach(c => {
+            const otherUid = c.data.participants.find(p => p !== currentUid);
+            const otherName = c.data.participantNames?.[otherUid] || 'Desconocido';
+            
+            html += `
+              <div class="chat-comparison">
+                <div><span class="field-name">Con:</span> ${otherName} (<span class="chat-id">${otherUid}</span>)</div>
+                <div><span class="field-name">Chat ID:</span> <span class="chat-id">${c.id}</span></div>
+                <div><span class="field-name">Formato:</span> ${analyzeChatIdFormat(c.id, currentUid, otherUid)}</div>
+                <div><span class="field-name">Último:</span> "${c.data.lastMessage || 'N/A'}"</div>
+                <button class="btn" onclick="inspectChatMessages('${c.id}')">Ver Mensajes</button>
+              </div>
+            `;
+          });
+        }
+
+        if (otherChats.length > 0) {
+          html += '<h4>Chats de Otros Usuarios (no participas):</h4>';
+          otherChats.forEach(c => {
+            html += `
+              <div class="chat-comparison">
+                <div><span class="field-name">Chat ID:</span> <span class="chat-id">${c.id}</span></div>
+                <div><span class="field-name">Participants:</span> ${JSON.stringify(c.data.participants)}</div>
+                <div><span class="field-name">Names:</span> ${JSON.stringify(c.data.participantNames || {})}</div>
+              </div>
+            `;
+          });
+        }
+
+        analysisDiv.innerHTML = html;
+        
+      } catch (error) {
+        addLog(`❌ Error en análisis: ${error.message}`, 'error');
+      }
+    };
+
+    function analyzeChatIdFormat(chatId, uid1, uid2) {
+      const sorted = [uid1, uid2].sort().join('_');
+      const unsorted1 = `${uid1}_${uid2}`;
+      const unsorted2 = `${uid2}_${uid1}`;
+      
+      if (chatId === sorted) return '✅ Ordenado alfabéticamente (web estándar)';
+      if (chatId === unsorted1) return '⚠️ Sin ordenar (posible app móvil)';
+      if (chatId === unsorted2) return '⚠️ Formato inverso (posible app móvil)';
+      return '❓ Formato desconocido';
+    }
+
+    // Auto-iniciar
+    setTimeout(() => {
+      startMonitoring();
+    }, 500);
+  </script>
+</body>
+</html>

@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import ChatList from './ChatList';
 import './FloatingChatButton.css';
 import { chatService, Chat } from '../services/chatService';
+import { auth } from '../config/firebase';
+import { getUserById, getUserByUsername } from '../services/firebaseUserStorage';
 
 interface MsgToast {
   id: number;
@@ -17,7 +19,7 @@ const FloatingChatButton: React.FC = () => {
   const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [toasts, setToasts] = useState<MsgToast[]>([]);
-  const [hidden, setHidden] = useState(true);
+  const [hidden, setHidden] = useState(false); // visible desde que el usuario inicia sesión
   const [draggingActive, setDraggingActive] = useState(false);
   const [overClose, setOverClose] = useState(false);
 
@@ -25,6 +27,9 @@ const FloatingChatButton: React.FC = () => {
   const toastIdRef = useRef(0);
   const initialLoadDoneRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // Cache de nombres resueltos para los toasts (UID → nombre display)
+  const senderNamesRef = useRef<Record<string, string>>({});
+  const currentUidRef = useRef<string | null>(null);
 
   // Refs para showChatList y activeChatUser: evitan reiniciar la suscripción al abrir/cerrar chat
   const showChatListRef = useRef(false);
@@ -113,8 +118,10 @@ const FloatingChatButton: React.FC = () => {
         if (raw) {
           const u = JSON.parse(raw);
           setCurrentUsername(u.username || null);
+          setHidden(false); // mostrar botón cuando hay sesión activa
         } else {
           setCurrentUsername(null);
+          setHidden(true); // ocultar si no hay sesión
         }
       } catch {
         setCurrentUsername(null);
@@ -131,6 +138,14 @@ const FloatingChatButton: React.FC = () => {
     };
   }, []);
 
+  // Sincronizar UID del usuario autenticado
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      currentUidRef.current = user?.uid ?? null;
+    });
+    return () => unsub();
+  }, []);
+
   // Suscribirse a mensajes no leídos
   useEffect(() => {
     if (!currentUsername) return;
@@ -143,36 +158,80 @@ const FloatingChatButton: React.FC = () => {
     if (!currentUsername) return;
     initialLoadDoneRef.current = false;
     const unsub = chatService.subscribeToUserChats(currentUsername, (chats: Chat[]) => {
+      const uid = currentUidRef.current;
+
+      // Helper: leer el contador de no leídos de un chat, considerando UID y username
+      const getUnread = (chat: Chat): number => {
+        const byUsername = chat.unreadCount?.[currentUsername] ?? 0;
+        const byUid = uid ? (chat.unreadCount?.[uid] ?? 0) : 0;
+        return Math.max(byUsername, byUid);
+      };
+
+      // Helper async: resolver identificador a nombre display con caché
+      const resolveSenderName = async (rawId: string): Promise<string> => {
+        if (senderNamesRef.current[rawId]) return senderNamesRef.current[rawId];
+        try {
+          // Si parece username (contiene letras no solo UID-like), buscar primero por username
+          const byUsername = await getUserByUsername(rawId);
+          if (byUsername) {
+            const name = byUsername.name || byUsername.username;
+            senderNamesRef.current[rawId] = name;
+            return name;
+          }
+          // Buscar por UID
+          const byId = await getUserById(rawId);
+          if (byId) {
+            const name = byId.name || byId.username;
+            senderNamesRef.current[rawId] = name;
+            return name;
+          }
+        } catch { /* ignorar */ }
+        return rawId;
+      };
+
       if (!initialLoadDoneRef.current) {
         // Primera carga: solo guardar los conteos actuales como base, sin mostrar nada
         chats.forEach((chat) => {
-          prevUnreadRef.current[chat.id] = chat.unreadCounts?.[currentUsername] ?? 0;
+          prevUnreadRef.current[chat.id] = getUnread(chat);
         });
         initialLoadDoneRef.current = true;
         return;
       }
+
       chats.forEach((chat) => {
-        const currentUnread = chat.unreadCounts?.[currentUsername] ?? 0;
+        const currentUnread = getUnread(chat);
         const prevUnread = prevUnreadRef.current[chat.id] ?? 0;
 
         if (currentUnread > prevUnread) {
-          // Usar refs en vez de estado para no requerir re-suscripción
-          const sender = chat.participants.find(p => p !== currentUsername) || '';
-          const isChatOpen = showChatListRef.current && activeChatUserRef.current === sender;
+          // Identificar al remitente (puede ser UID o username)
+          const senderRaw = chat.participants.find(p => {
+            if (p === currentUsername) return false;
+            if (uid && p === uid) return false;
+            return true;
+          }) || '';
+
+          const isChatOpen = showChatListRef.current && activeChatUserRef.current === senderRaw;
           if (!isChatOpen) {
             const toastId = ++toastIdRef.current;
+            // Mostrar toast con ID raw primero, luego reemplazar con nombre real
             const newToast: MsgToast = {
               id: toastId,
-              sender,
+              sender: senderRaw,
               text: chat.lastMessage || 'Nuevo mensaje',
               chatId: chat.id,
             };
             setToasts(prev => [...prev.slice(-3), newToast]);
-            // Si estaba oculto, reaparecerlo
             setHidden(false);
-            // Sonido + vibración + notificación del sistema
             playNotificationSound();
-            showSystemNotification(sender, chat.lastMessage || 'Nuevo mensaje');
+            // Resolver nombre real de forma asincrónica y actualizar el toast
+            resolveSenderName(senderRaw).then(resolvedName => {
+              if (resolvedName !== senderRaw) {
+                setToasts(prev => prev.map(t =>
+                  t.id === toastId ? { ...t, sender: resolvedName } : t
+                ));
+              }
+              showSystemNotification(resolvedName, chat.lastMessage || 'Nuevo mensaje');
+            });
             setTimeout(() => {
               setToasts(prev => prev.filter(t => t.id !== toastId));
             }, 5000);

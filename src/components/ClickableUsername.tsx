@@ -120,6 +120,7 @@ const ClickableUsername: React.FC<ClickableUsernameProps> = ({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         userName={fullName || username}
+        targetUsername={username}
         userAvatar={userAvatar}
         isOnline={isOnline}
       />

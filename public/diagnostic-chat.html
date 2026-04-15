@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnóstico de Chats - Firebase</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    .section h2 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    .chat-item {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+    .chat-header {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .chat-detail {
+      font-size: 13px;
+      color: #666;
+      margin: 4px 0;
+      font-family: 'Courier New', monospace;
+    }
+    .message-item {
+      background: #fff;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border-left: 3px solid #764ba2;
+      font-size: 13px;
+    }
+    .message-meta {
+      color: #999;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    .btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #667eea;
+      font-size: 16px;
+    }
+    .code-block {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    .warning {
+      background: #fff3cd;
+      border-left-color: #ffc107;
+      color: #856404;
+      padding: 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success {
+      background: #d4edda;
+      border-left-color: #28a745;
+      color: #155724;
+      padding: 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Diagnóstico de Chats en Firebase</h1>
+    <p class="subtitle">Herramienta para verificar la estructura de chats y mensajes</p>
+
+    <div class="section">
+      <button class="btn" onclick="loadAllChats()">🔄 Cargar Todos los Chats</button>
+      <button class="btn" onclick="loadAllUsers()" style="margin-left: 10px;">👥 Ver Usuarios</button>
+      <button class="btn" onclick="createTestChat()" style="margin-left: 10px; background: #28a745;">✨ Crear Chat de Prueba</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs,
+      query,
+      orderBy,
+      doc,
+      setDoc,
+      serverTimestamp,
+      addDoc
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDiMkTNIhWd6DHuA9YzBkMGGh8UQSlKFG0",
+      authDomain: "mopc-dashboard.firebaseapp.com",
+      projectId: "mopc-dashboard",
+      storageBucket: "mopc-dashboard.firebasestorage.app",
+      messagingSenderId: "773403726623",
+      appId: "1:773403726623:web:81e82394c05ea20e95cdc8",
+      measurementId: "G-5C5CCHG2B5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.loadAllChats = async function() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="loading">⏳ Cargando chats desde Firebase...</div>';
+
+      try {
+        const chatsRef = collection(db, 'chats');
+        const chatsSnapshot = await getDocs(chatsRef);
+        
+        if (chatsSnapshot.empty) {
+          resultsDiv.innerHTML = '<div class="warning">⚠️ No se encontraron chats en Firebase</div>';
+          return;
+        }
+
+        let html = '<div class="success">✅ Se encontraron ' + chatsSnapshot.size + ' chat(s)</div>';
+
+        for (const chatDoc of chatsSnapshot.docs) {
+          const chatData = chatDoc.data();
+          const chatId = chatDoc.id;
+
+          html += `
+            <div class="section">
+              <h2>📱 Chat ID: ${chatId}</h2>
+              <div class="chat-detail">Participantes: ${JSON.stringify(chatData.participants || [])}</div>
+              <div class="chat-detail">Nombres: ${JSON.stringify(chatData.participantNames || {})}</div>
+              <div class="chat-detail">Último mensaje: "${chatData.lastMessage || 'N/A'}"</div>
+              <div class="chat-detail">Tiempo: ${chatData.lastMessageTime?.toDate?.() || 'N/A'}</div>
+              <div class="chat-detail">Sender ID: ${chatData.lastMessageSenderId || 'N/A'}</div>
+              <div class="chat-detail">Unread Count: ${JSON.stringify(chatData.unreadCount || {})}</div>
+              
+              <h3 style="margin-top: 15px; color: #764ba2;">Mensajes:</h3>
+          `;
+
+          // Cargar mensajes
+          const messagesRef = collection(db, 'chats', chatId, 'messages');
+          const messagesQuery = query(messagesRef, orderBy('timestamp', 'asc'));
+          const messagesSnapshot = await getDocs(messagesQuery);
+
+          if (messagesSnapshot.empty) {
+            html += '<div class="warning">⚠️ No hay mensajes en este chat</div>';
+          } else {
+            messagesSnapshot.forEach(msgDoc => {
+              const msg = msgDoc.data();
+              const timestamp = msg.timestamp?.toDate?.() || msg.serverTimestamp?.toDate?.() || 'N/A';
+              
+              html += `
+                <div class="message-item">
+                  <strong>${msg.senderName || msg.sender || msg.username || 'Unknown'}</strong>: ${msg.text || msg.message || 'N/A'}
+                  <div class="message-meta">
+                    ID: ${msgDoc.id} | 
+                    Sender ID: ${msg.senderId || msg.senderUid || msg.senderUID || 'N/A'} | 
+                    Type: ${msg.type || 'N/A'} | 
+                    Time: ${timestamp}
+                  </div>
+                  <div class="code-block">${JSON.stringify(msg, null, 2)}</div>
+                </div>
+              `;
+            });
+          }
+
+          html += '</div>';
+        }
+
+        resultsDiv.innerHTML = html;
+
+      } catch (error) {
+
+    window.loadAllUsers = async function() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="loading">⏳ Cargando usuarios desde Firebase...</div>';
+
+      try {
+        const usersRef = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersRef);
+        
+        if (usersSnapshot.empty) {
+          resultsDiv.innerHTML = '<div class="warning">⚠️ No se encontraron usuarios en Firebase</div>';
+          return;
+        }
+
+        let html = '<div class="success">✅ Se encontraron ' + usersSnapshot.size + ' usuario(s)</div>';
+
+        usersSnapshot.forEach(userDoc => {
+          const user = userDoc.data();
+          const docId = userDoc.id;
+          
+          html += `
+            <div class="section">
+              <h2>👤 ${user.name || user.username || 'Sin nombre'}</h2>
+              <div class="chat-detail">Document ID (UID): ${docId}</div>
+              <div class="chat-detail">user.id: ${user.id || '❌ NO EXISTE'}</div>
+              <div class="chat-detail">username: ${user.username || 'N/A'}</div>
+              <div class="chat-detail">email: ${user.email || 'N/A'}</div>
+              <div class="chat-detail">role: ${user.role || 'N/A'}</div>
+              <div class="chat-detail">isActive: ${user.isActive ? '✅' : '❌'}</div>
+              ${user.id !== docId ? '<div class="warning">⚠️ PROBLEMA: user.id no coincide con el Document ID</div>' : ''}
+              ${!user.id ? '<div class="warning">⚠️ PROBLEMA: No tiene campo "id", los chats no funcionarán</div>' : ''}
+            </div>
+          `;
+        });
+
+        resultsDiv.innerHTML = html;
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="warning">❌ Error: ${error.message}</div>`;
+        console.error('Error completo:', error);
+      }
+    };
+
+    window.createTestChat = async function() {
+      const resultsDiv = document.getElementById('results');
+      
+      // Obtener usuarios primero
+      try {
+        resultsDiv.innerHTML = '<div class="loading">⏳ Cargando usuarios...</div>';
+        
+        const usersRef = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersRef);
+        
+        if (usersSnapshot.size < 2) {
+          resultsDiv.innerHTML = '<div class="warning">⚠️ Se necesitan al menos 2 usuarios para crear un chat</div>';
+          return;
+        }
+
+        const users = [];
+        usersSnapshot.forEach(doc => {
+          const u = doc.data();
+          if (u.id) {
+            users.push({ docId: doc.id, id: u.id, name: u.name || u.username, username: u.username });
+          }
+        });
+
+        if (users.length < 2) {
+          resultsDiv.innerHTML = '<div class="warning">⚠️ Se necesitan al menos 2 usuarios con campo "id" válido</div>';
+          return;
+        }
+
+        // Tomar los primeros 2 usuarios
+        const user1 = users[0];
+        const user2 = users[1];
+        
+        // Crear chatId ordenado alfabéticamente
+        const chatId = [user1.id, user2.id].sort().join('_');
+        
+        resultsDiv.innerHTML = `<div class="loading">⏳ Creando chat de prueba entre ${user1.name} y ${user2.name}...</div>`;
+        
+        // Crear documento de chat
+        const chatRef = doc(db, 'chats', chatId);
+        await setDoc(chatRef, {
+          participants: [user1.id, user2.id],
+          participantNames: {
+            [user1.id]: user1.name,
+            [user2.id]: user2.name
+          },
+          participantAvatars: {
+            [user1.id]: '',
+            [user2.id]: ''
+          },
+          lastMessage: 'Chat de prueba creado',
+          lastMessageTime: serverTimestamp(),
+          lastMessageSenderId: user1.id,
+          unreadCount: {
+            [user1.id]: 0,
+            [user2.id]: 1
+          },
+          createdAt: serverTimestamp()
+        });
+
+        // Crear mensaje de prueba
+        const messagesRef = collection(db, 'chats', chatId, 'messages');
+        await addDoc(messagesRef, {
+          senderId: user1.id,
+          senderName: user1.name,
+          text: 'Este es un mensaje de prueba desde la herramienta de diagnóstico',
+          timestamp: serverTimestamp(),
+          serverTimestamp: serverTimestamp(),
+          type: 'text',
+          read: false,
+          // Campos de compatibilidad
+          message: 'Este es un mensaje de prueba desde la herramienta de diagnóstico',
+          sender: user1.name,
+          senderUid: user1.id,
+          username: user1.name
+        });
+
+        resultsDiv.innerHTML = `
+          <div class="success">✅ Chat de prueba creado exitosamente</div>
+          <div class="section">
+            <h2>📱 Detalles del Chat</h2>
+            <div class="chat-detail">Chat ID: ${chatId}</div>
+            <div class="chat-detail">Usuario 1: ${user1.name} (${user1.id})</div>
+            <div class="chat-detail">Usuario 2: ${user2.name} (${user2.id})</div>
+            <div class="chat-detail">Mensaje: "Este es un mensaje de prueba..."</div>
+            <br>
+            <button class="btn" onclick="loadAllChats()">Ver Todos los Chats</button>
+          </div>
+        `;
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="warning">❌ Error: ${error.message}</div>`;
+        console.error('Error completo:', error);
+      }
+    };
+        resultsDiv.innerHTML = `<div class="warning">❌ Error: ${error.message}</div>`;
+        console.error('Error completo:', error);
+      }
+    };
+  </script>
+</body>
+</html>

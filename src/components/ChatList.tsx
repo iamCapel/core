@@ -31,10 +31,12 @@ const ChatList: React.FC<ChatListProps> = ({
   const [uniqueChats, setUniqueChats] = useState<ChatListItem[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [selectedOtherUid, setSelectedOtherUid] = useState<string | null>(null);
   const [showChatModal, setShowChatModal] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [allUsers, setAllUsers] = useState<firebaseUserStorage.UserData[]>([]);
+  const [extraUsers, setExtraUsers] = useState<firebaseUserStorage.UserData[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -66,14 +68,23 @@ const ChatList: React.FC<ChatListProps> = ({
   useEffect(() => {
     if (!isOpen || !currentUsername) return;
 
+    const currentUid = chatService.getEffectiveUid();
+    // Suscribir por UID (formato APK) con fallback automático por username (chats legacy)
     const unsubscribe = chatService.subscribeToUserChats(currentUsername, (fetchedChats) => {
-      // Guardar raw — la normalización y dedup se hace en el efecto que depende de allUsers
-      const processedChats = fetchedChats.map(chat => ({
-        ...chat,
-        otherUsername: chat.participants.find(p => p !== currentUsername) || '',
-        isOnline: false
-      }));
-      setChats(processedChats);
+      const effectiveId = currentUid || currentUsername;
+      const processedChats = fetchedChats.map(chat => {
+        // El otro participante es cualquier UID que no sea el actual
+        const otherRaw = chat.participants.find(p => p !== effectiveId && p !== currentUsername) || '';
+        // Si el chat tiene participantNames (formato APK), usarlo para obtener el nombre directamente
+        const displayName = (chat as any).participantNames?.[otherRaw] || otherRaw;
+        return {
+          ...chat,
+          otherUsername: displayName,   // nombre para mostrar (o UID si no hay nombre)
+          otherRawId: otherRaw,          // UID real para operar con Firestore
+          isOnline: false
+        };
+      });
+      setChats(processedChats as any);
     });
 
     return () => unsubscribe();
@@ -124,6 +135,31 @@ const ChatList: React.FC<ChatListProps> = ({
     setUniqueChats(acc);
   }, [chats, allUsers, currentUsername]);
 
+  // Fallback: cuando uniqueChats contiene UIDs de Firebase que no están en allUsers,
+  // los busca directamente en Firestore por document ID.
+  useEffect(() => {
+    if (uniqueChats.length === 0) return;
+    const allKnown = [...allUsers, ...extraUsers];
+    const unresolvedUids = uniqueChats
+      .map(c => c.otherUsername)
+      .filter(u => u && !allKnown.find(a => a.username === u || a.id === u));
+
+    if (unresolvedUids.length === 0) return;
+
+    Promise.all(unresolvedUids.map(uid => firebaseUserStorage.getUserById(uid)))
+      .then(results => {
+        const found = results.filter((u): u is firebaseUserStorage.UserData => u !== null);
+        if (found.length === 0) return;
+        setExtraUsers(prev => {
+          const existingIds = new Set(prev.map(u => u.id));
+          return [...prev, ...found.filter(u => !existingIds.has(u.id))];
+        });
+      })
+      .catch(() => { /* ignorar errores de red */ });
+  // extraUsers excluido intencionalmente para evitar bucle
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uniqueChats, allUsers]);
+
   // Suscribirse al estado online de cada usuario
   useEffect(() => {
     if (!isOpen || chats.length === 0) return;
@@ -153,7 +189,7 @@ const ChatList: React.FC<ChatListProps> = ({
     };
   }, [isOpen, chats]);
 
-  const handleChatClick = (username: string, chatId?: string) => {
+  const handleChatClick = (username: string, chatId?: string, otherUid?: string) => {
     if (isChatControlledByParent && onOpenChat) {
       onOpenChat(username);
       onClose();
@@ -162,6 +198,7 @@ const ChatList: React.FC<ChatListProps> = ({
 
     setSelectedUser(username);
     setSelectedChatId(chatId || null);
+    setSelectedOtherUid(otherUid || null);
     setShowChatModal(true);
     onClose();
   };
@@ -175,6 +212,7 @@ const ChatList: React.FC<ChatListProps> = ({
     setShowChatModal(false);
     setSelectedUser(null);
     setSelectedChatId(null);
+    setSelectedOtherUid(null);
   };
 
   const handleSelectUser = (username: string) => {
@@ -261,14 +299,17 @@ const ChatList: React.FC<ChatListProps> = ({
       }).slice(0, 5) // Máximo 5 resultados
     : [];
 
+  // Fuente combinada: usuarios precargados + resueltos on-demand
+  const allKnownUsers = [...allUsers, ...extraUsers];
+
   // Resuelve un identificador (puede ser username o Firebase UID) al nombre para mostrar
   const resolveDisplayName = (identifier: string): string => {
-    const user = allUsers.find(u => u.username === identifier || u.id === identifier);
+    const user = allKnownUsers.find(u => u.username === identifier || u.id === identifier);
     return user ? (user.name || user.username) : identifier;
   };
 
   const resolveUsername = (identifier: string): string => {
-    const user = allUsers.find(u => u.username === identifier || u.id === identifier);
+    const user = allKnownUsers.find(u => u.username === identifier || u.id === identifier);
     return user ? user.username : identifier;
   };
 
@@ -419,7 +460,7 @@ const ChatList: React.FC<ChatListProps> = ({
                       <div
                         key={chat.id}
                         className="chat-list-item"
-                        onClick={() => handleChatClick(resolveUsername(chat.otherUsername), chat.id)}
+                        onClick={() => handleChatClick(resolveUsername(chat.otherUsername), chat.id, (chat as any).otherRawId)}
                       >
                         {/* Avatar y estado */}
                         <div className="chat-list-item-avatar">
@@ -459,7 +500,9 @@ const ChatList: React.FC<ChatListProps> = ({
         <ChatModal
           isOpen={true}
           onClose={handleCloseChatModal}
-          userName={effectiveChatUser}
+          userName={resolveDisplayName(effectiveChatUser)}
+          targetUsername={effectiveChatUser}
+          targetUid={selectedOtherUid || (uniqueChats as any[]).find(c => c.otherUsername === effectiveChatUser || c.otherRawId === effectiveChatUser)?.otherRawId}
           currentUser={currentUsername}
           initialChatId={selectedChatId || undefined}
         />

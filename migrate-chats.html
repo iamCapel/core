@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migrar Chats al Nuevo Formato</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    .success {
+      background: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      display: none;
+    }
+    .error {
+      background: #f8d7da;
+      border-left: 4px solid #dc3545;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      display: none;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+      transition: transform 0.2s;
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      margin-top: 20px;
+      display: none;
+    }
+    .log-entry {
+      padding: 5px;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+    .log-entry.info { color: #0066cc; }
+    .log-entry.success { color: #28a745; }
+    .log-entry.error { color: #dc3545; }
+    .log-entry.warning { color: #ffc107; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .stat-label {
+      color: #666;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Migración de Chats</h1>
+    <p class="subtitle">Convierte chats del formato viejo (UID_username) al nuevo (username_username)</p>
+
+    <div class="warning">
+      <strong>⚠️ IMPORTANTE:</strong>
+      <ul style="margin-top: 10px; margin-bottom: 0;">
+        <li>Este script migrará chats con formato incorrecto al formato correcto</li>
+        <li>Los chats viejos se mantendrán como respaldo (no se eliminarán)</li>
+        <li>Los mensajes se copiarán al chat nuevo</li>
+        <li>El proceso puede tomar varios minutos si hay muchos chats</li>
+      </ul>
+    </div>
+
+    <div class="success" id="successMsg">
+      <strong>✅ Migración completada exitosamente</strong>
+      <p id="successDetail" style="margin-top: 10px; margin-bottom: 0;"></p>
+    </div>
+
+    <div class="error" id="errorMsg">
+      <strong>❌ Error durante la migración</strong>
+      <p id="errorDetail" style="margin-top: 10px; margin-bottom: 0;"></p>
+    </div>
+
+    <div class="stats" id="stats" style="display: none;">
+      <div class="stat-card">
+        <div class="stat-number" id="chatsFound">0</div>
+        <div class="stat-label">Chats Encontrados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="chatsMigrated">0</div>
+        <div class="stat-label">Chats Migrados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="messagesMigrated">0</div>
+        <div class="stat-label">Mensajes Copiados</div>
+      </div>
+    </div>
+
+    <button id="migrateBtn" onclick="startMigration()">
+      🚀 Iniciar Migración
+    </button>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs, 
+      doc, 
+      getDoc,
+      setDoc,
+      serverTimestamp,
+      query,
+      orderBy
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAp3Z67xm1zBkiiFQqyxVpDj5TQZjTN8Ug",
+      authDomain: "coredatabase-206ac.firebaseapp.com",
+      databaseURL: "https://coredatabase-206ac-default-rtdb.firebaseio.com",
+      projectId: "coredatabase-206ac",
+      storageBucket: "coredatabase-206ac.firebasestorage.app",
+      messagingSenderId: "728262620356",
+      appId: "1:728262620356:web:9bed8c00797fe41bbc4b8b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.db = db;
+
+    function addLog(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      logDiv.style.display = 'block';
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function updateStats(found, migrated, messages) {
+      document.getElementById('stats').style.display = 'grid';
+      document.getElementById('chatsFound').textContent = found;
+      document.getElementById('chatsMigrated').textContent = migrated;
+      document.getElementById('messagesMigrated').textContent = messages;
+    }
+
+    function showSuccess(detail) {
+      const successDiv = document.getElementById('successMsg');
+      successDiv.style.display = 'block';
+      document.getElementById('successDetail').textContent = detail;
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function showError(detail) {
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.style.display = 'block';
+      document.getElementById('errorDetail').textContent = detail;
+      document.getElementById('successMsg').style.display = 'none';
+    }
+
+    // Función para determinar si un ID parece un UID de Firebase
+    function looksLikeFirebaseUID(str) {
+      return str && str.length > 20 && /^[a-zA-Z0-9_-]+$/.test(str);
+    }
+
+    // Mapeo manual de UIDs conocidos (emergencia)
+    const KNOWN_UIDS = {
+      'NVb7MXCq4HhGPMWVeluPFPRj1vt2': 'jisidro',
+      '1VJInCWPdCcuikaL5EnCWi0CYX23': 'dferrera',
+      'nsv7TW2FFnUO0eFYIy1V3oHzoOC2': 'mcabrera',
+      'PvTR4emsmleEunr5kZcdQsIIlub2': 'lbeltre',
+    };
+
+    // Función para obtener username desde UID
+    async function getUsernameFromUID(uid) {
+      try {
+        // Verificar mapeo manual primero
+        if (KNOWN_UIDS[uid]) {
+          addLog(`   ✨ UID resuelto desde mapeo manual: ${uid.substring(0,10)}... → ${KNOWN_UIDS[uid]}`, 'success');
+          return KNOWN_UIDS[uid];
+        }
+
+        // Buscar en todos los documentos de firebaseUserStorage
+        const usersRef = collection(db, 'firebaseUserStorage');
+        const snapshot = await getDocs(usersRef);
+        
+        for (const userDoc of snapshot.docs) {
+          const data = userDoc.data();
+          // Buscar en el campo 'id' (que contiene el Firebase UID)
+          if (data.id === uid) {
+            const username = data.username || userDoc.id;
+            addLog(`   ✅ UID encontrado en campo 'id': ${uid.substring(0,10)}... → ${username}`, 'success');
+            // Guardar en mapeo para futuros usos
+            KNOWN_UIDS[uid] = username;
+            return username;
+          }
+        }
+        
+        return null;
+      } catch (error) {
+        console.error('Error getting username:', error);
+        return null;
+      }
+    }
+
+    // Función para obtener usuarios de firebaseUserStorage
+    async function getAllUsers() {
+      addLog('📚 Cargando usuarios desde firebaseUserStorage...', 'info');
+      const usersRef = collection(db, 'firebaseUserStorage');
+      const snapshot = await getDocs(usersRef);
+      
+      const users = {};
+      const usersByUID = {};
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const docId = doc.id;
+        
+        // El documento puede estar indexado por username o UID
+        // Mapear ambos
+        users[docId] = { ...data, uid: data.id || docId };
+        
+        if (data.username) {
+          users[data.username] = { ...data, uid: data.id || docId };
+        }
+        
+        // Si el documento tiene un campo 'id' (Firebase UID), mapearlo también
+        if (data.id) {
+          usersByUID[data.id] = { ...data, uid: data.id };
+        }
+      });
+      
+      // Combinar ambos mapeos
+      Object.assign(users, usersByUID);
+      
+      addLog(`✅ Cargados ${snapshot.size} usuarios con ${Object.keys(usersByUID).length} UIDs mapeados`, 'success');
+      return users;
+    }
+
+    // Función principal de migración
+    async function migrateChats() {
+      addLog('🚀 Iniciando migración de chats...', 'info');
+      
+      const users = await getAllUsers();
+      const chatsRef = collection(db, 'chats');
+      const chatsSnapshot = await getDocs(chatsRef);
+      
+      let found = 0;
+      let migrated = 0;
+      let totalMessages = 0;
+      const oldFormatChats = [];
+
+      // Identificar chats con formato viejo
+      addLog(`📊 Analizando ${chatsSnapshot.size} chats...`, 'info');
+      
+      for (const chatDoc of chatsSnapshot.docs) {
+        const chatId = chatDoc.id;
+        const chatData = chatDoc.data();
+        const parts = chatId.split('_');
+        
+        // Verificar si el chatId tiene formato viejo (contiene al menos un UID)
+        if (parts.length === 2) {
+          const hasUID = parts.some(part => looksLikeFirebaseUID(part));
+          
+          if (hasUID) {
+            found++;
+            addLog(`🔍 Chat con formato viejo: ${chatId}`, 'warning');
+            
+            // Extraer usernames de participants
+            const participants = chatData.participants || [];
+            const participantNames = chatData.participantNames || {};
+            const usernames = [];
+            
+            addLog(`   📋 participantNames: ${JSON.stringify(participantNames)}`, 'info');
+            
+            for (const participant of participants) {
+              if (looksLikeFirebaseUID(participant)) {
+                // Es un UID, buscar el username
+                let user = users[participant];
+                let resolvedUsername = null;
+                
+                // Estrategia 1: Verificar si participantNames tiene el mapeo
+                if (participantNames[participant]) {
+                  // participantNames tiene el nombre completo, buscar username correspondiente
+                  const fullName = participantNames[participant];
+                  addLog(`   📌 Del participantNames: ${participant.substring(0,10)}... → nombre: "${fullName}"`, 'info');
+                  
+                  // Buscar usuario por nombre en cache
+                  const userByName = Object.values(users).find(u => u.name === fullName);
+                  if (userByName && userByName.username) {
+                    resolvedUsername = userByName.username;
+                    addLog(`   ✅ Encontrado por nombre: "${fullName}" → username: ${resolvedUsername}`, 'success');
+                  }
+                }
+                
+                // Estrategia 2: Cache
+                if (!resolvedUsername && user && user.username) {
+                  resolvedUsername = user.username;
+                  addLog(`   ✅ Resolviendo desde cache: ${participant.substring(0, 10)}... → ${user.username}`, 'info');
+                }
+                
+                // Estrategia 3: Búsqueda bajo demanda
+                if (!resolvedUsername) {
+                  addLog(`   🔍 Buscando UID ${participant.substring(0, 10)}... en Firestore`, 'info');
+                  resolvedUsername = await getUsernameFromUID(participant);
+                  if (resolvedUsername && resolvedUsername !== participant) {
+                    addLog(`   ✅ Resuelto: ${participant.substring(0, 10)}... → username: ${resolvedUsername}`, 'success');
+                    // Actualizar cache
+                    users[participant] = { username: resolvedUsername, uid: participant };
+                  }
+                }
+                
+                if (resolvedUsername) {
+                  usernames.push(resolvedUsername);
+                } else {
+                  addLog(`   ⚠️ No se pudo resolver UID: ${participant}`, 'warning');
+                  addLog(`   💡 SUGERENCIA: Agrega a KNOWN_UIDS: '${participant}': 'username_correcto'`, 'warning');
+                  usernames.push(participant); // Usar el UID como fallback
+                }
+              } else {
+                // Ya es un username
+                usernames.push(participant);
+                addLog(`   ✓ Ya es username: ${participant}`, 'info');
+              }
+            }
+            
+            if (usernames.length === 2) {
+              oldFormatChats.push({
+                oldId: chatId,
+                oldData: chatData,
+                usernames: usernames.sort() // Ordenar alfabéticamente
+              });
+            }
+          }
+        }
+      }
+
+      addLog(`\n📈 Resumen: Encontrados ${found} chats con formato viejo`, 'info');
+      updateStats(found, 0, 0);
+
+      if (found === 0) {
+        addLog('✅ No hay chats para migrar', 'success');
+        showSuccess('Todos los chats ya están en el formato correcto.');
+        return;
+      }
+
+      // Migrar cada chat
+      for (const chat of oldFormatChats) {
+        const newChatId = chat.usernames.join('_');
+        addLog(`\n🔄 Migrando: ${chat.oldId} → ${newChatId}`, 'info');
+
+        try {
+          // Verificar si el chat nuevo ya existe
+          const newChatRef = doc(db, 'chats', newChatId);
+          const newChatSnap = await getDoc(newChatRef);
+
+          if (newChatSnap.exists()) {
+            addLog(`   ℹ️ El chat ${newChatId} ya existe, omitiendo...`, 'info');
+            continue;
+          }
+
+          // Crear chat nuevo con datos actualizados
+          const newChatData = {
+            participants: chat.usernames,
+            participantNames: chat.oldData.participantNames || {},
+            participantAvatars: chat.oldData.participantAvatars || {},
+            lastMessage: chat.oldData.lastMessage || '',
+            lastMessageTime: chat.oldData.lastMessageTime || null,
+            lastMessageSenderId: chat.oldData.lastMessageSenderId || chat.usernames[0],
+            unreadCount: {},
+            createdAt: chat.oldData.createdAt || serverTimestamp(),
+            migratedFrom: chat.oldId,
+            migratedAt: serverTimestamp()
+          };
+
+          // Inicializar unreadCount con usernames
+          chat.usernames.forEach(username => {
+            newChatData.unreadCount[username] = 0;
+          });
+
+          await setDoc(newChatRef, newChatData);
+          addLog(`   ✅ Chat creado: ${newChatId}`, 'success');
+
+          // Copiar mensajes
+          const oldMessagesRef = collection(db, 'chats', chat.oldId, 'messages');
+          const messagesQuery = query(oldMessagesRef, orderBy('timestamp', 'asc'));
+          const messagesSnapshot = await getDocs(messagesQuery);
+
+          addLog(`   📨 Copiando ${messagesSnapshot.size} mensajes...`, 'info');
+
+          for (const msgDoc of messagesSnapshot.docs) {
+            const msgData = msgDoc.data();
+            const newMessagesRef = doc(db, 'chats', newChatId, 'messages', msgDoc.id);
+            
+            // Asegurar que senderId sea username, no UID
+            let senderId = msgData.senderId;
+            if (looksLikeFirebaseUID(senderId)) {
+              let user = users[senderId];
+              
+              // Si no está en cache, buscar bajo demanda
+              if (!user || !user.username) {
+                const username = await getUsernameFromUID(senderId);
+                if (username && username !== senderId) {
+                  senderId = username;
+                  users[senderId] = { username, uid: senderId };
+                }
+              } else {
+                senderId = user.username;
+              }
+            }
+
+            const newMsgData = {
+              ...msgData,
+              senderId,
+              username: senderId
+            };
+
+            await setDoc(newMessagesRef, newMsgData);
+            totalMessages++;
+          }
+
+          addLog(`   ✅ ${messagesSnapshot.size} mensajes copiados`, 'success');
+          migrated++;
+          updateStats(found, migrated, totalMessages);
+
+        } catch (error) {
+          addLog(`   ❌ Error al migrar ${chat.oldId}: ${error.message}`, 'error');
+        }
+      }
+
+      addLog(`\n🎉 Migración completada!`, 'success');
+      addLog(`   Chats migrados: ${migrated}/${found}`, 'success');
+      addLog(`   Mensajes copiados: ${totalMessages}`, 'success');
+      
+      showSuccess(`Se migraron ${migrated} chats con ${totalMessages} mensajes. Los chats viejos se mantienen como respaldo.`);
+      updateStats(found, migrated, totalMessages);
+    }
+
+    window.startMigration = async function() {
+      const btn = document.getElementById('migrateBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Migrando...';
+      
+      document.getElementById('log').innerHTML = '';
+      document.getElementById('successMsg').style.display = 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+
+      try {
+        await migrateChats();
+      } catch (error) {
+        addLog(`❌ Error crítico: ${error.message}`, 'error');
+        showError(error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Migrar de Nuevo';
+      }
+    };
+  </script>
+</body>
+</html>

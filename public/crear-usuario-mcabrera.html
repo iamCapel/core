@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crear Usuario mcabrera - MOPC</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: #16213e; border-radius: 16px; padding: 36px; max-width: 520px; width: 100%; box-shadow: 0 8px 32px #0008; }
+    h1 { margin: 0 0 8px; color: #FF7A00; font-size: 22px; }
+    p { color: #aaa; font-size: 14px; margin: 0 0 24px; }
+    label { display: block; margin-bottom: 6px; font-size: 13px; color: #ccc; }
+    input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #333; background: #0f3460; color: #fff; font-size: 14px; margin-bottom: 14px; }
+    button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #FF7A00; color: #fff; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 4px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { margin-top: 20px; padding: 14px; border-radius: 8px; font-size: 14px; display: none; }
+    .ok  { background: #1a4d2e; color: #6fcf97; border: 1px solid #27ae60; }
+    .err { background: #4d1a1a; color: #eb5757; border: 1px solid #c0392b; }
+    code { background: #0d2137; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>Crear / Recuperar Usuario</h1>
+  <p>Crea el usuario en Firebase Authentication + Firestore.<br>
+     Si ya existe en Auth pero no en Firestore, igual lo registra.</p>
+
+  <label>Nombre completo</label>
+  <input id="name" value="Miguel Cabrera" />
+
+  <label>Usuario (username)</label>
+  <input id="username" value="mcabrera" />
+
+  <label>Email (debe ser único en Firebase Auth)</label>
+  <input id="email" value="mcabrera@mopc.gob.do" />
+
+  <label>Contraseña</label>
+  <input id="password" type="password" value="02260516" />
+
+  <label>Rol</label>
+  <input id="role" value="Administrador" />
+
+  <label>Departamento</label>
+  <input id="department" value="Dirección de Coordinación Regional" />
+
+  <button id="btn" onclick="crearUsuario()">Crear usuario en Firebase</button>
+
+  <div class="msg ok"  id="ok"></div>
+  <div class="msg err" id="err"></div>
+</div>
+
+<script type="module">
+  import { initializeApp }                       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword }
+                                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBULoCr78BEnY8ovO1AdXvrn1JYfDqud6c",
+    authDomain:        "coredatabase-206ac.firebaseapp.com",
+    projectId:         "coredatabase-206ac",
+    storageBucket:     "coredatabase-206ac.firebasestorage.app",
+    messagingSenderId: "204486232524",
+    appId:             "1:204486232524:web:d705e374692a8290fb3569"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  window.crearUsuario = async function () {
+    const btn  = document.getElementById('btn');
+    const ok   = document.getElementById('ok');
+    const err  = document.getElementById('err');
+
+    ok.style.display = err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Procesando…';
+
+    const name       = document.getElementById('name').value.trim();
+    const username   = document.getElementById('username').value.trim();
+    const email      = document.getElementById('email').value.trim();
+    const password   = document.getElementById('password').value;
+    const role       = document.getElementById('role').value.trim();
+    const department = document.getElementById('department').value.trim();
+
+    if (!name || !username || !email || !password) {
+      mostrarError('Todos los campos son obligatorios.');
+      btn.disabled = false; btn.textContent = 'Crear usuario en Firebase';
+      return;
+    }
+
+    try {
+      let uid;
+
+      // 1. Intentar crear en Firebase Auth
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        uid = cred.user.uid;
+        console.log('✅ Auth creado con UID:', uid);
+      } catch (authError) {
+        if (authError.code === 'auth/email-already-in-use') {
+          // Ya existe en Auth → hacer login para obtener el UID
+          console.warn('ℹ️ Email ya existe en Auth, recuperando UID…');
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          uid = cred.user.uid;
+          console.log('✅ UID recuperado:', uid);
+        } else {
+          throw authError;
+        }
+      }
+
+      // 2. Guardar / sobreescribir documento en Firestore
+      const now = new Date().toISOString();
+      const userData = {
+        id:         uid,
+        username,
+        email,
+        name,
+        phone:      '',
+        cedula:     '',
+        role,
+        department,
+        isActive:   true,
+        isVerified: true,
+        lastSeen:   now,
+        joinDate:   now,
+        avatar:     '',
+        currentLocation: {
+          province:     'Distrito Nacional',
+          municipality: 'Santo Domingo',
+          coordinates:  { lat: 18.4861, lng: -69.9312 },
+          lastUpdated:  now
+        },
+        reportsCount:        0,
+        pendingReportsCount: 0,
+        notes:   [],
+        createdAt: now,
+        updatedAt: now,
+        version:   1
+      };
+
+      await setDoc(doc(db, 'users', uid), userData);
+      console.log('✅ Firestore guardado');
+
+      ok.innerHTML = `
+        ✅ <strong>Usuario creado exitosamente</strong><br><br>
+        UID: <code>${uid}</code><br>
+        Username: <code>${username}</code><br>
+        Email: <code>${email}</code><br><br>
+        Ya puedes iniciar sesión con <code>${username}</code> / tu contraseña.<br>
+        <strong>Puedes cerrar esta página.</strong>
+      `;
+      ok.style.display = 'block';
+
+    } catch (e) {
+      mostrarError(e.message || String(e));
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Crear usuario en Firebase';
+  };
+
+  function mostrarError(msg) {
+    const err = document.getElementById('err');
+    err.textContent = '❌ ' + msg;
+    err.style.display = 'block';
+  }
+</script>
+</body>
+</html>

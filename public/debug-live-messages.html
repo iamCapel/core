@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitor de Mensajes en Vivo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    .status {
+      display: inline-block;
+      padding: 8px 20px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 20px;
+      font-size: 14px;
+    }
+    .status.connected { background: #10b981; }
+    .controls {
+      padding: 20px;
+      background: #f7fafc;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .controls button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+    .btn-primary:hover { background: #5568d3; }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-danger:hover { background: #dc2626; }
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-height: calc(100vh - 300px);
+      overflow-y: auto;
+    }
+    .section {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .section h2 {
+      color: #1e293b;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+    .message-item {
+      background: white;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin-bottom: 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .chat-id {
+      font-family: 'Courier New', monospace;
+      background: #fef3c7;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #92400e;
+      font-weight: bold;
+    }
+    .timestamp {
+      color: #64748b;
+      font-size: 12px;
+    }
+    .sender {
+      color: #667eea;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .text {
+      color: #334155;
+      word-break: break-word;
+    }
+    .metadata {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .metadata-row {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .metadata-item {
+      display: flex;
+      gap: 4px;
+    }
+    .metadata-label {
+      font-weight: 600;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .stat-label {
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .participant-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #dbeafe;
+      color: #1e40af;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-right: 4px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #94a3b8;
+    }
+    .empty-state svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔴 Monitor de Mensajes en Vivo</h1>
+      <div class="status" id="status">Desconectado</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-primary" onclick="startMonitoring()">Iniciar Monitoreo</button>
+      <button class="btn-danger" onclick="stopMonitoring()">Detener</button>
+      <button class="btn-primary" onclick="clearMessages()">Limpiar</button>
+      <button class="btn-primary" onclick="exportData()">Exportar JSON</button>
+    </div>
+
+    <div style="padding: 20px;">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="totalMessages">0</div>
+          <div class="stat-label">Total Mensajes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalChats">0</div>
+          <div class="stat-label">Chats Activos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="messagesPerMinute">0</div>
+          <div class="stat-label">Mensajes/min</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="lastUpdate">--:--</div>
+          <div class="stat-label">Última Actualización</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="section">
+        <h2>📨 Mensajes Recientes (Últimos 20)</h2>
+        <div id="messagesList"></div>
+      </div>
+
+      <div class="section">
+        <h2>💬 Chats Monitoreados</h2>
+        <div id="chatsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { 
+      getFirestore, 
+      collection, 
+      collectionGroup,
+      query, 
+      onSnapshot,
+      orderBy,
+      limit,
+      where,
+      getDocs
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBLJjrqL23tAP6z8EeRgKAWLYrCElFaI58",
+      authDomain: "mopcapp.firebaseapp.com",
+      projectId: "mopcapp",
+      storageBucket: "mopcapp.firebasestorage.app",
+      messagingSenderId: "807259566020",
+      appId: "1:807259566020:web:b85ff7bd7ca643adf238c0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let unsubscribers = [];
+    let allMessages = [];
+    let chatData = new Map();
+    let startTime = Date.now();
+
+    window.startMonitoring = function() {
+      stopMonitoring();
+      
+      document.getElementById('status').textContent = '🟢 Conectado';
+      document.getElementById('status').classList.add('connected');
+      
+      startTime = Date.now();
+      allMessages = [];
+      chatData.clear();
+      
+      // Monitorear TODOS los mensajes usando collectionGroup
+      const messagesQuery = query(
+        collectionGroup(db, 'messages'),
+        orderBy('timestamp', 'desc'),
+        limit(50)
+      );
+      
+      const unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === 'added') {
+            const msg = change.doc.data();
+            const chatId = change.doc.ref.parent.parent.id;
+            
+            const messageData = {
+              id: change.doc.id,
+              chatId: chatId,
+              senderId: msg.senderId || msg.senderUid || '?',
+              senderName: msg.senderName || msg.sender || msg.username || '?',
+              text: msg.text || msg.message || msg.content || '',
+              timestamp: msg.timestamp || msg.serverTimestamp || msg.createdAt,
+              type: msg.type || 'text',
+              imageUrl: msg.imageUrl,
+              read: msg.read,
+              rawData: msg
+            };
+            
+            allMessages.unshift(messageData);
+            if (allMessages.length > 100) allMessages.pop();
+            
+            updateUI();
+          }
+        });
+      });
+      
+      unsubscribers.push(unsubMessages);
+      
+      // Monitorear chats
+      const chatsQuery = query(collection(db, 'chats'));
+      const unsubChats = onSnapshot(chatsQuery, (snapshot) => {
+        snapshot.forEach(doc => {
+          chatData.set(doc.id, {
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+        updateUI();
+      });
+      
+      unsubscribers.push(unsubChats);
+    };
+
+    window.stopMonitoring = function() {
+      unsubscribers.forEach(unsub => unsub());
+      unsubscribers = [];
+      document.getElementById('status').textContent = 'Desconectado';
+      document.getElementById('status').classList.remove('connected');
+    };
+
+    window.clearMessages = function() {
+      allMessages = [];
+      updateUI();
+    };
+
+    window.exportData = function() {
+      const data = {
+        messages: allMessages,
+        chats: Array.from(chatData.values()),
+        exportDate: new Date().toISOString()
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chat-diagnostic-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    function formatTimestamp(ts) {
+      if (!ts) return 'Sin timestamp';
+      try {
+        let date;
+        if (typeof ts.toDate === 'function') {
+          date = ts.toDate();
+        } else if (typeof ts === 'number') {
+          date = new Date(ts);
+        } else {
+          date = new Date(ts);
+        }
+        return date.toLocaleString('es-ES', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          second: '2-digit',
+          day: '2-digit',
+          month: '2-digit'
+        });
+      } catch {
+        return 'Timestamp inválido';
+      }
+    }
+
+    function updateUI() {
+      // Estadísticas
+      document.getElementById('totalMessages').textContent = allMessages.length;
+      document.getElementById('totalChats').textContent = chatData.size;
+      
+      const elapsed = (Date.now() - startTime) / 60000; // minutos
+      const rate = elapsed > 0 ? (allMessages.length / elapsed).toFixed(1) : 0;
+      document.getElementById('messagesPerMinute').textContent = rate;
+      
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-ES');
+      
+      // Lista de mensajes
+      const messagesList = document.getElementById('messagesList');
+      if (allMessages.length === 0) {
+        messagesList.innerHTML = `
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            <p>Esperando mensajes...</p>
+          </div>
+        `;
+      } else {
+        messagesList.innerHTML = allMessages.slice(0, 20).map(msg => `
+          <div class="message-item">
+            <div class="message-header">
+              <span class="chat-id">${msg.chatId}</span>
+              <span class="timestamp">${formatTimestamp(msg.timestamp)}</span>
+            </div>
+            <div class="sender">📤 ${msg.senderName} (${msg.senderId})</div>
+            <div class="text">${msg.text || '📷 Imagen'}</div>
+            <div class="metadata">
+              <div class="metadata-row">
+                <div class="metadata-item">
+                  <span class="metadata-label">Tipo:</span>
+                  <span>${msg.type}</span>
+                </div>
+                <div class="metadata-item">
+                  <span class="metadata-label">Leído:</span>
+                  <span>${msg.read ? '✓' : '✗'}</span>
+                </div>
+                ${msg.imageUrl ? `
+                  <div class="metadata-item">
+                    <span class="metadata-label">Imagen:</span>
+                    <span>✓</span>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+      
+      // Lista de chats
+      const chatsList = document.getElementById('chatsList');
+      if (chatData.size === 0) {
+        chatsList.innerHTML = `
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path>
+            </svg>
+            <p>No hay chats</p>
+          </div>
+        `;
+      } else {
+        chatsList.innerHTML = Array.from(chatData.values()).map(chat => {
+          const participants = chat.participants || [];
+          const lastMsg = chat.lastMessage || 'Sin mensajes';
+          const unreadCount = chat.unreadCount || {};
+          
+          return `
+            <div class="message-item">
+              <div class="message-header">
+                <span class="chat-id">${chat.id}</span>
+                <span class="timestamp">${formatTimestamp(chat.lastMessageTime)}</span>
+              </div>
+              <div style="margin-bottom: 8px;">
+                ${participants.map(p => `<span class="participant-badge">${p}</span>`).join('')}
+              </div>
+              <div class="text" style="font-size: 13px; color: #64748b;">
+                💬 ${lastMsg.substring(0, 50)}${lastMsg.length > 50 ? '...' : ''}
+              </div>
+              <div class="metadata">
+                <div class="metadata-row">
+                  <div class="metadata-item">
+                    <span class="metadata-label">Último envío:</span>
+                    <span>${chat.lastMessageSenderId || '?'}</span>
+                  </div>
+                  ${Object.keys(unreadCount).length > 0 ? `
+                    <div class="metadata-item">
+                      <span class="metadata-label">No leídos:</span>
+                      <span>${JSON.stringify(unreadCount)}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Auto-start
+    window.onload = () => {
+      startMonitoring();
+    };
+  </script>
+</body>
+</html>

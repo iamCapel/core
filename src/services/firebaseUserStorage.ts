@@ -162,7 +162,9 @@ export async function getUserById(userId: string) {
 export async function getAllUsers() {
   try {
     const snapshot = await getDocs(collection(db, USERS_COLLECTION));
-    return snapshot.docs.map(doc => doc.data() as UserData);
+    // Garantizar que `id` siempre sea el document ID de Firestore (el UID),
+    // incluso si no fue almacenado como campo dentro del documento.
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as UserData);
   } catch (error) {
     console.error("Error obteniendo usuarios:", error);
     return [];

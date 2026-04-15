@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inspeccionar Chats</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    .chat {
+      background: #252526;
+      padding: 15px;
+      margin: 10px 0;
+      border-left: 3px solid #007acc;
+      border-radius: 5px;
+    }
+    h2 { color: #4ec9b0; }
+    .key { color: #9cdcfe; }
+    .value { color: #ce9178; }
+    button {
+      background: #007acc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="loadChats()">🔍 Inspeccionar Chats</button>
+  <div id="results"></div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getFirestore, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const app = initializeApp({
+      apiKey: "AIzaSyAp3Z67xm1zBkiiFQqyxVpDj5TQZjTN8Ug",
+      authDomain: "coredatabase-206ac.firebaseapp.com",
+      projectId: "coredatabase-206ac",
+      storageBucket: "coredatabase-206ac.firebasestorage.app",
+      messagingSenderId: "728262620356",
+      appId: "1:728262620356:web:9bed8c00797fe41bbc4b8b"
+    });
+    const db = getFirestore(app);
+
+    window.loadChats = async function() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<p>Cargando...</p>';
+      
+      const chatsRef = collection(db, 'chats');
+      const snapshot = await getDocs(chatsRef);
+      
+      let html = `<h2>Total Chats: ${snapshot.size}</h2>`;
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const chatId = doc.id;
+        
+        // Filtrar solo chats con formato viejo (que contengan UIDs)
+        const hasUID = chatId.split('_').some(part => part.length > 20);
+        
+        if (hasUID) {
+          html += `<div class="chat">
+            <h3>Chat ID: <span class="value">${chatId}</span></h3>
+            <p><span class="key">participants:</span> <span class="value">${JSON.stringify(data.participants)}</span></p>
+            <p><span class="key">participantNames:</span> <span class="value">${JSON.stringify(data.participantNames || {})}</span></p>
+            <p><span class="key">lastMessageSenderId:</span> <span class="value">${data.lastMessageSenderId || 'N/A'}</span></p>
+          </div>`;
+        }
+      });
+      
+      resultsDiv.innerHTML = html;
+    };
+  </script>
+</body>
+</html>

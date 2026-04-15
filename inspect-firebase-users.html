@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspeccionar Usuarios Firebase</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #667eea;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+    }
+    tr:hover {
+      background: #f5f5f5;
+    }
+    .code {
+      font-family: 'Courier New', monospace;
+      background: #f8f9fa;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    .uid {
+      color: #dc3545;
+      font-weight: bold;
+    }
+    .username {
+      color: #28a745;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Inspección de Usuarios Firebase</h1>
+    
+    <button id="loadBtn" onclick="loadUsers()">
+      📥 Cargar Usuarios
+    </button>
+
+    <div id="results"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs
+    } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAp3Z67xm1zBkiiFQqyxVpDj5TQZjTN8Ug",
+      authDomain: "coredatabase-206ac.firebaseapp.com",
+      databaseURL: "https://coredatabase-206ac-default-rtdb.firebaseio.com",
+      projectId: "coredatabase-206ac",
+      storageBucket: "coredatabase-206ac.firebasestorage.app",
+      messagingSenderId: "728262620356",
+      appId: "1:728262620356:web:9bed8c00797fe41bbc4b8b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.loadUsers = async function() {
+      const btn = document.getElementById('loadBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Cargando...';
+      
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      try {
+        const usersRef = collection(db, 'firebaseUserStorage');
+        const snapshot = await getDocs(usersRef);
+        
+        let html = `<h2>Total usuarios: ${snapshot.size}</h2>`;
+        html += `<table>
+          <thead>
+            <tr>
+              <th>Doc ID</th>
+              <th>Campo "id"</th>
+              <th>Username</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>¿Doc ID es UID?</th>
+            </tr>
+          </thead>
+          <tbody>`;
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const docId = doc.id;
+          const fieldId = data.id || 'N/A';
+          const username = data.username || 'N/A';
+          const name = data.name || 'N/A';
+          const role = data.role || 'N/A';
+          
+          // Verificar si el doc ID parece un UID de Firebase
+          const docIdLooksLikeUID = docId.length > 20 && /^[a-zA-Z0-9_-]+$/.test(docId);
+          
+          html += `<tr>
+            <td><span class="code ${docIdLooksLikeUID ? 'uid' : ''}">${docId}</span></td>
+            <td><span class="code">${fieldId}</span></td>
+            <td><span class="username">${username}</span></td>
+            <td>${name}</td>
+            <td>${role}</td>
+            <td>${docIdLooksLikeUID ? '✅ SÍ' : '❌ NO'}</td>
+          </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        
+        html += `<h3 style="margin-top: 30px;">Conclusión:</h3>`;
+        html += `<p>Si "Doc ID" y "Campo id" son DIFERENTES, entonces los documentos están indexados por USERNAME, no por UID.</p>`;
+        html += `<p>Si "Doc ID" es igual a "Campo id" Y ambos parecen UIDs, entonces los documentos están indexados por UID.</p>`;
+        
+        resultsDiv.innerHTML = html;
+        
+      } catch (error) {
+        resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔄 Recargar Usuarios';
+      }
+    };
+  </script>
+</body>
+</html>

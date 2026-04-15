@@ -24,6 +24,7 @@ type Field = { key: string; label: string; type: 'text' | 'number'; unit: string
 interface User {
   username: string;
   name: string;
+  uid?: string;
   profilePhoto?: string;
   fullName?: string;
   birthDate?: string;
@@ -684,7 +685,9 @@ const Dashboard: React.FC = () => {
   // Suscribirse a mensajes no leídos del chat (topbar)
   useEffect(() => {
     if (!user?.username) return;
-    const unsub = chatService.subscribeToTotalUnread(user.username, (total) => {
+    // Usar UID si está disponible (para leer unreadCount del APK), con username como fallback
+    const identifier = user.uid || user.username;
+    const unsub = chatService.subscribeToTotalUnread(identifier, (total) => {
       setChatUnreadCount(prev => {
         if (total > prev) {
           // Llegó un mensaje nuevo — disparar animación
@@ -695,7 +698,7 @@ const Dashboard: React.FC = () => {
       });
     });
     return () => unsub();
-  }, [user?.username]);
+  }, [user?.username, user?.uid]);
 
   // Actualizar contador al cargar y cada vez que cambie localStorage
   useEffect(() => {
@@ -895,6 +898,7 @@ const Dashboard: React.FC = () => {
         const newUser: User = {
           username: validatedUser.username,
           name: validatedUser.name,
+          uid: validatedUser.id,
           role: userRole
         };
         
@@ -933,6 +937,7 @@ const Dashboard: React.FC = () => {
         const newUser: User = {
           username: validatedUser.username,
           name: validatedUser.name,
+          uid: validatedUser.id,  // Agregar UID para compatibilidad con chat
           role: userRole
         };
         
