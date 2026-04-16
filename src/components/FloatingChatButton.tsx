@@ -41,17 +41,26 @@ const FloatingChatButton: React.FC = () => {
 
   // Solicitar permiso de notificaciones al montar y calentar AudioContext con primer gesto
   useEffect(() => {
+    console.log('[FloatingChatButton] 🎵 Inicializando sistema de audio');
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
     // Desbloquear AudioContext con el primer gesto del usuario
     const unlock = () => {
+      console.log('[FloatingChatButton] 🔓 Desbloqueando AudioContext con gesto del usuario');
       if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        console.log('[FloatingChatButton] Resumiendo AudioContext existente');
         audioCtxRef.current.resume();
       } else if (!audioCtxRef.current) {
+        console.log('[FloatingChatButton] Creando nuevo AudioContext');
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+        console.log('[FloatingChatButton] AudioContext creado, estado:', audioCtxRef.current.state);
+        if (audioCtxRef.current.state === 'suspended') {
+          console.log('[FloatingChatButton] Resumiendo AudioContext recién creado');
+          audioCtxRef.current.resume();
+        }
       }
+      console.log('[FloatingChatButton] ✅ AudioContext desbloqueado');
       document.removeEventListener('click', unlock);
       document.removeEventListener('touchend', unlock);
     };
@@ -64,32 +73,55 @@ const FloatingChatButton: React.FC = () => {
   }, []);
 
   const playNotificationSound = useCallback(() => {
+    console.log('[FloatingChatButton] 🔊 playNotificationSound() llamada');
     try {
       if (!audioCtxRef.current) {
+        console.log('[FloatingChatButton] Creando nuevo AudioContext...');
         audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
       const ctx = audioCtxRef.current;
+      console.log('[FloatingChatButton] AudioContext state:', ctx.state);
+      
       const play = () => {
-        const times = [0, 0.15];
-        times.forEach((startTime) => {
+        console.log('[FloatingChatButton] ▶️ Reproduciendo sonido...');
+        // Crear un sonido más agradable y distintivo (estilo "ding-dong")
+        const times = [
+          { start: 0, freq: 800, duration: 0.15 },      // Primera nota (más grave)
+          { start: 0.12, freq: 1000, duration: 0.18 }   // Segunda nota (más aguda)
+        ];
+        
+        times.forEach(({ start, freq, duration }) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.connect(gain);
           gain.connect(ctx.destination);
+          
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(880, ctx.currentTime + startTime);
-          gain.gain.setValueAtTime(0.3, ctx.currentTime + startTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + 0.12);
-          osc.start(ctx.currentTime + startTime);
-          osc.stop(ctx.currentTime + startTime + 0.12);
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+          
+          // Envelope más suave para un sonido más agradable
+          gain.gain.setValueAtTime(0, ctx.currentTime + start);
+          gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+          
+          osc.start(ctx.currentTime + start);
+          osc.stop(ctx.currentTime + start + duration);
         });
+        console.log('[FloatingChatButton] ✅ Sonido reproducido');
       };
+      
       if (ctx.state === 'suspended') {
-        ctx.resume().then(play);
+        console.log('[FloatingChatButton] Resumiendo AudioContext suspendido...');
+        ctx.resume().then(() => {
+          console.log('[FloatingChatButton] AudioContext resumido');
+          play();
+        });
       } else {
         play();
       }
-    } catch { /* ignorar si el navegador bloquea */ }
+    } catch (error) {
+      console.error('[FloatingChatButton] ❌ Error reproduciendo sonido:', error);
+    }
   }, []);
 
   const showSystemNotification = useCallback((sender: string, text: string) => {
@@ -156,8 +188,10 @@ const FloatingChatButton: React.FC = () => {
   // Detectar mensajes nuevos y mostrar toast
   useEffect(() => {
     if (!currentUsername) return;
+    console.log('[FloatingChatButton] 🔔 Iniciando suscripción a chats para:', currentUsername);
     initialLoadDoneRef.current = false;
     const unsub = chatService.subscribeToUserChats(currentUsername, (chats: Chat[]) => {
+      console.log('[FloatingChatButton] 📨 Callback de chats ejecutado. Total chats:', chats.length);
       const uid = currentUidRef.current;
 
       // Helper: leer el contador de no leídos de un chat, considerando UID y username
@@ -191,16 +225,27 @@ const FloatingChatButton: React.FC = () => {
 
       if (!initialLoadDoneRef.current) {
         // Primera carga: solo guardar los conteos actuales como base, sin mostrar nada
+        console.log('[FloatingChatButton] 📊 Primera carga - guardando base de mensajes no leídos');
         chats.forEach((chat) => {
-          prevUnreadRef.current[chat.id] = getUnread(chat);
+          const unread = getUnread(chat);
+          prevUnreadRef.current[chat.id] = unread;
+          console.log('[FloatingChatButton] Chat inicial:', chat.id, 'unread:', unread);
         });
         initialLoadDoneRef.current = true;
+        console.log('[FloatingChatButton] ✅ Inicialización completa');
         return;
       }
 
       chats.forEach((chat) => {
         const currentUnread = getUnread(chat);
         const prevUnread = prevUnreadRef.current[chat.id] ?? 0;
+
+        console.log('[FloatingChatButton] Chat check:', {
+          chatId: chat.id,
+          currentUnread,
+          prevUnread,
+          lastMessage: chat.lastMessage
+        });
 
         if (currentUnread > prevUnread) {
           // Identificar al remitente (puede ser UID o username)
@@ -210,8 +255,20 @@ const FloatingChatButton: React.FC = () => {
             return true;
           }) || '';
 
+          console.log('[FloatingChatButton] 🔔 Nuevo mensaje detectado!', {
+            sender: senderRaw,
+            showChatListOpen: showChatListRef.current,
+            activeChatUser: activeChatUserRef.current,
+            lastMessage: chat.lastMessage
+          });
+
           const isChatOpen = showChatListRef.current && activeChatUserRef.current === senderRaw;
+          
+          console.log('[FloatingChatButton] isChatOpen:', isChatOpen);
+          
           if (!isChatOpen) {
+            console.log('[FloatingChatButton] 🚀 Abriendo chat automáticamente...');
+            
             const toastId = ++toastIdRef.current;
             // Mostrar toast con ID raw primero, luego reemplazar con nombre real
             const newToast: MsgToast = {
@@ -222,7 +279,16 @@ const FloatingChatButton: React.FC = () => {
             };
             setToasts(prev => [...prev.slice(-3), newToast]);
             setHidden(false);
+            
+            // 🔊 Reproducir sonido de notificación
+            console.log('[FloatingChatButton] 🔊 Reproduciendo sonido...');
             playNotificationSound();
+            
+            // 🚀 Abrir automáticamente el chat con el remitente
+            console.log('[FloatingChatButton] 💬 Abriendo modal de chat...');
+            setActiveChatUser(senderRaw);
+            setShowChatList(true);
+            
             // Resolver nombre real de forma asincrónica y actualizar el toast
             resolveSenderName(senderRaw).then(resolvedName => {
               if (resolvedName !== senderRaw) {
@@ -235,6 +301,8 @@ const FloatingChatButton: React.FC = () => {
             setTimeout(() => {
               setToasts(prev => prev.filter(t => t.id !== toastId));
             }, 5000);
+          } else {
+            console.log('[FloatingChatButton] ℹ️ Chat ya está abierto con este usuario');
           }
         }
 

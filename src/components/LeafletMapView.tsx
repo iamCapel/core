@@ -8,6 +8,7 @@ import userLocationService from '../services/userLocationService';
 import DetailedReportView from './DetailedReportView';
 import { UserRole } from '../types/userRoles';
 import ClickableUsername from './ClickableUsername';
+import { municipioCoordinates } from '../services/municipioCoordinates';
 
 // Configurar iconos de Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -73,6 +74,7 @@ interface ReporteConVehiculos {
   fechaFin: string;
   latitud: number;
   longitud: number;
+  creadoPor?: string;
   vehiculos: Array<{
     tipo: string;
     modelo: string;
@@ -128,6 +130,11 @@ const normalizeLocationKey = (value: string): string => {
     .replace(/\s+/g, ' ');
 };
 
+const removeArticles = (text: string): string => {
+  // Eliminar artículos al inicio (el, la, los, las)
+  return text.replace(/^(el|la|los|las)\s+/i, '');
+};
+
 const findLocationCoordinate = (value: string | undefined): { lat: number; lng: number } | null => {
   if (!value || typeof value !== 'string') return null;
 
@@ -136,6 +143,15 @@ const findLocationCoordinate = (value: string | undefined): { lat: number; lng: 
   // Búsqueda exacta directo (incluye acentos, si existe singular)
   for (const key of Object.keys(municipioCoordinates)) {
     if (normalizeLocationKey(key) === normalized) {
+      return municipioCoordinates[key];
+    }
+  }
+
+  // Búsqueda sin artículos (ej. "El Comendador" = "Comendador")
+  const normalizedWithoutArticles = removeArticles(normalized);
+  for (const key of Object.keys(municipioCoordinates)) {
+    const keyWithoutArticles = removeArticles(normalizeLocationKey(key));
+    if (keyWithoutArticles === normalizedWithoutArticles) {
       return municipioCoordinates[key];
     }
   }
@@ -243,158 +259,6 @@ const toDate = (value: any): Date | null => {
 
 const hasOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => {
   return startA.getTime() <= endB.getTime() && startB.getTime() <= endA.getTime();
-};
-
-// Coordenadas de República Dominicana por municipios principales
-const municipioCoordinates: Record<string, { lat: number; lng: number }> = {
-  // Distrito Nacional
-  'Santo Domingo': { lat: 18.4861, lng: -69.9312 },
-  'Distrito Nacional': { lat: 18.4861, lng: -69.9312 },
-  
-  // Santiago
-  'Santiago': { lat: 19.4517, lng: -70.6970 },
-  'Santiago de los Caballeros': { lat: 19.4517, lng: -70.6970 },
-  'Tamboril': { lat: 19.4833, lng: -70.6167 },
-  'Villa González': { lat: 19.5333, lng: -70.7833 },
-  'Licey al Medio': { lat: 19.4167, lng: -70.5833 },
-  
-  // La Vega
-  'La Vega': { lat: 19.2167, lng: -70.5167 },
-  'Constanza': { lat: 18.9167, lng: -70.7500 },
-  'Jarabacoa': { lat: 19.1167, lng: -70.6333 },
-  
-  // Puerto Plata
-  'Puerto Plata': { lat: 19.7833, lng: -70.6833 },
-  'Altamira': { lat: 19.6833, lng: -70.8667 },
-  'Luperón': { lat: 19.8833, lng: -70.9500 },
-  
-  // San Cristóbal
-  'San Cristóbal': { lat: 18.4167, lng: -70.1000 },
-  'Bajos de Haina': { lat: 18.4167, lng: -70.0333 },
-  'Villa Altagracia': { lat: 18.6833, lng: -70.1667 },
-  
-  // La Romana
-  'La Romana': { lat: 18.4270, lng: -68.9728 },
-  'Villa Hermosa': { lat: 18.4833, lng: -69.0167 },
-  'Guaymate': { lat: 18.3833, lng: -68.9167 },
-  
-  // San Pedro de Macorís
-  'San Pedro de Macorís': { lat: 18.4539, lng: -69.3078 },
-  'Los Llanos': { lat: 18.4833, lng: -69.2833 },
-  'Ramón Santana': { lat: 18.4167, lng: -69.3667 },
-  
-  // Barahona
-  'Barahona': { lat: 18.2086, lng: -71.1010 },
-  'Cabral': { lat: 18.2667, lng: -71.2167 },
-  'Enriquillo': { lat: 17.9333, lng: -71.2667 },
-  
-  // Azua
-  'Azua': { lat: 18.4531, lng: -70.7347 },
-  'Padre Las Casas': { lat: 18.7333, lng: -71.2000 },
-  'Sabana Yegua': { lat: 18.6167, lng: -70.9333 },
-  
-  // Peravia
-  'Baní': { lat: 18.2794, lng: -70.3314 },
-  'Nizao': { lat: 18.2333, lng: -70.4333 },
-  'Matanzas': { lat: 18.3000, lng: -70.2833 },
-  
-  // Monte Cristi
-  'Monte Cristi': { lat: 19.8419, lng: -71.6454 },
-  'Castañuelas': { lat: 19.6833, lng: -71.3333 },
-  'Guayubín': { lat: 19.6167, lng: -71.3333 },
-  
-  // Valverde
-  'Mao': { lat: 19.5531, lng: -71.0781 },
-  'Esperanza': { lat: 19.6333, lng: -70.9833 },
-  'Laguna Salada': { lat: 19.6833, lng: -71.1333 },
-  
-  // Dajabón
-  'Dajabón': { lat: 19.5486, lng: -71.7083 },
-  'Loma de Cabrera': { lat: 19.4333, lng: -71.5833 },
-  'Partido': { lat: 19.5167, lng: -71.6833 },
-  
-  // Santiago Rodríguez
-  'San Ignacio de Sabaneta': { lat: 19.3833, lng: -71.3500 },
-  'Villa Los Almácigos': { lat: 19.4167, lng: -71.2833 },
-  'Monción': { lat: 19.4667, lng: -71.1667 },
-  
-  // Elías Piña
-  'Comendador': { lat: 18.8833, lng: -71.7000 },
-  'Bánica': { lat: 18.9667, lng: -71.3500 },
-  'Pedro Santana': { lat: 18.9333, lng: -71.4667 },
-  
-  // San Juan
-  'San Juan de la Maguana': { lat: 18.8061, lng: -71.2297 },
-  'Las Matas de Farfán': { lat: 18.8833, lng: -71.5167 },
-  'Juan de Herrera': { lat: 18.7667, lng: -71.1833 },
-  
-  // Independencia
-  'Jimaní': { lat: 18.5028, lng: -71.8597 },
-  'Duvergé': { lat: 18.3667, lng: -71.5167 },
-  'Postrer Río': { lat: 18.5667, lng: -71.7833 },
-  
-  // Baoruco
-  'Neiba': { lat: 18.4822, lng: -71.4186 },
-  'Galván': { lat: 18.5167, lng: -71.3333 },
-  'Tamayo': { lat: 18.2833, lng: -71.1000 },
-  
-  // Pedernales
-  'Pedernales': { lat: 18.0167, lng: -71.7333 },
-  'Oviedo': { lat: 17.8000, lng: -71.4167 },
-  
-  // Espaillat
-  'Moca': { lat: 19.3944, lng: -70.5256 },
-  'San Francisco de Macorís': { lat: 19.3011, lng: -70.2525 },
-  'Cayetano Germosén': { lat: 19.2333, lng: -70.3667 },
-  
-  // Duarte
-  'Villa Francisca': { lat: 19.2833, lng: -70.2167 },
-  'Arenoso': { lat: 19.1833, lng: -70.1833 },
-  'Castillo': { lat: 19.2167, lng: -70.0833 },
-  
-  // Salcedo
-  'Salcedo': { lat: 19.3775, lng: -70.4172 },
-  'Tenares': { lat: 19.4167, lng: -70.3333 },
-  'Villa Tapia': { lat: 19.3333, lng: -70.3667 },
-  
-  // Sánchez Ramírez
-  'Cotuí': { lat: 19.0531, lng: -70.1492 },
-  'Cevicos': { lat: 19.0000, lng: -70.0167 },
-  'Fantino': { lat: 19.1167, lng: -70.3000 },
-  
-  // Monseñor Nouel
-  'Bonao': { lat: 18.9369, lng: -70.4089 },
-  'Maimón': { lat: 18.9167, lng: -70.3667 },
-  'Piedra Blanca': { lat: 18.8833, lng: -70.3167 },
-  
-  // Monte Plata
-  'Monte Plata': { lat: 18.8072, lng: -69.7844 },
-  'Sabana Grande de Boyá': { lat: 18.9500, lng: -69.7833 },
-  'Peralvillo': { lat: 18.6667, lng: -69.7167 },
-  
-  // Hato Mayor
-  'Hato Mayor del Rey': { lat: 18.7667, lng: -69.2667 },
-  'Sabana de la Mar': { lat: 19.0500, lng: -69.4167 },
-  'El Valle': { lat: 18.7833, lng: -69.1833 },
-  
-  // El Seibo
-  'El Seibo': { lat: 18.7644, lng: -69.0386 },
-  'Miches': { lat: 18.9833, lng: -69.0500 },
-  
-  // María Trinidad Sánchez
-  'Nagua': { lat: 19.3831, lng: -69.8478 },
-  'Cabrera': { lat: 19.6333, lng: -69.9167 },
-  'El Factor': { lat: 19.4167, lng: -69.9000 },
-  
-  // Samaná
-  'Samaná': { lat: 19.2044, lng: -69.3364 },
-  'Las Terrenas': { lat: 19.3167, lng: -69.5333 },
-  'Sánchez': { lat: 19.2333, lng: -69.6000 },
-  
-  // San José de Ocoa
-  'San José de Ocoa': { lat: 18.5469, lng: -70.5000 },
-  'Sabana Larga': { lat: 18.6167, lng: -70.4833 },
-  'Rancho Arriba': { lat: 18.6833, lng: -70.4167 }
 };
 
 // Colores por tipo de intervención
@@ -552,6 +416,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             fechaFin: fechaFinReporte,
             latitud: coords.lat,
             longitud: coords.lng,
+            creadoPor: report.creadoPor || report.usuarioId || 'sistema',
             vehiculos: vehiculosValidos.map((v: any) => ({
               tipo: v.tipo || 'Sin tipo',
               modelo: v.modelo || 'Sin modelo',
@@ -663,7 +528,51 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           }
         });
 
-        setReportesConVehiculos(reportesVehiculos);
+        // Agrupar reportes que están en la misma ubicación (mismo lat/lng)
+        const reportesAgrupados: Record<string, ReporteConVehiculos[]> = {};
+        reportesVehiculos.forEach(reporte => {
+          const key = `${reporte.latitud.toFixed(4)}_${reporte.longitud.toFixed(4)}`;
+          if (!reportesAgrupados[key]) {
+            reportesAgrupados[key] = [];
+          }
+          reportesAgrupados[key].push(reporte);
+        });
+
+        // Crear reportes consolidados cuando hay múltiples en la misma ubicación
+        const reportesFinales: ReporteConVehiculos[] = [];
+        Object.values(reportesAgrupados).forEach(grupo => {
+          if (grupo.length === 1) {
+            // Solo un reporte en esta ubicación, mantenerlo como está
+            reportesFinales.push(grupo[0]);
+          } else {
+            // Múltiples reportes en la misma ubicación, consolidarlos
+            const todosVehiculos = grupo.flatMap(r => r.vehiculos);
+            const fechasInicio = grupo.map(r => r.fechaInicio).filter(f => f);
+            const fechasFin = grupo.map(r => r.fechaFin).filter(f => f);
+            
+            // Obtener usuarios únicos
+            const usuariosUnicos = Array.from(new Set(grupo.map(r => r.creadoPor).filter(u => u)));
+            const creadoPorTexto = usuariosUnicos.length > 0 
+              ? usuariosUnicos.join(', ') 
+              : 'sistema';
+            
+            reportesFinales.push({
+              id: `grupo_${grupo[0].latitud}_${grupo[0].longitud}`,
+              numeroReporte: `${grupo.length} reportes`,
+              tipoIntervencion: grupo[0].tipoIntervencion,
+              municipio: grupo[0].municipio,
+              provincia: grupo[0].provincia,
+              fechaInicio: fechasInicio.sort()[0] || '',
+              fechaFin: fechasFin.sort().reverse()[0] || '',
+              latitud: grupo[0].latitud,
+              longitud: grupo[0].longitud,
+              creadoPor: creadoPorTexto,
+              vehiculos: todosVehiculos
+            });
+          }
+        });
+
+        setReportesConVehiculos(reportesFinales);
         setVehiculosMarkers(Object.values(vehiculosMap));
       }
       
@@ -974,11 +883,17 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   };
 
   // Icono de vehículo pesado (excavadora)
-  const createVehiculoIcon = () => {
+  const createVehiculoIcon = (cantidad?: number) => {
+    const badge = cantidad && cantidad > 1 ? `
+      <circle cx="32" cy="8" r="8" fill="#e74c3c" stroke="#fff" stroke-width="2"/>
+      <text x="32" y="11" font-size="10" font-weight="bold" text-anchor="middle" fill="white">${cantidad}</text>
+    ` : '';
+    
     const svgIcon = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
         <circle cx="20" cy="20" r="18" fill="#FF7700" stroke="#fff" stroke-width="2"/>
         <text x="20" y="26" font-size="20" text-anchor="middle" fill="white">🚜</text>
+        ${badge}
       </svg>
     `;
     return L.divIcon({
@@ -1471,11 +1386,16 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 if (!busquedaFicha.trim()) return true;
                 return reporte.vehiculos.some(v => v.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()));
               })
-              .map((reporte) => (
+              .map((reporte) => {
+                const esGrupo = reporte.numeroReporte.includes('reportes');
+                const cantidadReportes = esGrupo ? parseInt(reporte.numeroReporte) : 1;
+                const cantidadVehiculos = reporte.vehiculos.length;
+                
+                return (
               <Marker 
                 key={`grupo-${reporte.id}`} 
                 position={[reporte.latitud, reporte.longitud]}
-                icon={createVehiculoIcon()}
+                icon={createVehiculoIcon(cantidadVehiculos > 1 ? cantidadVehiculos : undefined)}
               >
                 <Popup closeOnClick={false}>
                   <div style={{ fontFamily: 'Arial, sans-serif', minWidth: '280px', maxWidth: '340px' }}>
@@ -1486,24 +1406,46 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                       margin: '-13px -20px 12px -20px',
                       borderRadius: '8px 8px 0 0'
                     }}>
-                      <p 
-                        onMouseDown={(e) => { e.preventDefault(); handleViewDetail(reporte.numeroReporte); }}
-                        style={{ 
-                          margin: '0 0 6px', 
-                          fontSize: '14px', 
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          textDecoration: 'underline'
-                        }}
-                      >
-                        📋 {reporte.numeroReporte}
-                      </p>
-                      <h3 style={{ margin: 0, fontSize: '15px' }}>
-                        ⛏️ {reporte.tipoIntervencion}
-                      </h3>
+                      {esGrupo ? (
+                        <>
+                          <p style={{ 
+                            margin: '0 0 6px', 
+                            fontSize: '14px', 
+                            fontWeight: '700',
+                          }}>
+                            📋 {cantidadReportes} Reportes Agrupados
+                          </p>
+                          <h3 style={{ margin: 0, fontSize: '15px' }}>
+                            ⛏️ {reporte.tipoIntervencion}
+                          </h3>
+                        </>
+                      ) : (
+                        <>
+                          <p 
+                            onMouseDown={(e) => { e.preventDefault(); handleViewDetail(reporte.numeroReporte); }}
+                            style={{ 
+                              margin: '0 0 6px', 
+                              fontSize: '14px', 
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              textDecoration: 'underline'
+                            }}
+                          >
+                            📋 {reporte.numeroReporte}
+                          </p>
+                          <h3 style={{ margin: 0, fontSize: '15px' }}>
+                            ⛏️ {reporte.tipoIntervencion}
+                          </h3>
+                        </>
+                      )}
                       <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.9 }}>
                         📍 {reporte.municipio}, {reporte.provincia}
                       </p>
+                      {reporte.creadoPor && (
+                        <p style={{ margin: '4px 0 0', fontSize: '11px', opacity: 0.85 }}>
+                          👤 {reporte.creadoPor}
+                        </p>
+                      )}
                     </div>
                     
                     <div style={{ fontSize: '13px' }}>
@@ -1535,7 +1477,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                         overflowY: 'auto'
                       }}>
                         <p style={{ margin: '0 0 8px', fontWeight: '600', color: '#FF7700', fontSize: '12px' }}>
-                          🚜 VEHÍCULOS EN ESTA OBRA ({reporte.vehiculos.length})
+                          🚜 VEHÍCULOS EN ESTA UBICACIÓN ({reporte.vehiculos.length})
                         </p>
                         {reporte.vehiculos.map((vehiculo, idx) => (
                           <div 
@@ -1577,7 +1519,8 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                         ))}
                       </div>
                       
-                      {/* Botón ver detalle */}
+                      {/* Botón ver detalle - solo si no es grupo */}
+                      {!esGrupo && (
                       <div style={{ marginTop: '12px', textAlign: 'center' }}>
                         <button
                           onMouseDown={(e) => { e.preventDefault(); handleViewDetail(reporte.numeroReporte); }}
@@ -1595,11 +1538,13 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                           Ver Reporte Completo →
                         </button>
                       </div>
+                      )}
                     </div>
                   </div>
                 </Popup>
               </Marker>
-            ))}
+                );
+              })}
 
             {mapViewMode === 'vehiculos' && vehiculosMode === 'solo' && vehiculosMarkers
               .filter(vehiculo => {

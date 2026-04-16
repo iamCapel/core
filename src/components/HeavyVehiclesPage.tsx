@@ -4,6 +4,7 @@ import { ModernSelect } from './ModernSelect';
 import { ModernInput } from './ModernInput';
 import { firebaseHeavyVehiclesStorage, HeavyVehicleRecord } from '../services/firebaseHeavyVehiclesStorage';
 import { getMunicipios, addUserMunicipio, addUserDistrito } from '../services/municipioService';
+import LocationPreviewMap from './LocationPreviewMap';
 import './HeavyVehiclesPage.css';
 
 interface HeavyVehiclesPageProps {
@@ -424,9 +425,11 @@ const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
         </div>
       </div>
 
-      <div className="heavy-vehicles-content">
-        <ModernFormContainer
-          title="Nuevo registro de vehículo pesado"
+      <div className="heavy-vehicles-content" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+        {/* Formulario */}
+        <div style={{ flex: '1 1 600px', minWidth: '0' }}>
+          <ModernFormContainer
+            title="Nuevo registro de vehículo pesado"
           subtitle="Complete los datos para almacenar en Firestore"
           icon="🚚"
         >
@@ -708,6 +711,54 @@ const HeavyVehiclesPage: React.FC<HeavyVehiclesPageProps> = ({ onClose }) => {
           )}
 
         </ModernFormContainer>
+        </div>
+
+        {/* Mapa de vista previa */}
+        <div style={{ 
+          flex: '0 0 400px', 
+          height: '600px', 
+          position: 'sticky', 
+          top: '20px',
+          minWidth: '350px'
+        }}>
+          <div style={{ 
+            background: 'rgba(255, 255, 255, 0.95)', 
+            borderRadius: '16px', 
+            padding: '16px',
+            height: '100%',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+          }}>
+            <div style={{ 
+              marginBottom: '12px', 
+              textAlign: 'center',
+              borderBottom: '2px solid #FF7A00',
+              paddingBottom: '8px'
+            }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: '16px', 
+                fontWeight: 700,
+                color: '#FF7A00'
+              }}>
+                🗺️ Vista Previa de Ubicación
+              </h3>
+              <p style={{ 
+                margin: '4px 0 0', 
+                fontSize: '12px', 
+                color: '#666'
+              }}>
+                Se actualizará al seleccionar la ubicación
+              </p>
+            </div>
+            <div style={{ height: 'calc(100% - 70px)' }}>
+              <LocationPreviewMap 
+                provincia={provincia}
+                municipio={municipio}
+                distrito={distrito}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

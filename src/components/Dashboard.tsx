@@ -549,6 +549,11 @@ const Dashboard: React.FC = () => {
   const [showChatList, setShowChatList] = useState(false);
   const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   
+  // Referencias para detección de mensajes nuevos
+  const prevUnreadChatsRef = useRef<{[chatId: string]: number}>({});
+  const initialChatLoadRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
   // Estado para DetailedReportView
   const [showDetailedReportView, setShowDetailedReportView] = useState(false);
   const [selectedReportNumber, setSelectedReportNumber] = useState<string | undefined>(undefined);
@@ -700,6 +705,13 @@ const Dashboard: React.FC = () => {
     return () => unsub();
   }, [user?.username, user?.uid]);
 
+  // Solicitar permisos de notificación al cargar
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   // Actualizar contador al cargar y cada vez que cambie localStorage
   useEffect(() => {
     updatePendingCount();
@@ -813,6 +825,156 @@ const Dashboard: React.FC = () => {
       userPresenceService.stopPresenceTracking();
     }
   }, [user]);
+
+  // 🔔 Detectar mensajes nuevos y abrir chat automáticamente
+  useEffect(() => {
+    if (!user?.username) return;
+    
+    console.log('[Dashboard] 🔔 Iniciando detección de mensajes nuevos para:', user.username);
+    initialChatLoadRef.current = false;
+    
+    // Función para reproducir sonido de notificación
+    const playNotificationSound = () => {
+      console.log('[Dashboard] 🔊 Reproduciendo sonido de notificación');
+      try {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const ctx = audioContextRef.current;
+        
+        const play = () => {
+          // Sonido "ding-dong" de dos tonos
+          const times = [
+            { start: 0, freq: 800, duration: 0.15 },
+            { start: 0.12, freq: 1000, duration: 0.18 }
+          ];
+          
+          times.forEach(({ start, freq, duration }) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+            
+            gain.gain.setValueAtTime(0, ctx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+            
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + duration);
+          });
+          console.log('[Dashboard] ✅ Sonido reproducido');
+        };
+        
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(play);
+        } else {
+          play();
+        }
+      } catch (error) {
+        console.error('[Dashboard] ❌ Error reproduciendo sonido:', error);
+      }
+    };
+    
+    // Desbloquear AudioContext con primer click
+    const unlockAudio = () => {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+    };
+    document.addEventListener('click', unlockAudio, { once: true });
+    
+    const unsubscribe = chatService.subscribeToUserChats(user.username, async (chats) => {
+      console.log('[Dashboard] 📨 Chats actualizados. Total:', chats.length);
+      
+      // Helper para obtener unread count
+      const getUnread = (chat: any): number => {
+        const byUsername = chat.unreadCount?.[user.username] ?? 0;
+        const byUid = user.uid ? (chat.unreadCount?.[user.uid] ?? 0) : 0;
+        return Math.max(byUsername, byUid);
+      };
+      
+      // Primera carga: solo guardar estado base
+      if (!initialChatLoadRef.current) {
+        console.log('[Dashboard] 📊 Primera carga - guardando estado base');
+        chats.forEach(chat => {
+          prevUnreadChatsRef.current[chat.id] = getUnread(chat);
+          console.log('[Dashboard]   Chat:', chat.id, 'unread:', getUnread(chat));
+        });
+        initialChatLoadRef.current = true;
+        return;
+      }
+      
+      // Detectar mensajes nuevos
+      for (const chat of chats) {
+        const currentUnread = getUnread(chat);
+        const prevUnread = prevUnreadChatsRef.current[chat.id] ?? 0;
+        
+        console.log('[Dashboard] 🔍 Verificando chat:', chat.id, { currentUnread, prevUnread });
+        
+        if (currentUnread > prevUnread) {
+          // ¡Mensaje nuevo detectado!
+          const sender = chat.participants.find((p: string) => 
+            p !== user.username && p !== user.uid
+          ) || '';
+          
+          console.log('[Dashboard] 🔔 ¡MENSAJE NUEVO!', {
+            sender,
+            chatId: chat.id,
+            lastMessage: chat.lastMessage,
+            isChatModalOpen: activeChatUser === sender
+          });
+          
+          // Solo abrir si no está ya abierto con ese usuario
+          if (activeChatUser !== sender) {
+            console.log('[Dashboard] 🚀 Abriendo ChatModal automáticamente...');
+            
+            // 🔊 Reproducir sonido
+            playNotificationSound();
+            
+            // 💬 Abrir ChatModal directamente (sin lista)
+            setActiveChatUser(sender);
+            // NO establecer setShowChatList(true) para que solo se abra el modal
+            
+            // Notificación del sistema (si hay permiso)
+            try {
+              // Resolver nombre del remitente
+              let senderName = sender;
+              try {
+                const { getUserByUsername, getUserById } = await import('../services/firebaseUserStorage');
+                let senderData = await getUserByUsername(sender);
+                if (!senderData) senderData = await getUserById(sender);
+                if (senderData?.name) senderName = senderData.name;
+              } catch {}
+              
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(senderName, {
+                  body: chat.lastMessage || 'Nuevo mensaje',
+                  icon: '/favicon.ico'
+                });
+              }
+            } catch (err) {
+              console.error('[Dashboard] Error mostrando notificación:', err);
+            }
+          } else {
+            console.log('[Dashboard] ℹ️ Chat ya está abierto con este usuario');
+          }
+        }
+        
+        prevUnreadChatsRef.current[chat.id] = currentUnread;
+      }
+    });
+    
+    return () => {
+      unsubscribe();
+      document.removeEventListener('click', unlockAudio);
+    };
+  }, [user?.username, user?.uid, activeChatUser]);
 
 
 
