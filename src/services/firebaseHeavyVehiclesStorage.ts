@@ -1,4 +1,4 @@
-import { getFirestore, collection, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import app from '../config/firebase';
 import firebaseReportStorage from './firebaseReportStorage';
 import { reportStorage, ReportData } from './reportStorage';
@@ -196,6 +196,38 @@ class FirebaseHeavyVehiclesStorage {
     } catch (error) {
       console.error('Error saving heavy vehicle record:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Suscribirse a los vehículos agregados recientemente en tiempo real
+   * @param limitCount Número de vehículos recientes a mostrar (default: 10)
+   * @param callback Función que recibe la lista de vehículos
+   * @returns Función para cancelar la suscripción
+   */
+  subscribeToRecentVehicles(
+    limitCount: number = 10,
+    callback: (vehicles: HeavyVehicleRecord[]) => void
+  ): () => void {
+    try {
+      const vehiclesRef = collection(db, HEAVY_VEHICLES_COLLECTION);
+      const q = query(vehiclesRef, orderBy('createdAt', 'desc'), limit(limitCount));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const vehicles: HeavyVehicleRecord[] = [];
+        snapshot.forEach((doc) => {
+          vehicles.push({ id: doc.id, ...doc.data() } as HeavyVehicleRecord);
+        });
+        callback(vehicles);
+      }, (error) => {
+        console.error('Error suscribiéndose a vehículos recientes:', error);
+        callback([]);
+      });
+
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error en subscribeToRecentVehicles:', error);
+      return () => {}; // Retornar función vacía en caso de error
     }
   }
 }

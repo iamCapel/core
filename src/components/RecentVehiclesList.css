@@ -1,0 +1,370 @@
+/* Contenedor principal de vehículos recientes */
+.recent-vehicles-container {
+  margin-top: 16px;
+  padding: 0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: slideInFromTop 0.4s ease-out;
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 700px;
+  }
+}
+
+/* Header del componente */
+.recent-vehicles-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #FF7700 0%, #FF9933 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.recent-vehicles-header h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-icon {
+  font-size: 14px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.vehicle-count {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+/* Lista de vehículos */
+.recent-vehicles-list {
+  max-height: 580px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.recent-vehicles-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.recent-vehicles-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 6px;
+}
+
+.recent-vehicles-list::-webkit-scrollbar-thumb {
+  background: #FF7700;
+  border-radius: 6px;
+}
+
+.recent-vehicles-list::-webkit-scrollbar-thumb:hover {
+  background: #E66900;
+}
+
+/* Card individual de vehículo */
+.vehicle-card {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  padding: 6px 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  animation: slideIn 0.4s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  cursor: pointer;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vehicle-card:hover {
+  border-color: #FF7700;
+  box-shadow: 0 2px 6px rgba(255, 119, 0, 0.12);
+  transform: translateY(-1px);
+  background-color: #FFF9F5;
+}
+
+/* Header del card */
+.vehicle-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.vehicle-card-header::after {
+  content: '📍';
+  position: absolute;
+  right: -20px;
+  opacity: 0;
+  font-size: 12px;
+  transition: opacity 0.3s ease, right 0.3s ease;
+}
+
+.vehicle-card:hover .vehicle-card-header::after {
+  opacity: 1;
+  right: -16px;
+}
+
+.vehicle-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+  line-height: 1;
+}
+
+.vehicle-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.vehicle-type {
+  font-size: 10px;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vehicle-ficha {
+  font-size: 9px;
+  color: #6c757d;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.vehicle-ficha strong {
+  color: #FF7700;
+  font-weight: 600;
+}
+
+.vehicle-badge {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.quantity-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #FF7700, #FF9933);
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(255, 119, 0, 0.25);
+}
+
+/* Body del card - oculto en vista compacta */
+.vehicle-card-body {
+  display: none;
+}
+
+.vehicle-detail {
+  display: none;
+}
+
+.detail-icon {
+  display: none;
+}
+
+.detail-text {
+  display: none;
+}
+
+.detail-text.location {
+  display: none;
+}
+
+/* Footer del card */
+.vehicle-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.vehicle-user {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 8px;
+  color: #495057;
+  font-weight: 500;
+}
+
+.user-icon {
+  font-size: 10px;
+}
+
+.user-name {
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vehicle-time {
+  font-size: 8px;
+  color: #6c757d;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Estados de carga y vacío */
+.recent-vehicles-loading,
+.recent-vehicles-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+
+.loading-spinner,
+.empty-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.recent-vehicles-loading p,
+.recent-vehicles-empty p {
+  margin: 0;
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.recent-vehicles-loading p,
+.recent-vehicles-empty p {
+  margin: 0;
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .recent-vehicles-container {
+    margin-top: 10px;
+  }
+
+  .recent-vehicles-header {
+    padding: 6px 8px;
+  }
+
+  .recent-vehicles-header h4 {
+    font-size: 10px;
+  }
+
+  .header-icon {
+    font-size: 12px;
+  }
+
+  .vehicle-count {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+
+  .recent-vehicles-list {
+    max-height: 400px;
+    padding: 4px;
+  }
+
+  .vehicle-card {
+    padding: 4px 6px;
+    min-height: 40px;
+  }
+
+  .vehicle-icon {
+    font-size: 18px;
+  }
+
+  .vehicle-type {
+    font-size: 9px;
+  }
+
+  .vehicle-ficha {
+    font-size: 8px;
+  }
+
+  .vehicle-user,
+  .vehicle-time {
+    font-size: 7px;
+  }
+  
+  .user-icon {
+    font-size: 9px;
+  }
+}

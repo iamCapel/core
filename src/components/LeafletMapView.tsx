@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { reportStorage } from '../services/reportStorage';
@@ -9,6 +9,7 @@ import DetailedReportView from './DetailedReportView';
 import { UserRole } from '../types/userRoles';
 import ClickableUsername from './ClickableUsername';
 import { municipioCoordinates } from '../services/municipioCoordinates';
+import RecentVehiclesList from './RecentVehiclesList';
 
 // Configurar iconos de Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -296,6 +297,8 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [busquedaFicha, setBusquedaFicha] = useState<string>('');
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+  const [mapZoom, setMapZoom] = useState<number>(8);
 
   const refreshCycle: LocationMode[] = ['provincia', 'municipio', 'distrito'];
   const handleRefreshClick = (e: React.MouseEvent) => {
@@ -855,6 +858,94 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
     setSelectedReportNumber('');
   };
 
+  // Manejar clic en vehículo desde la lista
+  const handleVehicleClickFromList = async (vehicle: any) => {
+    // Establecer filtro por ficha primero
+    setBusquedaFicha(vehicle.ficha);
+    
+    // Cambiar a modo "solo" para mostrar vehículos individuales
+    setVehiculosMode('solo');
+    
+    // Cambiar al modo vehículos (esto disparará useEffect para cargar datos)
+    setMapViewMode('vehiculos');
+    
+    // Esperar un poco más para que los datos se carguen
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Buscar el vehículo en los marcadores actuales para obtener coordenadas precisas
+    const vehiculoEnMapa = vehiculosMarkers.find(v => v.ficha === vehicle.ficha);
+    
+    let coords = null;
+    if (vehiculoEnMapa) {
+      coords = { lat: vehiculoEnMapa.latitud, lng: vehiculoEnMapa.longitud };
+    } else {
+      // Si no está en marcadores, buscar en reportes con vehículos
+      const reporteConVehiculo = reportesConVehiculos.find(r => 
+        r.vehiculos.some(v => v.ficha === vehicle.ficha)
+      );
+      
+      if (reporteConVehiculo) {
+        coords = { lat: reporteConVehiculo.latitud, lng: reporteConVehiculo.longitud };
+      } else {
+        // Último recurso: obtener coordenadas del municipio
+        coords = findLocationCoordinate(vehicle.municipio) || 
+                 findLocationCoordinate(vehicle.distrito) ||
+                 findLocationCoordinate(vehicle.provincia);
+      }
+    }
+    
+    if (coords) {
+      // Centrar el mapa en la ubicación del vehículo con zoom cercano
+      setMapCenter([coords.lat, coords.lng]);
+      setMapZoom(14); // Zoom más cercano para ver el vehículo claramente
+    }
+  };
+  
+  // Manejar clic en actividad desde la lista
+  const handleActivityClickFromList = (activity: Intervention) => {
+    // Cambiar al modo actividades
+    setMapViewMode('actividades');
+    
+    // Obtener coordenadas de la actividad
+    const coords = activity.latitud && activity.longitud 
+      ? { lat: activity.latitud, lng: activity.longitud }
+      : (findLocationCoordinate(activity.municipio) || 
+         findLocationCoordinate(activity.distrito) ||
+         findLocationCoordinate(activity.provincia));
+    
+    if (coords) {
+      // Centrar el mapa en la ubicación de la actividad
+      setMapCenter([coords.lat, coords.lng]);
+      setMapZoom(13);
+    }
+  };
+  
+  // Manejar clic en operador desde la lista
+  const handleOperatorClickFromList = (operator: OperadorMarker) => {
+    // Cambiar al modo operadores
+    setMapViewMode('operadores');
+    
+    // Centrar el mapa en la ubicación del operador
+    setMapCenter([operator.latitud, operator.longitud]);
+    setMapZoom(14); // Zoom más cercano para operadores
+  };
+
+  // Componente para controlar el mapa dinámicamente
+  const MapController: React.FC<{ center: [number, number] | null; zoom: number }> = ({ center, zoom }) => {
+    const map = useMap();
+    
+    useEffect(() => {
+      if (center) {
+        map.setView(center, zoom, {
+          animate: true,
+          duration: 1
+        });
+      }
+    }, [center, zoom, map]);
+    
+    return null;
+  };
+
   if (showDetailView && selectedReportNumber) {
     return (
       <DetailedReportView 
@@ -1283,80 +1374,249 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             )}
           </div>
 
-          {/* Información de la vista actual */}
-          {(mapViewMode !== 'operadores' || operadoresMarkers.length > 0) && (
-            <div style={{ 
-              marginTop: '20px', 
-              padding: '12px', 
-              backgroundColor: '#f8f9fa', 
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: '#6c757d'
-            }}>
-              {loading ? (
-                <div style={{ textAlign: 'center' }}>
-                  <span style={{ fontSize: '20px' }}>⏳</span>
-                  <p style={{ margin: '8px 0 0' }}>Cargando datos...</p>
+          {/* Lista de Vehículos Agregados Recientemente - Solo visible en modo Vehículos */}
+          {mapViewMode === 'vehiculos' && (
+            <RecentVehiclesList 
+              limitCount={20} 
+              onVehicleClick={handleVehicleClickFromList}
+            />
+          )}
+          
+          {/* Lista de Actividades Recientes - Solo visible en modo Actividades */}
+          {mapViewMode === 'actividades' && interventions.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <div style={{
+                padding: '0',
+                backgroundColor: '#ffffff',
+                borderRadius: '8px',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                overflow: 'hidden',
+                animation: 'slideInFromTop 0.4s ease-out'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                }}>
+                  <h4 style={{
+                    margin: 0,
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span style={{ fontSize: '14px' }}>⛏️</span>
+                    Actividades Recientes
+                  </h4>
+                  <span style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                    color: '#ffffff',
+                    fontSize: '9px',
+                    fontWeight: '700',
+                    padding: '2px 6px',
+                    borderRadius: '10px'
+                  }}>{interventions.slice(0, 20).length}</span>
                 </div>
-              ) : (
-                <div>
-                  {mapViewMode === 'vehiculos' && (
-                    <div>
-                      <p style={{ margin: '0 0 8px' }}>
-                        <strong>🚜 Vehículos:</strong> Muestra las obras que tienen vehículos registrados. 
-                        Haz clic en un marcador para ver la lista de fichas.
-                      </p>
-                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: '#2c3e50' }}>
-                        📍 Modo de ubicación: <strong>{locationMode}</strong>
-                      </p>
-                      {busquedaFicha && (
-                        <p style={{ margin: 0, color: '#FF7700', fontWeight: '600' }}>
-                          🔍 Filtrando por ficha: "{busquedaFicha}" - {reportesConVehiculos.filter(r => 
-                            r.vehiculos.some(v => v.ficha.toLowerCase().includes(busquedaFicha.toLowerCase()))
-                          ).length} obras encontradas
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {mapViewMode === 'actividades' && (
-                    <div>
-                      <p style={{ margin: 0 }}>
-                        <strong>⛏️ Actividades:</strong> Muestra las intervenciones registradas. 
-                        Haz clic en un icono para ver el detalle del reporte.
-                      </p>
-                      <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#2c3e50' }}>
-                        📍 Modo de ubicación: <strong>{locationMode}</strong>
-                      </p>
-                    </div>
-                  )}
-                  {mapViewMode === 'operadores' && (
-                    <div>
-                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: '#2c3e50' }}>
-                        📍 Modo de ubicación: <strong>{locationMode}</strong>
-                      </p>
-                      {operadoresMarkers.length > 0 && (
-                        <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px' }}>
-                          {operadoresMarkers.filter(op => op.status === 'online').length > 0 && (
-                            <span style={{ color: '#2ecc71', fontWeight: '600' }}>
-                              🟢 {operadoresMarkers.filter(op => op.status === 'online').length} En línea
-                            </span>
-                          )}
-                          {operadoresMarkers.filter(op => op.status === 'recent').length > 0 && (
-                            <span style={{ color: '#f39c12', fontWeight: '600' }}>
-                              🟡 {operadoresMarkers.filter(op => op.status === 'recent').length} Activo
-                            </span>
-                          )}
-                          {operadoresMarkers.filter(op => op.status === 'offline').length > 0 && (
-                            <span style={{ color: '#95a5a6', fontWeight: '600' }}>
-                              ⚫ {operadoresMarkers.filter(op => op.status === 'offline').length} Desconectado
-                            </span>
-                          )}
+                
+                <div className="map-list-container" style={{
+                  maxHeight: '580px',
+                  overflowY: 'auto',
+                  padding: '6px'
+                }}>
+                  {interventions.slice(0, 20).map((activity) => {
+                    const tipoIcon = activity.tipoIntervencion?.includes('Bacheo') ? '🛣️' :
+                                   activity.tipoIntervencion?.includes('Limpieza') ? '🧹' :
+                                   activity.tipoIntervencion?.includes('Drenaje') ? '💧' : '⛏️';
+                    
+                    return (
+                      <div
+                        key={activity.id}
+                        onClick={() => handleActivityClickFromList(activity)}
+                        style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '6px',
+                          marginBottom: '4px',
+                          padding: '6px 8px',
+                          transition: 'all 0.3s ease',
+                          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          minHeight: '46px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#4CAF50';
+                          e.currentTarget.style.backgroundColor = '#f1f8f4';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e0e0e0';
+                          e.currentTarget.style.backgroundColor = '#ffffff';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                        title={`${activity.tipoIntervencion} - ${activity.municipio}, ${activity.provincia}`}
+                      >
+                        <span style={{ fontSize: '20px', flexShrink: 0 }}>{tipoIcon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            color: '#2c3e50',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {activity.tipoIntervencion}
+                          </div>
+                          <div style={{
+                            fontSize: '9px',
+                            color: '#6c757d',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            📍 {activity.municipio}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <div style={{ flexShrink: 0, marginLeft: 'auto', textAlign: 'right' }}>
+                          <div style={{ fontSize: '8px', color: '#495057', fontWeight: '500' }}>
+                            {activity.usuario || activity.creadoPor}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
+            </div>
+          )}
+          
+          {/* Lista de Operadores Activos - Solo visible en modo Operadores */}
+          {mapViewMode === 'operadores' && operadoresMarkers.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <div style={{
+                padding: '0',
+                backgroundColor: '#ffffff',
+                borderRadius: '8px',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                overflow: 'hidden',
+                animation: 'slideInFromTop 0.4s ease-out'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 10px',
+                  background: 'linear-gradient(135deg, #2196F3 0%, #42A5F5 100%)',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                }}>
+                  <h4 style={{
+                    margin: 0,
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span style={{ fontSize: '14px' }}>👷</span>
+                    Operadores Activos
+                  </h4>
+                  <span style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                    color: '#ffffff',
+                    fontSize: '9px',
+                    fontWeight: '700',
+                    padding: '2px 6px',
+                    borderRadius: '10px'
+                  }}>{operadoresMarkers.slice(0, 20).length}</span>
+                </div>
+                
+                <div className="map-list-container" style={{
+                  maxHeight: '580px',
+                  overflowY: 'auto',
+                  padding: '6px'
+                }}>
+                  {operadoresMarkers.slice(0, 20).map((operator) => {
+                    const statusColor = operator.status === 'online' ? '#2ecc71' : 
+                                       operator.status === 'recent' ? '#f39c12' : '#95a5a6';
+                    
+                    return (
+                      <div
+                        key={operator.id}
+                        onClick={() => handleOperatorClickFromList(operator)}
+                        style={{
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '6px',
+                          marginBottom: '4px',
+                          padding: '6px 8px',
+                          transition: 'all 0.3s ease',
+                          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          minHeight: '46px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = '#2196F3';
+                          e.currentTarget.style.backgroundColor = '#e3f2fd';
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = '#e0e0e0';
+                          e.currentTarget.style.backgroundColor = '#ffffff';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                        title={`${operator.nombre} - ${operator.ultimaActividad || 'Sin actividad'}`}
+                      >
+                        <span style={{ fontSize: '20px', flexShrink: 0 }}>👷</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            color: '#2c3e50',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {operator.nombre}
+                          </div>
+                          <div style={{
+                            fontSize: '9px',
+                            color: '#6c757d',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}>
+                            {operator.ultimaActividad || 'Sin actividad reciente'}
+                          </div>
+                        </div>
+                        <div style={{ flexShrink: 0, marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: statusColor,
+                            display: 'inline-block'
+                          }}></span>
+                          <div style={{ fontSize: '8px', color: '#495057', fontWeight: '500' }}>
+                            {operator.reportesCercanos?.length || 0} reportes
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
@@ -1375,6 +1635,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             zoom={8} 
             style={{ height: '100%', width: '100%' }}
           >
+            <MapController center={mapCenter} zoom={mapZoom} />
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

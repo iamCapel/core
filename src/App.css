@@ -298,3 +298,36 @@ body.role-admin .topbar-title {
     transform: rotate(360deg);
   }
 }
+
+/* Animación para listas desplegables del mapa */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 700px;
+  }
+}
+
+/* Estilos de scroll para listas del mapa */
+.map-list-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.map-list-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 6px;
+}
+
+.map-list-container::-webkit-scrollbar-thumb {
+  background: #999;
+  border-radius: 6px;
+}
+
+.map-list-container::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
