@@ -299,6 +299,8 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [refreshTimestamp, setRefreshTimestamp] = useState<number>(Date.now());
   const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(8);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(280);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
 
   const refreshCycle: LocationMode[] = ['provincia', 'municipio', 'distrito'];
   const handleRefreshClick = (e: React.MouseEvent) => {
@@ -1133,15 +1135,18 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             }}
           />
         </div>
-      </div>      <div style={{ display: 'flex', gap: '20px', height: 'calc(100vh - 120px)' }}>
+      </div>      <div style={{ display: 'flex', gap: '0px', height: 'calc(100vh - 120px)' }}>
         {/* Panel de control */}
         <div style={{ 
-          width: '280px', 
+          width: `${sidebarWidth}px`, 
+          minWidth: '220px',
+          maxWidth: '500px',
           backgroundColor: 'white', 
           padding: '16px', 
           borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          overflowY: 'auto'
+          overflowY: 'auto',
+          transition: isResizing ? 'none' : 'width 0.1s ease'
         }}>
           <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#2c3e50', fontSize: '16px' }}>🗺️ Ver en el Mapa</h3>
           
@@ -1178,21 +1183,69 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                     type='button'
                     onClick={handleRefreshClick}
                     style={{
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#FF7700',
+                      border: '2px solid #FF7700',
+                      background: 'linear-gradient(135deg, #FF9933 0%, #FF7700 100%)',
+                      color: 'white',
                       fontSize: '16px',
                       cursor: 'pointer',
-                      padding: 0
+                      padding: '0',
+                      borderRadius: '50%',
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(255, 119, 0, 0.3)',
+                      position: 'relative'
                     }}
                     title='Actualizar Vehículos (ciclo provincia/municipio/distrito)'
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 119, 0, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(255, 119, 0, 0.3)';
+                    }}
                   >
-                    🔄
+                    <div className="refresh-ring refresh-ring-orange"></div>
+                    <svg className="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                      <path d="M21 12a9 9 0 1 1-3.22-6.94"/>
+                      <polyline points="21 3 21 9 15 9"/>
+                    </svg>
                   </button>
                   <span style={{ color: '#FF7700', fontWeight: 'bold' }}>✓</span>
                 </span>
               )}
             </button>
+            
+            {/* Indicador de modo de ubicación para Vehículos */}
+            {mapViewMode === 'vehiculos' && (
+              <div style={{
+                marginTop: '8px',
+                marginBottom: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#FFF3E6',
+                borderRadius: '6px',
+                border: '1px solid #FFE5CC',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '14px' }}>📍</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '9px', color: '#FF9933', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Ubicación basada en
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#E66900', fontWeight: '700' }}>
+                    {locationMode === 'provincia' ? '🏛️ Provincia' : 
+                     locationMode === 'municipio' ? '🏘️ Municipio' : 
+                     '🏡 Distrito Municipal'}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Filtro de búsqueda por ficha - Solo visible en modo Vehículos */}
             {mapViewMode === 'vehiculos' && (
@@ -1303,21 +1356,68 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                     type='button'
                     onClick={handleRefreshClick}
                     style={{
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#4CAF50',
+                      border: '2px solid #4CAF50',
+                      background: 'linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%)',
+                      color: 'white',
                       fontSize: '16px',
                       cursor: 'pointer',
-                      padding: 0
+                      padding: '0',
+                      borderRadius: '50%',
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
+                      position: 'relative'
                     }}
                     title='Actualizar Actividades (ciclo provincia/municipio/distrito)'
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(76, 175, 80, 0.3)';
+                    }}
                   >
-                    🔄
+                    <div className="refresh-ring refresh-ring-green"></div>
+                    <svg className="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                      <path d="M21 12a9 9 0 1 1-3.22-6.94"/>
+                      <polyline points="21 3 21 9 15 9"/>
+                    </svg>
                   </button>
                   <span style={{ color: '#4CAF50', fontWeight: 'bold' }}>✓</span>
                 </span>
               )}
             </button>
+            
+            {/* Indicador de modo de ubicación para Actividades */}
+            {mapViewMode === 'actividades' && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#e8f5e9',
+                borderRadius: '6px',
+                border: '1px solid #c8e6c9',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '14px' }}>📍</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '9px', color: '#66BB6A', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Ubicación basada en
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#2e7d32', fontWeight: '700' }}>
+                    {locationMode === 'provincia' ? '🏛️ Provincia' : 
+                     locationMode === 'municipio' ? '🏘️ Municipio' : 
+                     '🏡 Distrito Municipal'}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Opción Operadores - Solo visible para administradores */}
             {user?.role === UserRole.ADMIN && (
@@ -1356,21 +1456,68 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                     type='button'
                     onClick={handleRefreshClick}
                     style={{
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#2196F3',
+                      border: '2px solid #2196F3',
+                      background: 'linear-gradient(135deg, #42A5F5 0%, #2196F3 100%)',
+                      color: 'white',
                       fontSize: '16px',
                       cursor: 'pointer',
-                      padding: 0
+                      padding: '0',
+                      borderRadius: '50%',
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+                      position: 'relative'
                     }}
                     title='Actualizar Operadores (ciclo provincia/municipio/distrito)'
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(33, 150, 243, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(33, 150, 243, 0.3)';
+                    }}
                   >
-                    🔄
+                    <div className="refresh-ring refresh-ring-blue"></div>
+                    <svg className="refresh-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px' }}>
+                      <path d="M21 12a9 9 0 1 1-3.22-6.94"/>
+                      <polyline points="21 3 21 9 15 9"/>
+                    </svg>
                   </button>
                   <span style={{ color: '#2196F3', fontWeight: 'bold' }}>✓</span>
                 </span>
               )}
             </button>
+            )}
+            
+            {/* Indicador de modo de ubicación para Operadores */}
+            {mapViewMode === 'operadores' && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#e3f2fd',
+                borderRadius: '6px',
+                border: '1px solid #bbdefb',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '14px' }}>📍</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '9px', color: '#42A5F5', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Ubicación basada en
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#1976D2', fontWeight: '700' }}>
+                    {locationMode === 'provincia' ? '🏛️ Provincia' : 
+                     locationMode === 'municipio' ? '🏘️ Municipio' : 
+                     '🏡 Distrito Municipal'}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -1484,6 +1631,19 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                           }}>
                             📍 {activity.municipio}
                           </div>
+                          {activity.fechaInicio && (
+                            <div style={{
+                              fontSize: '8px',
+                              color: '#4CAF50',
+                              fontWeight: '600',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              marginTop: '2px'
+                            }}>
+                              📅 {activity.fechaInicio}{activity.fechaFinal ? ` → ${activity.fechaFinal}` : ' (en curso)'}
+                            </div>
+                          )}
                         </div>
                         <div style={{ flexShrink: 0, marginLeft: 'auto', textAlign: 'right' }}>
                           <div style={{ fontSize: '8px', color: '#495057', fontWeight: '500' }}>
@@ -1622,13 +1782,67 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
 
         </div>
 
+        {/* Resize Handle */}
+        <div
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsResizing(true);
+            
+            const startX = e.clientX;
+            const startWidth = sidebarWidth;
+            
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+              const delta = moveEvent.clientX - startX;
+              const newWidth = Math.min(Math.max(startWidth + delta, 220), 500);
+              setSidebarWidth(newWidth);
+            };
+            
+            const handleMouseUp = () => {
+              setIsResizing(false);
+              document.removeEventListener('mousemove', handleMouseMove);
+              document.removeEventListener('mouseup', handleMouseUp);
+            };
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+          }}
+          style={{
+            width: '8px',
+            cursor: 'col-resize',
+            backgroundColor: isResizing ? '#4CAF50' : 'transparent',
+            transition: 'background-color 0.2s',
+            position: 'relative',
+            flexShrink: 0,
+            userSelect: 'none'
+          }}
+          onMouseEnter={(e) => {
+            if (!isResizing) e.currentTarget.style.backgroundColor = '#e0e0e0';
+          }}
+          onMouseLeave={(e) => {
+            if (!isResizing) e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '4px',
+            height: '40px',
+            backgroundColor: '#9e9e9e',
+            borderRadius: '2px',
+            opacity: isResizing ? 1 : 0.5
+          }} />
+        </div>
+
         {/* Mapa */}
         <div style={{ 
           flex: 1, 
           backgroundColor: 'white', 
           borderRadius: '8px',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          marginLeft: '12px'
         }}>
           <MapContainer 
             center={center} 
@@ -2283,6 +2497,78 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
         
         .leaflet-popup-tip {
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Estilos para botón de actualizar con anillo animado */
+        .refresh-ring {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          padding: 2px;
+          pointer-events: none;
+        }
+        
+        .refresh-ring-orange {
+          background: conic-gradient(
+            #111 0%,
+            #222 10%,
+            #ff6a00 30%,
+            #ff8c00 45%,
+            #ff6a00 60%,
+            #1a1a1a 80%,
+            #111 100%
+          );
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+        }
+        
+        .refresh-ring-green {
+          background: conic-gradient(
+            #1b5e20 0%,
+            #2e7d32 10%,
+            #4caf50 30%,
+            #66bb6a 45%,
+            #4caf50 60%,
+            #2e7d32 80%,
+            #1b5e20 100%
+          );
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+        }
+        
+        .refresh-ring-blue {
+          background: conic-gradient(
+            #0d47a1 0%,
+            #1565c0 10%,
+            #2196f3 30%,
+            #42a5f5 45%,
+            #2196f3 60%,
+            #1565c0 80%,
+            #0d47a1 100%
+          );
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+        }
+        
+        @keyframes rotate-ring {
+          to { transform: rotate(360deg); }
+        }
+        
+        button:hover .refresh-ring {
+          animation: rotate-ring 2s linear infinite;
+        }
+        
+        .refresh-svg {
+          position: relative;
+          z-index: 1;
+          transition: transform 0.3s ease;
+        }
+        
+        button:hover .refresh-svg {
+          transform: rotate(180deg);
         }
       `}</style>
     </div>
