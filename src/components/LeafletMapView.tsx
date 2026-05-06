@@ -301,6 +301,9 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
   const [mapZoom, setMapZoom] = useState<number>(8);
   const [sidebarWidth, setSidebarWidth] = useState<number>(280);
   const [isResizing, setIsResizing] = useState<boolean>(false);
+  const [showActivityList, setShowActivityList] = useState<boolean>(false);
+  const [showVehicleList, setShowVehicleList] = useState<boolean>(false);
+  const [showOperatorList, setShowOperatorList] = useState<boolean>(false);
 
   const refreshCycle: LocationMode[] = ['provincia', 'municipio', 'distrito'];
   const handleRefreshClick = (e: React.MouseEvent) => {
@@ -1135,7 +1138,9 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
             }}
           />
         </div>
-      </div>      <div style={{ display: 'flex', gap: '0px', height: 'calc(100vh - 120px)' }}>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '0px', height: 'calc(100vh - 120px)' }}>
         {/* Panel de control */}
         <div style={{ 
           width: `${sidebarWidth}px`, 
@@ -1153,6 +1158,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           {/* Menú de selección de vista */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {/* Opción Vehículos */}
+            <>
             <button
               onClick={() => setMapViewMode('vehiculos')}
               style={{
@@ -1179,6 +1185,55 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
               </div>
               {mapViewMode === 'vehiculos' && (
                 <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* Icono de lista de vehículos */}
+                  <svg 
+                    width="32" 
+                    height="32" 
+                    viewBox="0 0 100 100" 
+                    onClick={() => setShowVehicleList(!showVehicleList)}
+                    style={{ 
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      filter: showVehicleList ? 'none' : 'grayscale(0.5) opacity(0.7)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                      e.currentTarget.style.filter = 'drop-shadow(0 2px 4px rgba(255, 119, 0, 0.4))';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.filter = showVehicleList ? 'none' : 'grayscale(0.5) opacity(0.7)';
+                    }}
+                  >
+                    <title>{showVehicleList ? 'Ocultar lista de vehículos' : 'Mostrar lista de vehículos'}</title>
+                    {/* Cuerpo de la lista */}
+                    <rect 
+                      x="10" 
+                      y="10" 
+                      width="80" 
+                      height="80" 
+                      rx="22" 
+                      fill="#FF9933" 
+                      stroke="#E66900" 
+                      strokeWidth="3"
+                    />
+                    {/* Ojos */}
+                    <circle cx="35" cy="28" r="5" fill="white" stroke="#E66900" strokeWidth="2"/>
+                    <circle cx="35" cy="28" r="2" fill="#E66900"/>
+                    <circle cx="65" cy="28" r="5" fill="white" stroke="#E66900" strokeWidth="2"/>
+                    <circle cx="65" cy="28" r="2" fill="#E66900"/>
+                    {/* Líneas de la lista */}
+                    <rect x="25" y="48" width="40" height="5" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="25" y="58" width="30" height="5" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="25" y="68" width="35" height="5" rx="2" fill="white" opacity="0.9"/>
+                    {/* Reloj pequeño en la esquina */}
+                    <circle cx="78" cy="22" r="15" fill="#FFF3C4" stroke="#E6A817" strokeWidth="3"/>
+                    <line x1="78" y1="22" x2="78" y2="14" stroke="#7B4F00" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="78" y1="22" x2="83" y2="22" stroke="#E6A817" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="78" cy="22" r="2" fill="#7B4F00"/>
+                  </svg>
+                  
                   <button
                     type='button'
                     onClick={handleRefreshClick}
@@ -1219,35 +1274,6 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </span>
               )}
             </button>
-            
-            {/* Indicador de modo de ubicación para Vehículos */}
-            {mapViewMode === 'vehiculos' && (
-              <div style={{
-                marginTop: '8px',
-                marginBottom: '8px',
-                padding: '8px 12px',
-                backgroundColor: '#FFF3E6',
-                borderRadius: '6px',
-                border: '1px solid #FFE5CC',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontSize: '14px' }}>📍</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '9px', color: '#FF9933', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Ubicación basada en
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#E66900', fontWeight: '700' }}>
-                    {locationMode === 'provincia' ? '🏛️ Provincia' : 
-                     locationMode === 'municipio' ? '🏘️ Municipio' : 
-                     '🏡 Distrito Municipal'}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Filtro de búsqueda por ficha - Solo visible en modo Vehículos */}
             {mapViewMode === 'vehiculos' && (
               <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                 <button
@@ -1324,8 +1350,10 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 )}
               </div>
             )}
+            </>
 
             {/* Opción Actividades */}
+            <>
             <button
               onClick={() => setMapViewMode('actividades')}
               style={{
@@ -1352,6 +1380,55 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
               </div>
               {mapViewMode === 'actividades' && (
                 <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* Icono de lista de caricatura */}
+                  <svg 
+                    width="32" 
+                    height="32" 
+                    viewBox="0 0 100 100" 
+                    onClick={() => setShowActivityList(!showActivityList)}
+                    style={{ 
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      filter: showActivityList ? 'none' : 'grayscale(0.5) opacity(0.7)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                      e.currentTarget.style.filter = 'drop-shadow(0 2px 4px rgba(91, 141, 239, 0.4))';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.filter = showActivityList ? 'none' : 'grayscale(0.5) opacity(0.7)';
+                    }}
+                  >
+                    <title>{showActivityList ? 'Ocultar lista de actividades' : 'Mostrar lista de actividades'}</title>
+                    {/* Cuerpo de la lista */}
+                    <rect 
+                      x="10" 
+                      y="10" 
+                      width="80" 
+                      height="80" 
+                      rx="22" 
+                      fill="#5B8DEF" 
+                      stroke="#2855B8" 
+                      strokeWidth="3"
+                    />
+                    {/* Ojos */}
+                    <circle cx="35" cy="28" r="5" fill="white" stroke="#2855B8" strokeWidth="2"/>
+                    <circle cx="35" cy="28" r="2" fill="#2855B8"/>
+                    <circle cx="65" cy="28" r="5" fill="white" stroke="#2855B8" strokeWidth="2"/>
+                    <circle cx="65" cy="28" r="2" fill="#2855B8"/>
+                    {/* Líneas de la lista */}
+                    <rect x="25" y="48" width="40" height="5" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="25" y="58" width="30" height="5" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="25" y="68" width="35" height="5" rx="2" fill="white" opacity="0.9"/>
+                    {/* Reloj pequeño en la esquina */}
+                    <circle cx="78" cy="22" r="15" fill="#FFF3C4" stroke="#E6A817" strokeWidth="3"/>
+                    <line x1="78" y1="22" x2="78" y2="14" stroke="#7B4F00" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="78" y1="22" x2="83" y2="22" stroke="#E6A817" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="78" cy="22" r="2" fill="#7B4F00"/>
+                  </svg>
+                  
                   <button
                     type='button'
                     onClick={handleRefreshClick}
@@ -1392,36 +1469,11 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </span>
               )}
             </button>
-            
-            {/* Indicador de modo de ubicación para Actividades */}
-            {mapViewMode === 'actividades' && (
-              <div style={{
-                marginTop: '8px',
-                padding: '8px 12px',
-                backgroundColor: '#e8f5e9',
-                borderRadius: '6px',
-                border: '1px solid #c8e6c9',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontSize: '14px' }}>📍</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '9px', color: '#66BB6A', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Ubicación basada en
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#2e7d32', fontWeight: '700' }}>
-                    {locationMode === 'provincia' ? '🏛️ Provincia' : 
-                     locationMode === 'municipio' ? '🏘️ Municipio' : 
-                     '🏡 Distrito Municipal'}
-                  </div>
-                </div>
-              </div>
-            )}
-
+            </>
             {/* Opción Operadores - Solo visible para administradores */}
             {user?.role === UserRole.ADMIN && (
-            <button
+              <>
+              <button
               onClick={() => setMapViewMode('operadores')}
               style={{
                 display: 'flex',
@@ -1452,6 +1504,55 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
               </div>
               {mapViewMode === 'operadores' && (
                 <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {/* Icono de lista de operadores */}
+                  <svg 
+                    width="32" 
+                    height="32" 
+                    viewBox="0 0 100 100" 
+                    onClick={() => setShowOperatorList(!showOperatorList)}
+                    style={{ 
+                      flexShrink: 0,
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      filter: showOperatorList ? 'none' : 'grayscale(0.5) opacity(0.7)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.1)';
+                      e.currentTarget.style.filter = 'drop-shadow(0 2px 4px rgba(33, 150, 243, 0.4))';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.filter = showOperatorList ? 'none' : 'grayscale(0.5) opacity(0.7)';
+                    }}
+                  >
+                    <title>{showOperatorList ? 'Ocultar lista de operadores' : 'Mostrar lista de operadores'}</title>
+                    {/* Cuerpo de la lista */}
+                    <rect 
+                      x="10" 
+                      y="10" 
+                      width="80" 
+                      height="80" 
+                      rx="22" 
+                      fill="#42A5F5" 
+                      stroke="#1976D2" 
+                      strokeWidth="3"
+                    />
+                    {/* Ojos */}
+                    <circle cx="35" cy="28" r="5" fill="white" stroke="#1976D2" strokeWidth="2"/>
+                    <circle cx="35" cy="28" r="2" fill="#1976D2"/>
+                    <circle cx="65" cy="28" r="5" fill="white" stroke="#1976D2" strokeWidth="2"/>
+                    <circle cx="65" cy="28" r="2" fill="#1976D2"/>
+                    {/* Líneas de la lista */}
+                    <rect x="25" y="48" width="40" height="5" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="25" y="58" width="30" height="5" rx="2" fill="white" opacity="0.9"/>
+                    <rect x="25" y="68" width="35" height="5" rx="2" fill="white" opacity="0.9"/>
+                    {/* Reloj pequeño en la esquina */}
+                    <circle cx="78" cy="22" r="15" fill="#FFF3C4" stroke="#E6A817" strokeWidth="3"/>
+                    <line x1="78" y1="22" x2="78" y2="14" stroke="#7B4F00" strokeWidth="2" strokeLinecap="round"/>
+                    <line x1="78" y1="22" x2="83" y2="22" stroke="#E6A817" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="78" cy="22" r="2" fill="#7B4F00"/>
+                  </svg>
+                  
                   <button
                     type='button'
                     onClick={handleRefreshClick}
@@ -1492,37 +1593,12 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
                 </span>
               )}
             </button>
-            )}
-            
-            {/* Indicador de modo de ubicación para Operadores */}
-            {mapViewMode === 'operadores' && (
-              <div style={{
-                marginTop: '8px',
-                padding: '8px 12px',
-                backgroundColor: '#e3f2fd',
-                borderRadius: '6px',
-                border: '1px solid #bbdefb',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontSize: '14px' }}>📍</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '9px', color: '#42A5F5', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Ubicación basada en
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#1976D2', fontWeight: '700' }}>
-                    {locationMode === 'provincia' ? '🏛️ Provincia' : 
-                     locationMode === 'municipio' ? '🏘️ Municipio' : 
-                     '🏡 Distrito Municipal'}
-                  </div>
-                </div>
-              </div>
+            </>
             )}
           </div>
 
           {/* Lista de Vehículos Agregados Recientemente - Solo visible en modo Vehículos */}
-          {mapViewMode === 'vehiculos' && (
+          {mapViewMode === 'vehiculos' && showVehicleList && (
             <RecentVehiclesList 
               limitCount={20} 
               onVehicleClick={handleVehicleClickFromList}
@@ -1530,7 +1606,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           )}
           
           {/* Lista de Actividades Recientes - Solo visible en modo Actividades */}
-          {mapViewMode === 'actividades' && interventions.length > 0 && (
+          {mapViewMode === 'actividades' && showActivityList && interventions.length > 0 && (
             <div style={{ marginTop: '16px' }}>
               <div style={{
                 padding: '0',
@@ -1659,7 +1735,7 @@ const LeafletMapView: React.FC<LeafletMapViewProps> = ({ user, onBack }) => {
           )}
           
           {/* Lista de Operadores Activos - Solo visible en modo Operadores */}
-          {mapViewMode === 'operadores' && operadoresMarkers.length > 0 && (
+          {mapViewMode === 'operadores' && showOperatorList && operadoresMarkers.length > 0 && (
             <div style={{ marginTop: '16px' }}>
               <div style={{
                 padding: '0',
